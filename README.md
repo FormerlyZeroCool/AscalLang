@@ -1,5 +1,5 @@
 # AscalLang
-<h2>Andrew's Simple Calculator Language</h2>
+<h3>Andrew's Simple Calculator Language</h3>
 Ascal is a language designed for people in STEM fields who deal with long mathematical expressions, and formula.<br>
 Ascal provides an easy way to save commonly used mathematical functions, and run them with dynamically specified parameters<br>
 <br>
