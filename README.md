@@ -47,13 +47,13 @@ Operators Documentation:<br>
   written like : x^z<br>
   
   '*' , '/' , '%' ,'$' , 'P' all have the same third level of priority<br>
-  * or X is the multiplication operator<br>
-  / is the division operator<br>
-  % is not exactly modulus, as it returns the entire remainder, including the decimal part<br>
-  $ the left operand of $ defines the fractional part of a power we are raising the second operand to so something like:<br>
+  '*' or X is the multiplication operator<br>
+  '/' is the division operator<br>
+  '%' is not exactly modulus, as it returns the entire remainder, including the decimal part<br>
+  '$' the left operand of $ defines the fractional part of a power we are raising the second operand to so something like:<br>
   operand2^(1/operand1)<br>
   Although the exponentiation operator cannot handle fractional powers<br>
-  P is the permutation operator from statistics or operand1!/(operand1-operand2)!<br>
+  'P' is the permutation operator from statistics or operand1!/(operand1-operand2)!<br>
   
   '+' , '-' after that the next priority level is for addition, and subtraction<br>
   
