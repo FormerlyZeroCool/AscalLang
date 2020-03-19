@@ -1,9 +1,11 @@
 //============================================================================
-// Name        : Calculator.cpp
+// Name        : Ascal.cpp
 // Author      : Andrew Rubinstein
 // Version     : v1
 // Copyright   :
 // Description : An infix expression interpreter, and simple math programming language in C++
+// A.S.Cal.
+// Andrew's Simple Calculator Language
 //============================================================================
 
 #include <unordered_map>
@@ -576,7 +578,7 @@ std::string replace(std::string original,std::string replace,std::string replace
 {
 	for(int i = 0; original.length()>replace.length()+i;i++)
 	{
-		if(cmpstr(original.substr(i,replace.length()),replace) && (original[i+1] == NULL || isOperator(original[i+1]) || original[i+1] == ' ' || isNumeric(original[i+1])))
+		if(cmpstr(original.substr(i,replace.length()),replace) && (original[i+1] == 0 || isOperator(original[i+1]) || original[i+1] == ' ' || isNumeric(original[i+1])))
 		{
 			original = original.substr(0,i-1)+replacement+original.substr(i+replace.length(),original.length());
 			i += replacement.length() - replace.length();
