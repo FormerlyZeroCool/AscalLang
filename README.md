@@ -46,6 +46,8 @@ Note: System Defined Variables cannot be deleted, but you can overwrite their va
 <br>
 <br>
 <h3>Operators Documentation:</h3>
+Operator precedence is defined below, in a case where two adjacent operations have the same priority the left most operation will occur first<br>
+<br>
   (...) - Parenthesis have the highest priority, and any expression inside them will be calculated before anything outside<br>
   '^' - or the exponentiation operator has the second highest priority, and will return the first operand raised to the power of the
   second<br>
