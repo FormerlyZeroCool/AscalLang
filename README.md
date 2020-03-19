@@ -9,7 +9,7 @@ Ascal tries to be as succinct as possible while expressing the mathematical func
 Note: functions have been tested to provide at least 160 levels of nesting, and although it does not currently exist support for loops, and other conditional execution modules like if and else<br>
 <br>
 Enter a mathematical expression, or you can also use<br> 
-parameters to choose between the following options or see below "redo" for how to handle variables/functions.<br>
+parameters to choose between the following options or see below for how to use variables/functions.<br>
 <h3>Valid params are:</h3>
 t to show time taken to interpret, and calculate expression<br>
 o to show operations in order of execution in console<br>
