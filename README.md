@@ -38,8 +38,9 @@ printsdf to print only system defined functions.<br>
 printudf to print only user defined functions<br>
 <br>
 <h3>Memory Managment:</h3>
-You can also delete a variable by typing delete [variableName]<br>
+You can delete a variable by typing delete [variableName]<br>
 Or delete all saved variables by typing deleteall<br>
+Note: System Defined Variables cannot be deleted, but you can overwrite their values, to refresh with the original values delete the variable you overwrote with the delete [varName] command, and all system defined functions will revert to the state they where in at startup
 <br>
 <br>
 <h3>Operators Documentation:</h3>
