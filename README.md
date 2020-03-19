@@ -6,7 +6,8 @@ Ascal provides an easy way to save commonly used mathematical functions, and run
 Ascal tries to be as succinct as possible while expressing the mathematical functions, and aims to use a mathematical syntax, it does this to make the UX as easy as possible for people in STEM to get used to.<br>
 <br>
 A quick help guide to using the language, further documentation to come<br>
-Note: functions have been tested to provide at least 160 levels of nesting, and should support much more, <br>My guess would be nearer to 1,000; however, it is possible with complex function definitions with many parameters could shrink this number to be closer to ~400 to 500 levels<br>
+Note: functions have been tested to provide at least 160 levels of nesting, <br>
+and although it does not currently exist support for loops, and other conditional execution modules like if and else<br>
 <br>
 Enter a mathematical expression, or you can also use<br> 
 parameters to choose between the following options or see below "redo" for how to handle variables/functions.<br>
