@@ -33,6 +33,7 @@ because it replaces x with c^2, and c with the parameter supplied.
 
 <h3>Print Commmands:</h3>
 By default when running any expression the Ascal Interpreter will print out the result of any expressions calculations, but keep reading to learn how to print information about variables saved in memory.<br>
+<br>
 You can print all variables, and their expressions by typing printall<br>
 print [variableName] to print everything in memory related to the specified variable.<br>
 printsdf to print only system defined functions.<br>
