@@ -58,6 +58,7 @@ You can print all variables, and their expressions by typing printall<br>
   '%' is not exactly modulus, as it returns the entire remainder, including the decimal part<br>
   So, 3.3 % 2 = 1.3, not 1 like with the common modulus operator
   <br>
+  <br>
   '$' the left operand of $ defines the fractional part of a power we are raising the second operand to so something like:<br>
   operand2^(1/operand1)<br>
   Although the exponentiation operator cannot handle fractional powers<br>
