@@ -6,7 +6,7 @@ Ascal is essentially a calculator on steroids, and is exactly what I needed for 
 Ascal aims to be as succinct as possible while expressing the mathematical functions, and aims to use a mathematical syntax 
 to make the UX as easy as possible for students to get used to.
 
-A quick help guide to using the language, further documentation to come
+A quick help guide to using the language, further documentation to come<br>
 Enter a mathematical expression, or you can also use 
 parameters to choose between the following options or see below "redo" for how to handle variables/functions.
 valid params are:
