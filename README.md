@@ -19,7 +19,7 @@ d to show debug information in console<br>
 u to show execute previous statement in console or "undo"<br>
 r to show "redo"<br>
 <br>
-How to use variables/functions:<br>
+<h3>How to use variables/functions:</h3>
 let [variableName] = [expression] to save an expression with the given variable name.<br>
 const [variableName] = [expression] will save the result of the expression with the given variable name.<br>
 <br>
@@ -42,7 +42,7 @@ Or delete all saved variables by typing deleteall<br>
 You can print all variables, and their expressions by typing printall<br>
 <br>
 <br>
-Operators Documentation:<br>
+<h3>Operators Documentation:</h3>
   (...) - Parenthesis have the highest priority, and any expression inside them will be calculated before anything outside<br>
   '^' - or the exponentiation operator has the second highest priority, and will return the first operand raised to the power of the
   second<br>
