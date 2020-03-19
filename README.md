@@ -56,7 +56,7 @@ Operators Documentation:<br>
   '$' the left operand of $ defines the fractional part of a power we are raising the second operand to so something like:<br>
   operand2^(1/operand1)<br>
   Although the exponentiation operator cannot handle fractional powers<br>
-  'P' is the permutation operator from statistics or operand1!/(operand1-operand2)!<br>
+  'P' is the permutation operator from statistics or factorial(operand1)/factorial(operand1-operand2)<br>
   
   '+' , '-' after that the next priority level is for addition, and subtraction<br>
   
