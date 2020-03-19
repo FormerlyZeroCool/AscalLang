@@ -12,7 +12,7 @@ Note: functions have been tested to provide at least 160 levels of nesting, and 
 <br>
 Enter a mathematical expression, or you can also use<br> 
 parameters to choose between the following options or see below "redo" for how to handle variables/functions.<br>
-valid params are:<br>
+<h3>Valid params are:</h3>
 t to show time taken to interpret, and calculate expression<br>
 o to show operations in order of execution in console<br>
 d to show debug information in console<br>
@@ -29,17 +29,19 @@ Example:<br>
 let x = c^2<br>
 x(4)<br>
 and the program will print the result of 4^2<br>
-because it replaces x with c^2, and c with the parameter supplied.<br>
+because it replaces x with c^2, and c with the parameter supplied.
+<br>
+<br>
 
-you can print the expression a variable holds by typing<br>
-print [variableName] or printall to print everything in memory,<br>
-printsdf prints only system defined functions<br>
-printudf prints only user defined functions<br>
-
+<h3>Print Commmands:</h3>
+You can print all variables, and their expressions by typing printall<br>
+print [variableName] to print everything in memory related to the specified variable.<br>
+printsdf to print only system defined functions.<br>
+printudf to print only user defined functions<br>
+<br>
+<h3>Memory Managment:</h3>
 You can also delete a variable by typing delete [variableName]<br>
 Or delete all saved variables by typing deleteall<br>
-<br>
-You can print all variables, and their expressions by typing printall<br>
 <br>
 <br>
 <h3>Operators Documentation:</h3>
