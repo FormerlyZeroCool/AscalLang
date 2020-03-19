@@ -40,7 +40,7 @@ You can print all variables, and their expressions by typing printall<br>
 <br>
 <br>
 Operators Documentation:<br>
-  (...) - Parenthesis have the highest priority, and any expression inside them will be the first calculated<br>
+  (...) - Parenthesis have the highest priority, and any expression inside them will be calculated before anything outside<br>
   '^' - or the exponentiation operator has the second highest priority, and will return the first operand raised to the power of the
   second<br>
   This operator cannot handle fractional powers, and will return the result as if it was raised to the power of 0<br>
