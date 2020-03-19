@@ -60,10 +60,10 @@ You can print all variables, and their expressions by typing printall<br>
   <br>
   <br>
   '$' the left operand of $ defines the fractional part of a power we are raising the second operand to so something like:<br>
-  operand2^(1/operand1)<br>
+  rightOperand^(1/leftOperand)<br>
   Although the exponentiation operator cannot handle fractional powers<br>
   <br>
-  'P' is the permutation operator from statistics or factorial(operand1)/factorial(operand1-operand2)<br>
+  'P' is the permutation operator from statistics or factorial(leftOperand)/factorial(leftOperand-rightOperand)<br>
   <br>
   '+' , '-' after that the next priority level is for addition, and subtraction<br>
   <br>
