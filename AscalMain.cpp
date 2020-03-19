@@ -537,6 +537,7 @@ int getClosingIndex(char opening,const std::string &data)
 SubStr getExpr(const std::string &data)
 {
 	int index = data.find("let")<500 || data.find("const")<500?data.find("="):0;
+	index++;
 	while(!isNumeric(data[index]) && !isalpha(data[index]) && !isOperator(data[index]))
 	{
 		index++;
