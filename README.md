@@ -7,7 +7,7 @@ Ascal aims to be as succinct as possible while expressing the mathematical funct
 to make the UX as easy as possible for students to get used to.
 
 A quick help guide to using the language, further documentation to come<br>
-Note: functions have been tested to provide at least 160 levels of nesting, and should support much more, <br>My guess would be nearer to 1,000; however, it is possible with complex function definitions with many parameters could shrink this number to be closer to ~400 or 500 levels<br><br>
+Note: functions have been tested to provide at least 160 levels of nesting, and should support much more, <br>My guess would be nearer to 1,000; however, it is possible with complex function definitions with many parameters could shrink this number to be closer to ~400 to 500 levels<br><br>
 
 Enter a mathematical expression, or you can also use 
 parameters to choose between the following options or see below "redo" for how to handle variables/functions.
