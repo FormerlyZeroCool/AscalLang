@@ -1037,9 +1037,13 @@ int getPriority(char ator)
   {
     priority = 80;
   }
-  else if (ator == '+' || ator == '-'  || ator == '&' || ator == '|')
+  else if (ator == '+' || ator == '-')
   {
     priority = 70;
+  }
+  else if(ator == '=' || ator == '>' || ator == '<')
+  {
+	  priority = 60;
   }
   return priority;
 }
@@ -1094,6 +1098,12 @@ t calc(char op,t and1,t and2)
         {
         	result = root(and2,and1);
         }
+        else if(op == '=')
+        	result = and1 == and2;
+        else if(op == '<')
+        	result = and1 < and2;
+        else if(op == '>')
+        	result = and1 > and2;
         else
           result = -400;
     if(*boolsettings["o"])
@@ -1103,12 +1113,13 @@ t calc(char op,t and1,t and2)
 
 bool isOperator(char s)
 {
-  return s == '&' || s == '|' || s == '$' || s == 'P' || s  == '@'
-		  || s == '+' || s == '-' || s == '*' || s == '/' || s == '^' || s == '(' || s == ')' || s == '%';
+  return  isNonParentheticalOperator(s) || s == '(' || s == ')';
 }
 bool isNonParentheticalOperator(char s)
 {
-    return s == '&' || s == '|' || s == '$' || s == 'P' || s == '@' || s == '+' || s == '-' || s == '*' || s == '/' || s == '^' || s == '%';
+    return s == '=' || s == '>' || s == '<' || s == '$' ||
+    		s == 'P' || s == '@' || s == '+' || s == '-' ||
+			s == '*' || s == '/' || s == '^' || s == '%';
 }
 bool isNumeric(char c)
 {
