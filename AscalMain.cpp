@@ -92,8 +92,8 @@ double getNextDouble(std::string data,int &index);
 /////////////////////////////
 //UI
 /////////////////////////////
-void interpretParam(std::string &p);
-double calcWithOptions();
+void interpretParam(std::string &p,std::string &expr);
+double calcWithOptions(std::string);
 /////////////////////////////
 /////////////////////////////
 
@@ -103,6 +103,8 @@ double calcWithOptions();
 std::unordered_map<std::string,Object> memory;
 std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
+//Interpreter Settings HashMap for toggle flags, like show time, or operations
+std::unordered_map<std::string,setting<bool> > boolsettings;
 /////////////////////////////
 //End Program Global Memory Declaration
 /////////////////////////////
@@ -110,24 +112,46 @@ std::vector<Object> systemDefinedFunctions;
 linkedStack<std::string> lastExp;
 //list of previous undone expressions for r command in interpretParam fn
 linkedStack<std::string> undoneExp;
-//variable to hold expression for parsing
-std::string expr = "";
-std::unordered_map<std::string,setting<bool> > boolsettings;
+
 void printLoadedMemMessage(Object function)
 {
 	std::cout<<"Loaded Function: "<<function.id<<"\nexpression: "<<function.instructionsToString()<<std::endl<<std::endl;
 }
-void loadFn(Object function)
+bool containsOperator(std::string s)
 {
-	memory[function.id] = function;
-	systemDefinedFunctions.push_back(function);
-	//printLoadedMemMessage(function);
+	bool contains = false;
+	int i = 0;
+	while(!contains && s[i])
+	{
+		if(isOperator(s[i])){
+			contains = true;
+		}
+		i++;
+	}
+	return contains;
+}
+bool loadFn(Object function)
+{
+
+	if(!containsOperator(function.id))
+	{
+		memory[function.id] = function;
+		systemDefinedFunctions.push_back(function);
+		return true;
+	}
+	else
+	{
+		std::cout<<"Error loading "<<function.id<<" due to the use of an operator in its name"<<std::endl;
+		std::cout<<"Operators: "<< '=' <<','<< '>' << ',' << '<' <<','<< '$' <<','<<
+	    		'P' <<','<< '@' <<','<< '+' <<','<< '-' <<','<<
+				'*'<<','<< '/' <<','<< '^' <<','<< '%' <<','<< 'C';
+		return false;
+	}
 }
 void loadUserDefinedFn(Object function)
 {
-	memory[function.id] = function;
-	userDefinedFunctions.push_back(function);
-	printLoadedMemMessage(function);
+	if(loadFn(function))
+		printLoadedMemMessage(function);
 }
 void loadInitialFunctions()
 {
@@ -140,7 +164,7 @@ void loadInitialFunctions()
 	loadFn(csc);
 	Object cos("cos","notCos(theta%(2*pi))","");
 	loadFn(cos);
-	Object notCos("notCos","1-theta^2/2+theta^4/24-theta^6/720+theta^8/40320-theta^10/3628800+theta^12/479001600-theta^14/fact(14)","");
+	Object notCos("notcos","1-theta^2/2+theta^4/24-theta^6/720+theta^8/40320-theta^10/3628800+theta^12/479001600-theta^14/fact(14)","");
 	loadFn(notCos);
 	Object sec("sec","1/cos(theta)","");
 	loadFn(sec);
@@ -164,6 +188,10 @@ void loadInitialFunctions()
 	loadFn(toDeg);
 	Object toRad("toRad","deg*pi/180","");
 	loadFn(toRad);
+
+	//Stats Functions
+	Object binProbDist("binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
+	loadFn(binProbDist);
 
 	//Constants Definition
 	Object pi("pi","3.14159265359","");
@@ -205,7 +233,7 @@ int main(int argc,char* argv[])
    * */
   {
 	  loadInitialFunctions();
-    setting<bool> set(
+	  setting<bool> set(
     		/*name*/
     			"Show Operations",
     		/*command line command*/
@@ -214,6 +242,16 @@ int main(int argc,char* argv[])
     			false);
 
     	boolsettings[set.getCommand()] = set;
+
+        set = setting<bool> (
+        		/*name*/
+        			"Print all expressions results",
+        		/*command line command*/
+        			"p",
+        		/*variable*/
+        			true);
+
+	    boolsettings[set.getCommand()] = set;
     	set = setting<bool>(
     		/*name*/
     			"Debug Mode",
@@ -232,7 +270,7 @@ int main(int argc,char* argv[])
     	boolsettings[set.getCommand()] = set;
     	set = setting<bool>(
     		/*name*/
-    			"Print current Date, and time taken to run calculation",
+    			"Print time taken to run calculation",
     		/*command line command*/
     			"t",
     		/*variable*/
@@ -242,6 +280,8 @@ int main(int argc,char* argv[])
     	  /*
     	   * End of initialization values in settings hashmap
     	   * */
+  //Variable to save user defined expressions to be run
+  std::string expr;
   //Beginning of section interpreting program parameters from command line
   if(argc > 1)
   {
@@ -255,10 +295,10 @@ int main(int argc,char* argv[])
     for(int i = 2;i<argc;i++)
     {
     	arg = argv[i];
-    	interpretParam(arg);
+    	interpretParam(arg,expr);
     }
 	 if(!isOperator(expr[0]) && !isNumeric(expr[0]) && expr[0] != '.' && !cmpstr(expr.substr(0,3),"let")){
-		  interpretParam(expr);
+		  interpretParam(expr,expr);
 	  }
   }
   //End of section interpreting program parameters from command line
@@ -274,9 +314,9 @@ int main(int argc,char* argv[])
 	  //if there is a . present in the string it will use doubles else long
 
 	  if(cmpstr(expr.substr(0,3),"let") || boolsettings.count(expr.substr(0,1)) != 0)
-		  interpretParam(expr);
+		  interpretParam(expr,expr);
 	  else
-		  calcWithOptions();
+		  calcWithOptions(expr);
 
 	  if(*boolsettings["l"])
 	  {
@@ -284,7 +324,7 @@ int main(int argc,char* argv[])
 		  std::cout<<std::endl<<">>";
 		  getline(std::cin, expr);
 		  if(!isOperator(expr[0]) && !isNumeric(expr[0]) && expr[0] != '.'){
-			  interpretParam(expr);
+			  interpretParam(expr,expr);
 		  }
 		  //While to interpret for multiple commands for a single expression
 		  //Exits when a valid expression is entered
@@ -292,7 +332,7 @@ int main(int argc,char* argv[])
 		  {
 
 			  if(!isOperator(expr[0]) && !isNumeric(expr[0]) && expr[0] != '.' && !cmpstr(expr.substr(0,3),"let")){
-				  interpretParam(expr);
+				  interpretParam(expr,expr);
 			  }
 			  std::cout<<std::endl<<">>";
 			  getline(std::cin, expr);
@@ -306,7 +346,7 @@ int main(int argc,char* argv[])
   }
   return 0;
 }
-void interpretParam(std::string &p)
+void interpretParam(std::string &p,std::string &expr)
 {
 	if(cmpstr(expr.substr(0,3),"let"))
 	{
@@ -329,18 +369,15 @@ void interpretParam(std::string &p)
 	{
 		SubStr exPart = getExpr(expr);
 		SubStr newVarPart = getNewVarName(expr);
-		std::vector<std::string> p;
-		expr = exPart.data;
 		//std::cout<<"Expr: "<<expr<<"  result: "<<std::to_string(calculateExpression<double>(exPart.data,p))<<std::endl;
-		Object var(newVarPart.data,std::to_string(calculateExpression<double>(exPart.data,p)),"");
-
+		Object var(newVarPart.data,std::to_string(calcWithOptions(exPart.data)),"");
 		//set var defined's value in hashmap
 		loadUserDefinedFn(var);
 		//std::cout<<"VarName: "<<memory[newVarPart.data].id<<" expression: "<<memory[newVarPart.data].expression<<std::endl;
 	}
-	else if(memory.count(getVarName(expr,0).data))
+	else if(memory.count(getVarName(expr,0).data) != 0)
 	{
-		calcWithOptions();
+		calcWithOptions(expr);
 	}
 	else
 	if(p.length() == 0) {}
@@ -359,8 +396,14 @@ void interpretParam(std::string &p)
 		{
 			printAllSDF();
 		}
+		else if(cmpstr(p.substr(5,3),"var"))
+		{
+			std::cout<<memory[getVarName(p,9).data].instructionsToString()<<std::endl;
+		}
 		else
-			std::cout<<memory[getVarName(p,6).data].instructionsToString()<<std::endl;
+		{
+			std::cout<<calcWithOptions(expr.substr(6,expr.length()))<<std::endl;
+		}
 	}
 	else if(cmpstr(p.substr(0,6),"delete"))
 	{
@@ -402,6 +445,7 @@ void interpretParam(std::string &p)
 		setting<bool> set = boolsettings[p];
 		//inverts setting value via operator overloads of = and *
 		bool data = !*set;
+		std::cout<<set.getName()<<" Status: "<<data<<std::endl<<std::endl;
 		setting<bool> newSetting(set.getName(),set.getCommand(),data);
 		boolsettings.erase(p);
 		boolsettings[p] = newSetting;
@@ -413,9 +457,8 @@ void interpretParam(std::string &p)
 			lastExp.top(last);
 			lastExp.pop();
 			undoneExp.push(last);
-			expr = last;
 			std::cout<<last<<std::endl;
-			calcWithOptions();
+			calcWithOptions(last);
 		}
 		else
 			std::cout<<"No previous statements"<<std::endl;
@@ -427,9 +470,8 @@ void interpretParam(std::string &p)
 			undoneExp.top(last);
 			undoneExp.pop();
 			lastExp.push(last);
-			expr = last;
 			std::cout<<last<<std::endl;
-			calcWithOptions();
+			calcWithOptions(last);
 		}
 		else
 			std::cout<<"No statements can be redone"<<std::endl;
@@ -442,6 +484,7 @@ void interpretParam(std::string &p)
 		std::cout<<" and calculate expression";
 		std::cout<<"\no to show operations in order of execution in console";
 		std::cout<<"\nd to show debug information in console\n";
+		std::cout<<"p to show results of all calculations in console\n";
 
 
 		std::cout<<"u to show execute previous statement in console or \"undo\"\n";
@@ -458,9 +501,10 @@ void interpretParam(std::string &p)
 		std::cout<<"\nbecause it replaces x with c^2, and c with the parameter supplied.\n";
 
 		std::cout<<"\nyou can print the expression a variable holds by typing\n";
-		std::cout<<"print [variableName] or printall to print everything in memory,\n";
+		std::cout<<"printvar [variableName] or printall to print everything in memory,\n";
 		std::cout<<"printsdf prints only system defined functions\n";
 		std::cout<<"printudf prints only user defined functions\n";
+		std::cout<<"print [your_expression] will print the result of computing the expression\n";
 		std::cout<<"\nYou can also delete a variable by typing delete [variableName]\n";
 		std::cout<<"Or delete all saved variables by typing deleteall\n";
 
@@ -489,7 +533,7 @@ bool cmpstr(const std::string &s1,const std::string &s2)
 	}
 	return isEqual;
 }
-double calcWithOptions()
+double calcWithOptions(std::string expr)
 {
 	bool timeInstruction = *boolsettings["t"];
 
@@ -514,7 +558,10 @@ double calcWithOptions()
 		std::cout << "finished computation at " << std::ctime(&end_time)
 		          << "elapsed time: " << elapsed_seconds.count() << "s\n";
 		}
-	std::cout<<"Final Answer: "<<result<<std::endl;
+	if(*boolsettings["p"])
+	{
+		std::cout<<"Final Answer: "<<result<<std::endl;
+	}
 	return result;
 
 }
@@ -1036,7 +1083,7 @@ int getPriority(char ator)
   {
     priority = 90;
   }
-  else if (ator == '*' || ator == '/' || ator == '%' || ator == '$' || ator == 'P')
+  else if (ator == '*' || ator == '/' || ator == '%' || ator == '$' || ator == 'P' || ator == 'C')
   {
     priority = 80;
   }
@@ -1081,8 +1128,16 @@ t calc(char op,t and1,t and2)
         else if(op == '^')
         {
           result = 1;
+          bool negExponent = and2<0;
+          if(negExponent)
+        	  and2 *= -1;
           for(int i = 0;i < and2;i++)
-          result *= and1;
+        	  result *= and1;
+
+          if(negExponent)
+          {
+        	  result = 1/result;
+          }
         }
         else if(op == 'P')
         {
@@ -1092,6 +1147,20 @@ t calc(char op,t and1,t and2)
         	{
         		result *= and1 - i;
         	}
+        }
+        else if(op == 'C')
+        {
+        	result = 1;
+        	for(int i = 0;i<and2 && and1 - i > 1;i++)
+        	{
+        		result *= and1 - i;
+        	}
+        	int and2Fact = 1;
+        	for(int i = 2;i <= and2;i++)
+        	{
+        		and2Fact *= i;
+        	}
+        	result /= and2Fact;
         }
         else if(op == '@')
         {
@@ -1122,7 +1191,7 @@ bool isNonParentheticalOperator(char s)
 {
     return s == '=' || s == '>' || s == '<' || s == '$' ||
     		s == 'P' || s == '@' || s == '+' || s == '-' ||
-			s == '*' || s == '/' || s == '^' || s == '%';
+			s == '*' || s == '/' || s == '^' || s == '%' || s =='C';
 }
 bool isNumeric(char c)
 {
