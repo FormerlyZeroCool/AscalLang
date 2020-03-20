@@ -707,9 +707,6 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	for(int i = 0;i <= exp.length();i++)
 	{
 	 currentChar = exp[i];
-	 if(debug){
-	    std::cout<<currentChar;
-	 }
 	 initialOperators.top(peeker);
 
 
@@ -726,11 +723,16 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 			 int startOfEnd = data.params.size()==0?varName.end+1:varName.end+endOfParams;
 			 endOfExp = exp.substr(startOfEnd,exp.length());
 
+
+			 if(debug)
+			 {
+				 std::cout<<"In expression: "<<exp<<" ";
+			 }
 			 //Filling params of called functions with params from calling function where there are undefined vars
 			 for(int i =0; i<data.params.size();i++)
 			 {
 
-				 if(*boolsettings["d"])
+				 if(debug)
 				 {
 					 std::cout<<"Resolving Parameter: "<<data.params[i]<<std::endl;
 				 }
@@ -745,15 +747,15 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 			 if(expressions.size() == 1)
 				 j = -1;
 
-			 if(*boolsettings["d"])
+			 if(debug)
 			 {
-				 std::cout<<"In expression: "<<exp<<" Resolving: "<<expressions[j+1]<<std::endl;
+				 std::cout<<"In expression: "<<exp<<" Resolving: "<<varName.data<<" to: "<<expressions[j+1]<<std::endl;
 			 }
 			 double varValue = calculateExpression<double>(expressions[j+1],data.params);
 			 std::string value = std::to_string(varValue);
 			 //std::cout<<"Current Index: "<<i<<" exp len: "<<exp.length()<<" endOfPArams: "<<varName.end<<std::endl;
 			 exp = exp.substr(0,varName.start) + value + endOfExp;
-			 if(*boolsettings["d"])
+			 if(debug)
 			 {
 			 	 std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
 			 	 std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
@@ -783,7 +785,7 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 				 exp = exp.substr(0,varName.start) + value + endOfExp;
 				 i = varName.start;
 
-				 if(*boolsettings["d"])
+				 if(debug)
 				 {
 				 	 std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
 				 	 std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
@@ -806,6 +808,12 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 				 double varValue = calculateExpression<double>(expressions[j+1],localVar.params);
 				 std::string value = std::to_string(varValue);
 				 endOfExp = exp.substr(varName.end+1,exp.length());
+
+				 if(debug)
+				 {
+				 	 std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
+				 	 std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
+			 	 }
 				 exp = exp.substr(0,varName.start)+value+endOfExp;
 				 //exp = replace(exp,varName.data,params[paramUse-1]);
 				 //std::cout<<"First: "<<exp.substr(0,varName.start)<<" Second: "<<params[paramUse-1]<<" Third: "<<endOfExp;
@@ -827,12 +835,14 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 				 std::string name = varName.data;
 				 int originalStart = varName.start;
 				 do{
-					 //std::cout<<"VarName:"<<varName.data<<" original name:"<<name<<std::endl;
-					 //std::cout<<"Exp Len: "<<exp.length()<<" endOf exp: "<<varName.end+1<<" Var Start: "<<varName.start<<std::endl;
-					 //std::cout<<"start:"<<(varName.end+1<exp.length()?varName.end+1:exp.length())<<" substrLen: "<<exp.length() - (varName.end+1<exp.length()?varName.end+1:0);
+					 if(debug)
+					 {
+						 std::cout<<"VarName:"<<varName.data<<" original name:"<<name<<std::endl;
+						 std::cout<<"start:"<<(varName.end+1<exp.length()?varName.end+1:exp.length())<<" substrLen: "<<exp.length() - (varName.end+1<exp.length()?varName.end+1:0);
+
+					 }
 					 endOfExp = exp.substr(varName.end+1<exp.length()?varName.end+1:exp.length()-1,
 							 exp.length() - (varName.end+1<exp.length()?varName.end+1:exp.length()));
-					 //std::cout<<"EndStr:"<<endOfExp<<std::endl;
 					 exp = exp.substr(0,varName.start<exp.length()?varName.start:exp.length()-1)+input+endOfExp;
 					 varName = getVarName(exp,exp.find(name));
 				 } while(cmpstr(name,varName.data));
