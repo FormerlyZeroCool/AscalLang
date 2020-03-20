@@ -700,7 +700,7 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	  std::cout<<"Calculating expression: "<<exp<<std::endl;
 	  }
 	if(debug){
-	  std::cout<<"Intial Processing: "<<std::endl;
+	  std::cout<<"Intial Processing: "<<exp<<std::endl;
 	}
 	//This loop handles parsing the numbers, and adding the data from the expression
 	//to the stacks
@@ -722,13 +722,18 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 
 		 if(data.id.length() != 0)
 		 {
-			 int endOfParams = data.setParams(exp.substr(varName.end+1));
+			 int endOfParams = data.setParams(exp[varName.end+1] == '('?exp.substr(varName.end+1):"");
 			 int startOfEnd = data.params.size()==0?varName.end+1:varName.end+endOfParams;
 			 endOfExp = exp.substr(startOfEnd,exp.length());
 
 			 //Filling params of called functions with params from calling function where there are undefined vars
 			 for(int i =0; i<data.params.size();i++)
 			 {
+
+				 if(*boolsettings["d"])
+				 {
+					 std::cout<<"Resolving Parameter: "<<data.params[i]<<std::endl;
+				 }
 				 data.params[i] = std::to_string(calculateExpression<double>(data.params[i],params));
 			 }
 			 std::vector<std::string> expressions = data.getInstructions();
@@ -739,12 +744,20 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 			 }
 			 if(expressions.size() == 1)
 				 j = -1;
+
+			 if(*boolsettings["d"])
+			 {
+				 std::cout<<"In expression: "<<exp<<" Resolving: "<<expressions[j+1]<<std::endl;
+			 }
 			 double varValue = calculateExpression<double>(expressions[j+1],data.params);
 			 std::string value = std::to_string(varValue);
 			 //std::cout<<"Current Index: "<<i<<" exp len: "<<exp.length()<<" endOfPArams: "<<varName.end<<std::endl;
 			 exp = exp.substr(0,varName.start) + value + endOfExp;
-			 //std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
-			 //std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
+			 if(*boolsettings["d"])
+			 {
+			 	 std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
+			 	 std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
+		 	 }
 			 i = varName.start;
 			 currentChar = exp[i];
 			 //std::cout<<exp.substr(i)<<std::endl;
@@ -769,8 +782,12 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 				 endOfExp = exp.substr(varName.end+1,exp.length());
 				 exp = exp.substr(0,varName.start) + value + endOfExp;
 				 i = varName.start;
-				 //std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
-				 //std::cout<<std::endl;
+
+				 if(*boolsettings["d"])
+				 {
+				 	 std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
+				 	 std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
+			 	 }
 				 currentChar = exp[i];
 			 }
 			 else if(paramUse < params.size())
@@ -829,7 +846,7 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	    if (currentChar==')')
 	    {
 	      if(debug){
-	        std::cout<<std::endl<<"Parentheses Process:"<<std::endl;
+	        std::cout<<std::endl<<"Parentheses Process: "<<exp<<std::endl;
 	      }
 	      initialOperators.top(peeker);
 	      linkedStack<t> inParenthesesOperands;
@@ -861,7 +878,7 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	      }
 
 	if(debug){
-	  std::cout<<"Back to initial processing:"<<and2<<std::endl;
+	  std::cout<<"Back to initial processing: "<<exp<<and2<<std::endl;
 	}
 	    }
 	    //Section to parse numeric values from expression as a string to be inserted into
@@ -919,7 +936,7 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	}
 
 	if(debug){
-	  std::cout<<"\nFinal Process:"<<std::endl;
+	  std::cout<<"\nFinal Process: "<<exp<<std::endl;
 	}
 	//process values in stacks, and return final solution
 	return processStack(finalOperands,finalOperators);
