@@ -130,14 +130,20 @@ bool containsOperator(std::string s)
 	}
 	return contains;
 }
-bool loadFn(Object function)
+void loadFn(Object function)
 {
+		memory[function.id] = function;
+		systemDefinedFunctions.push_back(function);
+
+}
+void loadUserDefinedFn(Object function)
+{
+
 
 	if(!containsOperator(function.id))
 	{
 		memory[function.id] = function;
-		systemDefinedFunctions.push_back(function);
-		return true;
+		userDefinedFunctions.push_back(function);
 	}
 	else
 	{
@@ -145,13 +151,8 @@ bool loadFn(Object function)
 		std::cout<<"Operators: "<< '=' <<','<< '>' << ',' << '<' <<','<< '$' <<','<<
 	    		'P' <<','<< '@' <<','<< '+' <<','<< '-' <<','<<
 				'*'<<','<< '/' <<','<< '^' <<','<< '%' <<','<< 'C';
-		return false;
 	}
-}
-void loadUserDefinedFn(Object function)
-{
-	if(loadFn(function))
-		printLoadedMemMessage(function);
+	printLoadedMemMessage(function);
 }
 void loadInitialFunctions()
 {
@@ -360,20 +361,36 @@ void interpretParam(std::string &p,std::string &expr)
 
 			SubStr exPart = getExpr(expr);
 			SubStr newVarPart = getNewVarName(expr);
+
 			Object var(newVarPart.data,exPart.data,expr.substr(newVarPart.end + 1,exPart.start - 1 ));
+
+			std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
+			if(position != userDefinedFunctions.end())
+				userDefinedFunctions.erase(position);
+
+			position = std::find(systemDefinedFunctions.begin(), systemDefinedFunctions.end(), memory[var.id]);
+			if(position != systemDefinedFunctions.end())
+				systemDefinedFunctions.erase(position);
 			//set var defined's value in hashmap
 			loadUserDefinedFn(var);
-			//std::cout<<"VarName: "<<memory[newVarPart.data].id<<" expression: "<<memory[newVarPart.data].expression<<std::endl;
 	}
 	else if(cmpstr(expr.substr(0,5),"const"))
 	{
+
 		SubStr exPart = getExpr(expr);
 		SubStr newVarPart = getNewVarName(expr);
-		//std::cout<<"Expr: "<<expr<<"  result: "<<std::to_string(calculateExpression<double>(exPart.data,p))<<std::endl;
+
 		Object var(newVarPart.data,std::to_string(calcWithOptions(exPart.data)),"");
+
+		std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
+								if(position != userDefinedFunctions.end())
+									userDefinedFunctions.erase(position);
+
+								position = std::find(systemDefinedFunctions.begin(), systemDefinedFunctions.end(), memory[var.id]);
+								if(position != systemDefinedFunctions.end())
+									systemDefinedFunctions.erase(position);
 		//set var defined's value in hashmap
 		loadUserDefinedFn(var);
-		//std::cout<<"VarName: "<<memory[newVarPart.data].id<<" expression: "<<memory[newVarPart.data].expression<<std::endl;
 	}
 	else if(memory.count(getVarName(expr,0).data) != 0)
 	{
