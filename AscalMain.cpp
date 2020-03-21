@@ -157,13 +157,17 @@ void loadUserDefinedFn(Object function)
 void loadInitialFunctions()
 {
 	//Trig Functions
+	Object sinD("sinD","sin(toRad(theta))","");
+	loadFn(sinD);
 	Object sin("sin","notSin(theta%(2*pi))","");
 	loadFn(sin);
 	Object notSin("notSin","theta-theta^3/6+theta^5/120-theta^7/5040+theta^9/362800-theta^11/39916800+theta^13/6227020800-theta^15/fact(15)","");
 	loadFn(notSin);
 	Object csc("csc","1/sin(theta)","");
 	loadFn(csc);
-	Object cos("cos","notCos(theta%(2*pi))","");
+	Object cosD("cosD","cos(toRad(theta))","");
+	loadFn(cosD);
+	Object cos("cos","notcos(theta%(2*pi))","");
 	loadFn(cos);
 	Object notCos("notcos","1-theta^2/2+theta^4/24-theta^6/720+theta^8/40320-theta^10/3628800+theta^12/479001600-theta^14/fact(14)","");
 	loadFn(notCos);
@@ -193,6 +197,12 @@ void loadInitialFunctions()
 	//Stats Functions
 	Object binProbDist("binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
 	loadFn(binProbDist);
+
+	//Dietician Functions
+	Object eKCal("ekcal","((mw=1)*5+(mw=0)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
+	loadFn(eKCal);
+	//Object desWeight("desw","(percent/100)*(usual-desired)+desired","");
+	//loadFn(desWeight);
 
 	//Constants Definition
 	Object pi("pi","3.14159265359","");
@@ -1165,6 +1175,15 @@ t calc(char op,t and1,t and2)
       	{
       		int quotient = and1/and2;
       		result = and1 - and2*quotient;
+
+      		if(and1*and2 < 0 && result >0)
+      		{
+      			result *= -1;
+      		}
+      		else if(and1*and2 > 0 && result <0)
+      		{
+      			result *= -1;
+      		}
       	}
       	else
       		result = -400;
