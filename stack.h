@@ -1,5 +1,6 @@
 
 #include <iostream>
+#include <vector>
 template <typename t>
 struct singlelinknode
 {
@@ -111,3 +112,47 @@ template <typename t>
   {
     return len;
   }
+
+template <typename t>
+class stack : public std::vector<t>{
+
+public:
+	stack(){ this->reserve(128);}
+	void push(t data);
+	void pop();
+	void top(t&data);
+	bool isEmpty();
+	int length();
+};
+
+template <typename t>
+void stack<t>::push(t data)
+{
+	this->push_back(data);
+}
+template <typename t>
+void stack<t>::pop()
+{
+	if(this->size() > 0)
+	{
+		this->pop_back();
+	}
+}
+template <typename t>
+bool stack<t>::isEmpty()
+{
+	return this->size() == 0;
+}
+template <typename t>
+int stack<t>::length()
+{
+	return this->size();
+}
+template <typename t>
+void stack<t>::top(t&data)
+{
+	if(this->size() > 0)
+	{
+		data = (*this)[this->size()-1];
+	}
+}

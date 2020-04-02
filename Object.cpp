@@ -38,7 +38,7 @@ bool cmpVector(const std::vector<std::string>& a,const std::vector<std::string>&
 		equal = false;
 	else
 	{
-		for(int i = 0; i < a.size();i++)
+		for(int i = 0; i < a.size() && equal;i++)
 		{
 			if(a[i].compare(b[i]) != 0)
 				equal = false;
@@ -51,8 +51,8 @@ bool Object::operator==(Object o)
 	bool equal = true;
 	if(id.compare(o.id) != 0)
 		equal = false;
-	if(equal && cmpVector(instructions,o.instructions))
-		equal = false;
+	//if(equal && cmpVector(instructions,o.instructions))
+	//	equal = false;
 	return equal;
 }
 

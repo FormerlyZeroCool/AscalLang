@@ -18,6 +18,21 @@
 #include "setting.h"
 #include "Object.h"
 
+//////////////////////////////////////////////////////////
+//Ascal System Defined  Keyword functionality
+//////////////////////////////////////////////////////////
+double printCommand(const std::string &expr,bool saveLast);
+void printVar(const std::string &expr,bool saveLast);
+double printCalculation(const std::string &expr,bool saveLast);
+double constNewVar(const std::string &expr,bool saveLast);
+double letNewVar(const std::string &expr,bool saveLast);
+void printHelpMessage(const std::string &expr);
+double deleteObject(const std::string& expr,bool saveLast);
+double undoAction(const std::string & expr, bool s);
+double redoAction(const std::string & expr, bool s);
+//////////////////////////////////////////////////////////
+//End Ascal System Defined  Keyword functionality
+//////////////////////////////////////////////////////////
 
 /////////////////////////////
 //char/string interpreters
@@ -36,19 +51,23 @@ struct SubStr{
 	int start,end;
 	SubStr(std::string data,int start,int end):data(data),start(start),end(end){}
 };
-SubStr getVarName(std::string s,int index);
+SubStr getVarName(const std::string &s,int index);
 int getClosingIndex(char opening,const std::string &data);
 SubStr getExpr(const std::string &data);
 SubStr getNewVarName(const std::string &data);
 /////////////////////////////
 //Logic
 /////////////////////////////
+//Operations mapper
 template <class t>
-t calculateExpression(std::string exp,std::vector<std::string>);
+void initOperations();
+//regular logic
+template <class t>
+t calculateExpression(std::string exp,std::vector<std::string>,std::unordered_map<std::string,Object> &localMemory);
 template <class t>
 t calc(char op,t and1,t and2);
 template <class t>
-t processStack(linkedStack<t> &operands,linkedStack<char> &operators);
+t processStack(stack<t> &operands,stack<char> &operators);
 template <class t>
 t pow(t a,t b)
 {
@@ -88,12 +107,12 @@ t root(t b,t p)
 /////////////////////////////
 template <class t>
 t getNextInt(std::string data,int &index);
-double getNextDouble(std::string data,int &index);
+double getNextDouble(const std::string &data,int &index);
 /////////////////////////////
 //UI
 /////////////////////////////
-void interpretParam(std::string &p,std::string &expr);
-double calcWithOptions(std::string);
+double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &localMemory,bool);
+double calcWithOptions(std::string,std::unordered_map<std::string,Object> &localMemory,std::vector<std::string> &params);
 /////////////////////////////
 /////////////////////////////
 
@@ -105,13 +124,19 @@ std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
 //Interpreter Settings HashMap for toggle flags, like show time, or operations
 std::unordered_map<std::string,setting<bool> > boolsettings;
+//Interpreter hash map for system keywords
+//template <class t>
+std::unordered_map<std::string,double (*)(const std::string&,bool)> inputMapper;
+
+template <class t>
+std::unordered_map<char,t (*)(t&,t&)> operations;
 /////////////////////////////
 //End Program Global Memory Declaration
 /////////////////////////////
 //list of previous expressions for u command in interpretParam fn
-linkedStack<std::string> lastExp;
+stack<std::string> lastExp;
 //list of previous undone expressions for r command in interpretParam fn
-linkedStack<std::string> undoneExp;
+stack<std::string> undoneExp;
 
 void printLoadedMemMessage(Object function)
 {
@@ -152,10 +177,21 @@ void loadUserDefinedFn(Object function)
 	    		'P' <<','<< '@' <<','<< '+' <<','<< '-' <<','<<
 				'*'<<','<< '/' <<','<< '^' <<','<< '%' <<','<< 'C';
 	}
-	printLoadedMemMessage(function);
+	if(*boolsettings["p"])
+		printLoadedMemMessage(function);
 }
 void loadInitialFunctions()
 {
+	//Unary boolean Operations
+	Object not1("not","value=0","");
+	loadFn(not1);
+	Object isTrue("true","not(value=0)","");
+	loadFn(isTrue);
+
+	//Calculus Functions
+	Object fPrime("fprime","x*0+(f(x+0.000001)-f(x))/0.000001","");
+	loadFn(fPrime);
+
 	//Trig Functions
 	Object sinD("sinD","sin(toRad(theta))","");
 	loadFn(sinD);
@@ -199,7 +235,7 @@ void loadInitialFunctions()
 	loadFn(binProbDist);
 
 	//Dietician Functions
-	Object eKCal("ekcal","((mw=1)*5+(mw=0)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
+	Object eKCal("ekcal","(0*male*kg*cm*age*activity+ true(male)*5+not(male)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
 	loadFn(eKCal);
 	//Object desWeight("desw","(percent/100)*(usual-desired)+desired","");
 	//loadFn(desWeight);
@@ -237,12 +273,27 @@ void printAllSDF()
 	}
 	std::cout<<std::endl<<"End of System Defined Functions."<<std::endl;
 }
+
+void initParamMapper()
+{
+
+	inputMapper["print"] = printCommand;
+	inputMapper["const"] = constNewVar;
+	inputMapper["let"] = letNewVar;
+	inputMapper["delete"] = deleteObject;
+	inputMapper["u"] = undoAction;
+	inputMapper["r"] = redoAction;
+	inputMapper["-u"] = undoAction;
+	inputMapper["-r"] = redoAction;
+}
 int main(int argc,char* argv[])
 {
   /*
    * Initializing values in settings hashmap
    * */
   {
+	  initOperations<double>();
+	  initParamMapper();
 	  loadInitialFunctions();
 	  setting<bool> set(
     		/*name*/
@@ -303,14 +354,12 @@ int main(int argc,char* argv[])
     std::string arg = "";
 
 
-    for(int i = 2;i<argc;i++)
+    for(int i = 1;i<argc;i++)
     {
+    	std::unordered_map<std::string,Object> localMemory;
     	arg = argv[i];
-    	interpretParam(arg,expr);
+    	interpretParam(arg,localMemory,true);
     }
-	 if(!isOperator(expr[0]) && !isNumeric(expr[0]) && expr[0] != '.' && !cmpstr(expr.substr(0,3),"let")){
-		  interpretParam(expr,expr);
-	  }
   }
   //End of section interpreting program parameters from command line
   //beginning of main program loop, if only one parameter is given in the
@@ -318,37 +367,20 @@ int main(int argc,char* argv[])
   //by default the loop runs
   do
   {
-	  //push expression to stack of previous entries for u command
-	  lastExp.push(expr);
 	  //runs the calculation using the global variable expr
 	  //this function also infers the datatype of the expression based on
 	  //if there is a . present in the string it will use doubles else long
 
-	  if(cmpstr(expr.substr(0,3),"let") || boolsettings.count(expr.substr(0,1)) != 0)
-		  interpretParam(expr,expr);
-	  else
-		  calcWithOptions(expr);
 
 	  if(*boolsettings["l"])
 	  {
 		  //Interpreter prompt to let user know program is expecting a command/expression
 		  std::cout<<std::endl<<">>";
 		  getline(std::cin, expr);
-		  if(!isOperator(expr[0]) && !isNumeric(expr[0]) && expr[0] != '.'){
-			  interpretParam(expr,expr);
-		  }
-		  //While to interpret for multiple commands for a single expression
-		  //Exits when a valid expression is entered
-		  while(*boolsettings["l"] && !isOperator(expr[0]) && !isNumeric(expr[0]) && expr[0] != '.' && !cmpstr(expr.substr(0,3),"let"))
-		  {
 
-			  if(!isOperator(expr[0]) && !isNumeric(expr[0]) && expr[0] != '.' && !cmpstr(expr.substr(0,3),"let")){
-				  interpretParam(expr,expr);
-			  }
-			  std::cout<<std::endl<<">>";
-			  getline(std::cin, expr);
+	    	std::unordered_map<std::string,Object> localMemory;
+		  interpretParam(expr,localMemory,true);
 
-		  }
 	  }
   } while(*boolsettings["l"]);
   if(undoneExp.length() > 1 || lastExp.length()>1)
@@ -357,188 +389,266 @@ int main(int argc,char* argv[])
   }
   return 0;
 }
-void interpretParam(std::string &p,std::string &expr)
+double redoAction(const std::string & expr, bool s)
 {
-	if(cmpstr(expr.substr(0,3),"let"))
+	double value = 0;
+	if(!undoneExp.isEmpty()){
+		std::string last = "";
+		undoneExp.top(last);
+		undoneExp.pop();
+		lastExp.push(last);
+		std::cout<<last<<std::endl;
+    	std::unordered_map<std::string,Object> localMemory;
+		value = interpretParam(last,localMemory,false);
+		*boolsettings["p"] = false;
+	}
+	else
+		std::cout<<"No statements can be redone"<<std::endl;
+	return value;
+}
+double undoAction(const std::string & expr, bool s)
+{
+	double value = 0;
+	if(!lastExp.isEmpty()){
+		std::string last = "";
+		lastExp.top(last);
+		lastExp.pop();
+		undoneExp.push(last);
+		std::cout<<last<<std::endl;
+    	std::unordered_map<std::string,Object> localMemory;
+		value = interpretParam(last,localMemory,false);
+		*boolsettings["p"] = false;
+	}
+	else
+		std::cout<<"No previous statements"<<std::endl;
+	return value;
+}
+double deleteObject(const std::string& expr,bool saveLast)
+{
+
+	if(cmpstr(expr.substr(6,3),"all"))
 	{
-			//find index of first char that is alpha find index of last alpha before space or =
+		memory.clear();
+		userDefinedFunctions.clear();
+		systemDefinedFunctions.clear();
+		std::cout<<"All Memory cleared."<<std::endl;
+	}
+	else
+	{
+		std::string name = getVarName(expr,7).data;
 
-			//ignore everything till the =
+		if(memory.count(name) > 0)
+		{
 
-			//use expr.substr(firstIndex,LastIndex) as var name and id and key in hash map use everything after = as expression
-
-			//set expr = expression part (everything after = ignoring spaces) of object and run calculation
-
-			SubStr exPart = getExpr(expr);
-			SubStr newVarPart = getNewVarName(expr);
-
-			Object var(newVarPart.data,exPart.data,expr.substr(newVarPart.end + 1,exPart.start - 1 ));
-
-			std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
+			std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[name]);
 			if(position != userDefinedFunctions.end())
 				userDefinedFunctions.erase(position);
 
-			position = std::find(systemDefinedFunctions.begin(), systemDefinedFunctions.end(), memory[var.id]);
+			position = std::find(systemDefinedFunctions.begin(), systemDefinedFunctions.end(), memory[name]);
 			if(position != systemDefinedFunctions.end())
 				systemDefinedFunctions.erase(position);
-			//set var defined's value in hashmap
-			loadUserDefinedFn(var);
-	}
-	else if(cmpstr(expr.substr(0,5),"const"))
-	{
 
-		SubStr exPart = getExpr(expr);
-		SubStr newVarPart = getNewVarName(expr);
 
-		Object var(newVarPart.data,std::to_string(calcWithOptions(exPart.data)),"");
-
-		std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
-								if(position != userDefinedFunctions.end())
-									userDefinedFunctions.erase(position);
-
-								position = std::find(systemDefinedFunctions.begin(), systemDefinedFunctions.end(), memory[var.id]);
-								if(position != systemDefinedFunctions.end())
-									systemDefinedFunctions.erase(position);
-		//set var defined's value in hashmap
-		loadUserDefinedFn(var);
-	}
-	else if(memory.count(getVarName(expr,0).data) != 0)
-	{
-		calcWithOptions(expr);
-	}
-	else
-	if(p.length() == 0) {}
-	else if(cmpstr(p.substr(0,5),"print"))
-	{
-		std::cout<<std::endl;
-		if(cmpstr(p.substr(5,3),"all"))
-		{
-			printAllFunctions();
-		}
-		else if(cmpstr(p.substr(5,3),"udf"))
-		{
-			printAllUDF();
-		}
-		else if(cmpstr(p.substr(5,3),"sdf"))
-		{
-			printAllSDF();
-		}
-		else if(cmpstr(p.substr(5,3),"var"))
-		{
-			std::cout<<memory[getVarName(p,9).data].instructionsToString()<<std::endl;
+			memory.erase(name);
+			std::cout<<"Erased "<<name<<" from memory."<<std::endl;
 		}
 		else
 		{
-			std::cout<<calcWithOptions(expr.substr(6,expr.length()))<<std::endl;
+			std::cout<<"	Error could not find "<<name<<" in memory to delete."<<std::endl;
 		}
 	}
-	else if(cmpstr(p.substr(0,6),"delete"))
-	{
-		if(cmpstr(p.substr(6,3),"all"))
-		{
-			memory.clear();
-			userDefinedFunctions.clear();
-			systemDefinedFunctions.clear();
-			std::cout<<"All Memory cleared."<<std::endl;
-		}
-		else
-		{
-			std::string name = getVarName(p,7).data;
+	loadInitialFunctions();
+	return 0;
+}
+void printHelpMessage(const std::string &expr)
+{
 
-			if(memory.count(name) > 0)
+	std::cout<<"Error Invalid Parameter \""<<expr<<"\""<<std::endl;
+	std::cout<<"Enter a mathematical expression, or you can also use \nparameters to choose between the following options or see below \"redo\" for how to handle variables/functions."<<
+			"\nvalid params are:\nt to show time taken to interpret,";
+	std::cout<<" and calculate expression";
+	std::cout<<"\no to show operations in order of execution in console";
+	std::cout<<"\nd to show debug information in console\n";
+	std::cout<<"p to show results of all calculations in console\n";
+
+
+	std::cout<<"u to show execute previous statement in console or \"undo\"\n";
+	std::cout<<"r to show \"redo\"\n";
+	std::cout<<"\nHow to use variables/functions:";
+	std::cout<<"\nlet [variableName] = [expression] to save an expression with the given variable name.\n";
+	std::cout<<"const [variableName] = [expression] will save the result of the expression with the given variable name.";
+	std::cout<<"\n\nto use a saved expression simply type the variable name, then in parenthesis supply any parameters\n";
+
+	std::cout<<"\nExample:";
+	std::cout<<"\nlet x = c^2";
+	std::cout<<"\nx(4)";
+	std::cout<<"\nand the program will print the result of 4^2";
+	std::cout<<"\nbecause it replaces x with c^2, and c with the parameter supplied.\n";
+
+	std::cout<<"\nyou can print the expression a variable holds by typing\n";
+	std::cout<<"printvar [variableName] or printall to print everything in memory,\n";
+	std::cout<<"printsdf prints only system defined functions\n";
+	std::cout<<"printudf prints only user defined functions\n";
+	std::cout<<"print [your_expression] will print the result of computing the expression\n";
+	std::cout<<"\nYou can also delete a variable by typing delete [variableName]\n";
+	std::cout<<"Or delete all saved variables by typing deleteall\n";
+
+	std::cout<<"\nYou can print all variables, and their expressions by typing printall\n";
+}
+double letNewVar(const std::string &expr,bool saveLast)
+{
+	//find index of first char that is alpha find index of last alpha before space or =
+
+				//ignore everything till the =
+
+				//use expr.substr(firstIndex,LastIndex) as var name and id and key in hash map use everything after = as expression
+
+				//set expr = expression part (everything after = ignoring spaces) of object and run calculation
+
+				SubStr exPart = getExpr(expr);
+				SubStr newVarPart = getNewVarName(expr);
+				Object var(newVarPart.data,exPart.data,expr.substr(newVarPart.end + 1,exPart.start - 1 ));
+
+				if(memory.count(var.id) != 0)
+				{
+					std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
+					if(position != userDefinedFunctions.end())
+						userDefinedFunctions.erase(position);
+				}
+				//set var defined's value in hashmap
+				loadUserDefinedFn(var);
+				if(saveLast)
+					lastExp.push(expr);
+				return 0;
+}
+double constNewVar(const std::string &expr,bool saveLast)
+{
+
+	SubStr exPart = getExpr(expr);
+	SubStr newVarPart = getNewVarName(expr);
+	std::unordered_map<std::string,Object> localMemory;
+	std::vector<std::string> params;
+	bool print = *boolsettings["p"];
+	double value = calcWithOptions(exPart.data,localMemory,params);
+	*boolsettings["p"] = print;
+	Object var(newVarPart.data,std::to_string(value),"");
+
+
+	std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
+							if(position != userDefinedFunctions.end())
+								userDefinedFunctions.erase(position);
+
+							//position = std::find(systemDefinedFunctions.begin(), systemDefinedFunctions.end(), memory[var.id]);
+							//if(position != systemDefinedFunctions.end())
+							//	systemDefinedFunctions.erase(position);
+	//set var defined's value in hash map
+	loadUserDefinedFn(var);
+	if(saveLast)
+		lastExp.push(expr);
+	return value;
+}
+double printCalculation(const std::string &expr,bool saveLast)
+{
+	std::string subexpr = expr.substr(6,expr.length());
+	bool print = *boolsettings["p"];
+	*boolsettings["p"] = true;
+	std::unordered_map<std::string,Object> localMemory;
+	double value = interpretParam(subexpr,localMemory,false);
+	*boolsettings["p"] = print;
+	return value;
+}
+void printVar(const std::string &expr,bool saveLast)
+{
+	std::cout<<memory[getVarName(expr,10).data].instructionsToString()<<std::endl;
+}
+double printCommand(const std::string &expr,bool saveLast)
+{
+	std::cout<<std::endl;
+	double value  = 0;
+			if(cmpstr(expr.substr(6,3),"all"))
 			{
-
-				std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[name]);
-				if(position != userDefinedFunctions.end())
-					userDefinedFunctions.erase(position);
-
-				position = std::find(systemDefinedFunctions.begin(), systemDefinedFunctions.end(), memory[name]);
-				if(position != systemDefinedFunctions.end())
-					systemDefinedFunctions.erase(position);
-
-
-				memory.erase(name);
-				std::cout<<"Erased "<<name<<" from memory."<<std::endl;
+				printAllFunctions();
+			}
+			else if(cmpstr(expr.substr(6,3),"udf"))
+			{
+				printAllUDF();
+			}
+			else if(cmpstr(expr.substr(6,3),"sdf"))
+			{
+				printAllSDF();
+			}
+			else if(cmpstr(expr.substr(6,3),"var"))
+			{
+				printVar(expr,saveLast);
 			}
 			else
 			{
-				std::cout<<"	Error could not find "<<name<<" in memory to delete."<<std::endl;
+				bool print = *boolsettings["p"];
+				value = printCalculation(expr,saveLast);
+				*boolsettings["p"] = print;
 			}
-		}
-		loadInitialFunctions();
-	}
-	else if(boolsettings.count(p) > 0)
+			if(saveLast)
+				lastExp.push(expr);
+			return value;
+}
+double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &localMemory,bool saveLast)
+{
+	double value = 0;
+	std::string firstWord = getVarName(expr,0).data;
+	if(expr.length() == 0) {}
+	else if(cmpstr(firstWord,"loc") || inputMapper.count(firstWord) != 0 || memory.count(firstWord) != 0 || (expr[0] >= 48 && expr[0] < 58) || expr[0] == '-')
 	{
-		setting<bool> set = boolsettings[p];
+		std::vector<std::string> params;
+		bool print = *boolsettings["p"];
+		value = calcWithOptions(expr,localMemory,params);
+		*boolsettings["p"] = print;
+		if(saveLast)
+			lastExp.push(expr);
+	}
+	/*else if(inputMapper.count(firstWord) != 0)
+	{
+		value = inputMapper[firstWord](expr,saveLast);
+	}*/
+	else if(boolsettings.count(expr) > 0)
+	{
+		setting<bool> set = boolsettings[expr];
 		//inverts setting value via operator overloads of = and *
 		bool data = !*set;
 		std::cout<<set.getName()<<" Status: "<<data<<std::endl<<std::endl;
 		setting<bool> newSetting(set.getName(),set.getCommand(),data);
-		boolsettings.erase(p);
-		boolsettings[p] = newSetting;
-	}
-	else if (cmpstr(p,"u") || cmpstr(p,"-u"))//undo
-	{
-		if(!lastExp.isEmpty()){
-			std::string last = "";
-			lastExp.top(last);
-			lastExp.pop();
-			undoneExp.push(last);
-			std::cout<<last<<std::endl;
-			calcWithOptions(last);
-		}
-		else
-			std::cout<<"No previous statements"<<std::endl;
-	}
-	else if (cmpstr(p,"r") || cmpstr(p,"-r"))//redo
-	{
-		if(!undoneExp.isEmpty()){
-			std::string last = "";
-			undoneExp.top(last);
-			undoneExp.pop();
-			lastExp.push(last);
-			std::cout<<last<<std::endl;
-			calcWithOptions(last);
-		}
-		else
-			std::cout<<"No statements can be redone"<<std::endl;
+		boolsettings.erase(expr);
+		boolsettings[expr] = newSetting;
 	}
 	else
 	{
-		std::cout<<"Error Invalid Parameter \""<<p<<"\""<<std::endl;
-		std::cout<<"Enter a mathematical expression, or you can also use \nparameters to choose between the following options or see below \"redo\" for how to handle variables/functions."<<
-				"\nvalid params are:\nt to show time taken to interpret,";
-		std::cout<<" and calculate expression";
-		std::cout<<"\no to show operations in order of execution in console";
-		std::cout<<"\nd to show debug information in console\n";
-		std::cout<<"p to show results of all calculations in console\n";
-
-
-		std::cout<<"u to show execute previous statement in console or \"undo\"\n";
-		std::cout<<"r to show \"redo\"\n";
-		std::cout<<"\nHow to use variables/functions:";
-		std::cout<<"\nlet [variableName] = [expression] to save an expression with the given variable name.\n";
-		std::cout<<"const [variableName] = [expression] will save the result of the expression with the given variable name.";
-		std::cout<<"\n\nto use a saved expression simply type the variable name, then in parenthesis supply any parameters\n";
-
-		std::cout<<"\nExample:";
-		std::cout<<"\nlet x = c^2";
-		std::cout<<"\nx(4)";
-		std::cout<<"\nand the program will print the result of 4^2";
-		std::cout<<"\nbecause it replaces x with c^2, and c with the parameter supplied.\n";
-
-		std::cout<<"\nyou can print the expression a variable holds by typing\n";
-		std::cout<<"printvar [variableName] or printall to print everything in memory,\n";
-		std::cout<<"printsdf prints only system defined functions\n";
-		std::cout<<"printudf prints only user defined functions\n";
-		std::cout<<"print [your_expression] will print the result of computing the expression\n";
-		std::cout<<"\nYou can also delete a variable by typing delete [variableName]\n";
-		std::cout<<"Or delete all saved variables by typing deleteall\n";
-
-		std::cout<<"\nYou can print all variables, and their expressions by typing printall\n";
+		printHelpMessage(expr);
 	}
-
-	p = "";
+	return value;
+/*
+	else if(cmpstr(expr.substr(0,3),"let"))
+	{
+		letNewVar(expr,saveLast);
+	}
+	else if(cmpstr(expr.substr(0,5),"const"))
+	{
+		constNewVar(expr,saveLast);
+	}
+	else if(cmpstr(expr.substr(0,5),"print"))
+	{
+		printCommand(expr,saveLast);
+	}
+	else if(cmpstr(expr.substr(0,6),"delete"))
+	{
+		deleteObject(expr,saveLast);
+	}
+	else if (cmpstr(expr,"u") || cmpstr(expr,"-u"))//undo
+	{
+		undoAction(expr,false);
+	}
+	else if (cmpstr(expr,"r") || cmpstr(expr,"-r"))//redo
+	{
+		redoAction(expr,false);
+	}*/
 }
 
 bool cmpstr(const std::string &s1,const std::string &s2)
@@ -560,13 +670,12 @@ bool cmpstr(const std::string &s1,const std::string &s2)
 	}
 	return isEqual;
 }
-double calcWithOptions(std::string expr)
+double calcWithOptions(std::string expr,std::unordered_map<std::string,Object> &localMemory,std::vector<std::string> &params)
 {
 	bool timeInstruction = *boolsettings["t"];
 
 
 	std::cout<<"";
-	std::vector<std::string> p;
 	std::chrono::system_clock::time_point start,end;
 	if(timeInstruction){
 	start = std::chrono::system_clock::now();
@@ -574,9 +683,9 @@ double calcWithOptions(std::string expr)
 
 	//alternate beginning of calculation for doubles
 	//-------------------------
-	double result = calculateExpression<double>(expr,p);
+	double result = calculateExpression<double>(expr,params,localMemory);
 	//------------------------
-	if(timeInstruction){
+	if(timeInstruction && *boolsettings["p"]){
 		end = std::chrono::system_clock::now();
 
 		std::chrono::duration<double> elapsed_seconds = end-start;
@@ -584,10 +693,10 @@ double calcWithOptions(std::string expr)
 
 		std::cout << "finished computation at " << std::ctime(&end_time)
 		          << "elapsed time: " << elapsed_seconds.count() << "s\n";
-		}
+	}
 	if(*boolsettings["p"])
 	{
-		std::cout<<"Final Answer: "<<result<<std::endl;
+		std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
 	}
 	return result;
 
@@ -610,38 +719,42 @@ int getClosingIndex(char opening,const std::string &data)
 }
 SubStr getExpr(const std::string &data)
 {
-	int index = data.find("let")<500 || data.find("const")<500?data.find("="):0;
+	int index = (data.find("let")<500 || data.find("const")<500 || data.find("loc")<500)?data.find("="):0;
 	index++;
+	int count = 0;
 	while(!isNumeric(data[index]) && !isalpha(data[index]) && !isOperator(data[index]))
 	{
 		index++;
 	}
-	return SubStr(data.substr(index,data.length()),index,data.length());
+	while(data[index + count] && (data[index + count] != ';' && data[index + count] != '\n'))
+	{
+		count++;
+	}
+	std::string result = data.substr(index>data.length()?data.length():index,count);
+	return SubStr(result,index,index+result.length());
 }
 
 SubStr getNewVarName(const std::string &data)
 {
 	int index = data.find("let")<500 || data.find("const")<500?data.find("t ")+1:0;
-		while(!isalpha(data[index]) || data[index] == ' ')
-		{
-			index++;
-		}
-	int endIndex = index;
-	while((data[endIndex]>=65 && data[endIndex] <=123) && data[endIndex] != ' ' && data[endIndex] != '=')
+	while(!isalpha(data[index]) || data[index] == ' ')
 	{
-		endIndex++;
+		index++;
 	}
-	//endIndex -=3;
-	return SubStr(data.substr(index,endIndex-index),index,endIndex);
+	return getVarName(data,index);
 }
 
-SubStr getVarName(std::string s,int index)
+SubStr getVarName(const std::string &s,int index)
 {
 	int begin = index;
 	int count = 0;
-	//std::cout<<"Helllo from get Var Name: "<<std::endl;
-	while(s.length()>index && isalpha(s[index]) && !isOperator(s[index])){
-	//	std::cout<<s[index]<<std::endl;
+	while(s[index] && s[index] == ' ')
+	{
+		begin++;
+		index++;
+	}
+	while(s.length()>index && !isOperator(s[index]) && (isalpha(s[index]) || isNumeric(s[index])))
+	{
 		index++;
 		count++;
 	}
@@ -649,7 +762,7 @@ SubStr getVarName(std::string s,int index)
 	std::string result = s.substr(begin>s.length()?s.length():begin,count);
 	return SubStr(result,begin,begin + result.length()-1);
 }
-std::string replace(std::string original,std::string replace,std::string replacement)
+std::string replace(std::string &original,std::string &replace,std::string &replacement)
 {
 	for(int i = 0; original.length()>replace.length()+i;i++)
 	{
@@ -662,10 +775,10 @@ std::string replace(std::string original,std::string replace,std::string replace
 	return original;
 }
 template <class t>
-t calculateExpression(std::string exp,std::vector<std::string> params)
+t calculateExpression(std::string exp,std::vector<std::string> params,std::unordered_map<std::string,Object> &localMemory)
 {
 	int paramUse = 0;
-	std::unordered_map<std::string,Object> localMemory;
+
 	//std::cout<<"Printing Params for exp: "<<exp<<std::endl;
 	//printVector(params);
 	//loop through exp
@@ -704,8 +817,8 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	  //c is a variable to store each of the characters in the expression
 	  //in the for loop
 	  char currentChar;
-	  linkedStack<t> initialOperands;
-	  linkedStack<char> initialOperators;
+	  stack<t> initialOperands;
+	  stack<char> initialOperators;
 	  if(debug){
 	  std::cout<<"Calculating expression: "<<exp<<std::endl;
 	  }
@@ -719,15 +832,63 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	 currentChar = exp[i];
 	 initialOperators.top(peeker);
 
-
 	 if(isalpha(currentChar) && !isOperator(currentChar) && currentChar != 'X')
 	 {
+		 if(debug)
+		 {
+			 for(auto &[key,value]:localMemory)
+			 {
+				 std::cout<<"Local Memory: |"<<key<<'|'<<std::endl;
+			 }
+		 }
 		 SubStr varName(getVarName(exp,i));
-		 Object data = memory[varName.data];
-		 Object localData = localMemory[varName.data];
-		 std::string endOfExp;
+		 Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
+		 Object localData = localMemory.count(varName.data)!=0?localMemory[varName.data]:Object();
 
-		 if(data.id.length() != 0)
+		 std::unordered_map<std::string,Object> calledFunctionLocalMemory;
+		 std::string endOfExp;
+		 //Keyword handling only one keyword at the begining of each statement allowed,
+		 //including statements defined in variables
+		 if(inputMapper.count(varName.data) != 0)
+		 {
+			 //*boolsettings["p"] = false;
+			 inputMapper[varName.data](exp,false);
+			 while(exp[i] && (exp[i] != ';' && exp[i] != '\n'))
+			 {
+				 i++;
+			 }
+			 exp = exp.substr(i,exp.length());
+			 i = 0;
+			 currentChar = exp[i];
+		 }
+		 //manual local variable instantiation
+		 else if (cmpstr(varName.data,"loc"))
+		 {
+			 SubStr localName = getVarName(exp,4+i);
+			 SubStr subexp = getExpr(exp);
+			 while(exp[i] && (exp[i] != ';' && exp[i] != '\n'))
+			 {
+				 i++;
+			 }
+			 if(exp[i])
+				 i++;
+
+			 Object newLocalVar(localName.data,exp.substr(subexp.start,i-subexp.start),"");
+			 if(debug)
+			 {
+				 std::cout<<std::endl<<"Name: "<<localName.data<< " subexp: "<<newLocalVar.instructionsToString()<<std::endl;
+
+			 }
+			 localMemory[newLocalVar.id] = newLocalVar;
+			 exp = exp.substr(exp[i]==';'?i+1:i, exp.length());
+			 //std::cout<<"ehllo  "<<exp<<" Index: "<<i<<std::endl;
+			 i = -1;
+			 currentChar = exp[0];
+			 continue;
+
+		 }
+		 //Variable handling section
+		 else if(data.id.length() != 0)
 		 {
 			 int endOfParams = data.setParams(exp[varName.end+1] == '('?exp.substr(varName.end+1):"");
 			 int startOfEnd = data.params.size()==0?varName.end+1:varName.end+endOfParams;
@@ -742,26 +903,29 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 			 for(int i =0; i<data.params.size();i++)
 			 {
 
+				 //if after calc exp data.params[i] has changed, and the original
 				 if(debug)
 				 {
-					 std::cout<<"Resolving Parameter: "<<data.params[i]<<std::endl;
+					 std::cout<<"Resolving Parameter: "<<data.params[i]<<" To: ";
 				 }
-				 data.params[i] = std::to_string(calculateExpression<double>(data.params[i],params));
+				 data.params[i] = std::to_string(calculateExpression<double>(data.params[i],params,localMemory));
+				 if(debug)
+					 std::cout<<data.params[i]<<std::endl;
 			 }
 			 std::vector<std::string> expressions = data.getInstructions();
 			 int j;
 			 for(j = 0;j<expressions.size()-1;j++)
 			 {
-				 calculateExpression<double>(expressions[j],data.params);
+				 calculateExpression<double>(expressions[j],data.params,calledFunctionLocalMemory);
 			 }
 			 if(expressions.size() == 1)
 				 j = -1;
 
 			 if(debug)
 			 {
-				 std::cout<<"In expression: "<<exp<<" Resolving: "<<varName.data<<" to: "<<expressions[j+1]<<std::endl;
+				 std::cout<<"In var parsing exp: "<<exp<<" Resolving: "<<varName.data<<" to: "<<expressions[j+1]<<std::endl;
 			 }
-			 double varValue = calculateExpression<double>(expressions[j+1],data.params);
+			 double varValue = calculateExpression<double>(expressions[j+1],data.params,calledFunctionLocalMemory);
 			 std::string value = std::to_string(varValue);
 			 //std::cout<<"Current Index: "<<i<<" exp len: "<<exp.length()<<" endOfPArams: "<<varName.end<<std::endl;
 			 exp = exp.substr(0,varName.start) + value + endOfExp;
@@ -780,18 +944,39 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 			 //std::cout<<params.size()<<" param list len\n";
 			 if(localData.id.length() != 0)
 			 {
-				 localData.setParams("");
+
+				 int endOfParams = localData.setParams(exp[varName.end+1] == '('?exp.substr(varName.end+1):"");
+				 int startOfEnd = localData.params.size()==0?varName.end+1:varName.end+endOfParams;
+				 endOfExp = exp.substr(startOfEnd,exp.length());
 				 std::vector<std::string> expressions = localData.getInstructions();
+
+				 if(debug)
+				 {
+					 std::cout<<"In expression: "<<exp<<" ";
+				 }
+				 //Filling params of called functions with params from calling function where there are undefined vars
+				 for(int i =0; i<localData.params.size();i++)
+				 {
+
+					 //if after calc exp data.params[i] has changed, and the original
+					 if(debug)
+					 {
+						 std::cout<<"Resolving Local Data Parameter: "<<localData.params[i]<<" To: ";
+					 }
+					 localData.params[i] = std::to_string(calculateExpression<double>(localData.params[i],params,localMemory));
+					 if(debug)
+						 std::cout<<localData.params[i]<<std::endl;
+				 }
 				 int j;
 				 for(j = 0;j<expressions.size()-1;j++)
 				 {
-					 calculateExpression<double>(expressions[j],localData.params);
+					 calculateExpression<double>(expressions[j],localData.params,localMemory);
 				 }
 				 if(expressions.size() == 1)
 					 j = -1;
-				 double varValue = calculateExpression<double>(expressions[j+1],localData.params);
+				 double varValue = calculateExpression<double>(expressions[j+1],localData.params,localMemory);
 				 std::string value = std::to_string(varValue);
-				 endOfExp = exp.substr(varName.end+1,exp.length());
+				 //endOfExp = exp.substr(varName.end+1,exp.length());
 				 exp = exp.substr(0,varName.start) + value + endOfExp;
 				 i = varName.start;
 
@@ -811,17 +996,20 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 				 int j;
 				 for(j = 0;j<expressions.size()-1;j++)
 				 {
-					 calculateExpression<double>(expressions[j],localVar.params);
+					 calculateExpression<double>(expressions[j],localVar.params,calledFunctionLocalMemory);
+					 if(debug)
+						 std::cout<<"Running instruction: "<<expressions[j]<<" While Loading param: "<<varName.data<<std::endl;
 				 }
 				 if(expressions.size() == 1)
 					 j = -1;
-				 double varValue = calculateExpression<double>(expressions[j+1],localVar.params);
+				 double varValue = calculateExpression<double>(expressions[j+1],localVar.params,calledFunctionLocalMemory);
 				 std::string value = std::to_string(varValue);
+
 				 endOfExp = exp.substr(varName.end+1,exp.length());
 
 				 if(debug)
 				 {
-				 	 std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
+				 	 std::cout<<"Param Object name: "<<varName.data<<" paramuseIndex: "<<paramUse<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
 				 	 std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
 			 	 }
 				 exp = exp.substr(0,varName.start)+value+endOfExp;
@@ -869,8 +1057,8 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	        std::cout<<std::endl<<"Parentheses Process: "<<exp<<std::endl;
 	      }
 	      initialOperators.top(peeker);
-	      linkedStack<t> inParenthesesOperands;
-	      linkedStack<char> inParenthesesOperators;
+	      stack<t> inParenthesesOperands;
+	      stack<char> inParenthesesOperators;
 	      while(!initialOperators.isEmpty() && peeker != '(')
 	      {
 	        initialOperands.top(and1);
@@ -939,8 +1127,8 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	    }
 	  }
 	//Finally pop all values off initial stack onto final stacks for processing
-	  linkedStack<t> finalOperands;
-	  linkedStack<char> finalOperators;
+	  stack<t> finalOperands;
+	  stack<char> finalOperators;
 	while(!initialOperands.isEmpty() || !initialOperators.isEmpty())
 	{
 	  if(!initialOperands.isEmpty()){
@@ -962,7 +1150,7 @@ t calculateExpression(std::string exp,std::vector<std::string> params)
 	return processStack(finalOperands,finalOperators);
 }
 template <class t>
-t processStack(linkedStack<t> &operands,linkedStack<char> &operators)
+t processStack(stack<t> &operands,stack<char> &operators)
 {
 	  t result = 0,and1 = 0,and2 = 0;
 	  char firstOperator,nextOperator;
@@ -974,8 +1162,8 @@ t processStack(linkedStack<t> &operands,linkedStack<char> &operators)
 	  nextOperator = 'a',firstOperator = 'a';
 	//now with more stacks!
 	  //these stacks handle respecting priority, the can handle as many priority levels as you like
-	linkedStack<t> savedOperands;
-	linkedStack<char> savedOperators;
+	stack<t> savedOperands;
+	stack<char> savedOperators;
 	//do while loop to search for operation with highest priority
 	  do
 	  {
@@ -1065,7 +1253,7 @@ t getNextInt(std::string data,int &index)//index is a reference so that when we 
     num *= -1;
   return num;
 }
-double getNextDouble(std::string data,int &index)
+double getNextDouble(const std::string &data,int &index)
 {
   bool stillReading = true;
   bool isNegative = false;
@@ -1151,94 +1339,100 @@ int getPriority(char ator)
   }
   return priority;
 }
+template <class t>
+t add(t &and1,t &and2){	return and1+and2;}
+template <class t>
+t subtract(t &and1,t &and2){return and1-and2;}
+template <class t>
+t multiply(t &and1,t &and2){return and1*and2;}
+template <class t>
+t divide(t &and1,t &and2){return and1/and2;}
+template <class t>
+t doubleModulus(t &and1,t &and2)
+{
+	t result;
+  	if(and2 != 0)
+  	{
+  		long quotient = and1/and2;
+  		result = and1 - and2*quotient;
 
+  		if(and1*and2 < 0 && result >0)
+  		{
+  			result *= -1;
+  		}
+  		else if(and1*and2 > 0 && result <0)
+  		{
+  			result *= -1;
+  		}
+  	}
+  	else
+  		result = -400;
+  	return result;
+}
+template <class t>
+t exponentiate(t &and1,t &and2){return pow(and1,and2);}
+template <class t>
+t permute(t &and1,t &and2){
+	t result = 1;
+
+	for(int i = 0;i<and2 && and1 - i > 1;i++)
+	{
+		result *= and1 - i;
+	}
+	return result;
+}
+template <class t>
+t combinations(t &and1,t &and2)
+{
+	t result = 1;
+	for(int i = 0;i<and2 && and1 - i > 1;i++)
+	{
+		result *= and1 - i;
+	}
+	int and2Fact = 1;
+	for(int i = 2;i <= and2;i++)
+	{
+		and2Fact *= i;
+	}
+	result /= and2Fact;
+	return result;
+}
+template <class t>
+t log(t &and1,t &and2){	return log(and2)/log(and1);}
+template <class t>
+t rootOp(t &and1,t &and2){	return root(and2,and1);}
+template <class t>
+t equals(t &and1,t &and2){	return and1==and2;}
+template <class t>
+t lessThan(t &and1,t &and2){	return and1<and2;}
+template <class t>
+t greaterThan(t &and1,t &and2){	return and1>and2;}
+
+template <class t>
+void initOperations()
+{
+	operations<t>['+'] = add<t>;
+	operations<t>['-'] = subtract<t>;
+	operations<t>['*'] = multiply<t>;
+	operations<t>['/'] = divide<t>;
+	operations<t>['%'] = doubleModulus<t>;
+	operations<t>['^'] = exponentiate<t>;
+	operations<t>['P'] = permute<t>;
+	operations<t>['C'] = combinations<t>;
+	operations<t>['@'] = log<t>;
+	operations<t>['$'] = rootOp<t>;
+	operations<t>['='] = equals<t>;
+	operations<t>['<'] = lessThan<t>;
+	operations<t>['>'] = greaterThan<t>;
+}
 template <class t>
 t calc(char op,t and1,t and2)
 {
 	t result = 0;
-        if(op=='+')
-        result = (and1+and2);
-        else if(op == '-')
-        result = (and1-and2);
-        else if(op == '*')
-        result = (and1*and2);
-        else if(op == '/')
+        if(operations<t>.count(op) != 0)
         {
-        	if(and2 != 0)
-        		result = (and1/and2);
-        	else
-        		result = -400;
+        	result = operations<t>[op](and1,and2);
         }
-        else if(op == '%')
-        {
-      	if(and2 != 0)
-      	{
-      		int quotient = and1/and2;
-      		result = and1 - and2*quotient;
-
-      		if(and1*and2 < 0 && result >0)
-      		{
-      			result *= -1;
-      		}
-      		else if(and1*and2 > 0 && result <0)
-      		{
-      			result *= -1;
-      		}
-      	}
-      	else
-      		result = -400;
-        }
-        else if(op == '^')
-        {
-          result = 1;
-          bool negExponent = and2<0;
-          if(negExponent)
-        	  and2 *= -1;
-          for(int i = 0;i < and2;i++)
-        	  result *= and1;
-
-          if(negExponent)
-          {
-        	  result = 1/result;
-          }
-        }
-        else if(op == 'P')
-        {
-        	result = 1;
-
-        	for(int i = 0;i<and2 && and1 - i > 1;i++)
-        	{
-        		result *= and1 - i;
-        	}
-        }
-        else if(op == 'C')
-        {
-        	result = 1;
-        	for(int i = 0;i<and2 && and1 - i > 1;i++)
-        	{
-        		result *= and1 - i;
-        	}
-        	int and2Fact = 1;
-        	for(int i = 2;i <= and2;i++)
-        	{
-        		and2Fact *= i;
-        	}
-        	result /= and2Fact;
-        }
-        else if(op == '@')
-        {
-        	result = log(and2)/log(and1);
-        }
-        else if (op  == '$')
-        {
-        	result = root(and2,and1);
-        }
-        else if(op == '=')
-        	result = and1 == and2;
-        else if(op == '<')
-        	result = and1 < and2;
-        else if(op == '>')
-        	result = and1 > and2;
         else
           result = -400;
     if(*boolsettings["o"])
@@ -1252,9 +1446,7 @@ bool isOperator(char s)
 }
 bool isNonParentheticalOperator(char s)
 {
-    return s == '=' || s == '>' || s == '<' || s == '$' ||
-    		s == 'P' || s == '@' || s == '+' || s == '-' ||
-			s == '*' || s == '/' || s == '^' || s == '%' || s =='C';
+    return operations<double>.count(s);
 }
 bool isNumeric(char c)
 {
