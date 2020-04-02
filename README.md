@@ -12,7 +12,7 @@ The not function returns 1 if a 0 is supplied, and zero with all other values, t
 <h5>Your input testing the value supplied in this case 0</h5>
 >>not(0)
 <p>
-Result of test: <br>Final Answer: 
+<h5>Result of test:</h5> <br>Final Answer: 
 </p>
 1
 <br>
@@ -20,7 +20,7 @@ Result of test: <br>Final Answer:
 <h5>Your input testing the value supplied in this case 1</h5>
 >>not(1)
 <p>
-Result of test: <br>Final Answer: 
+<h5>Result of test:</h5> <br>Final Answer: 
 </p>
 0
 <br>
@@ -29,7 +29,7 @@ Result of test: <br>Final Answer:
 >>true(1)
 <br>
 <p>
-Result of test: <br>Final Answer: 
+<h5>Result of test:</h5><br>Final Answer: 
 </p>
 1
 
@@ -37,7 +37,7 @@ Result of test: <br>Final Answer:
 <h5>Your input testing the value supplied in this case 0</h5>
 >>true(0)
 <p>
-Result of test: <br>Final Answer:
+<h5>Result of test:</h5><br>Final Answer:
 </p> 
 0
 <br>
