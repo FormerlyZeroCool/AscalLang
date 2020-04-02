@@ -155,7 +155,7 @@ Or delete all saved variables by typing delete all<br>
 1) If you redefine a variable using the same name as a previously used variable, the old one will be overwritten automatically <br>
 2) System Defined Variables cannot be deleted, but you can overwrite their values, to refresh with the original values delete the variable you overwrote with the delete [varName] command, and all system defined functions will revert to the state they where in at startup
 <br>
-<h4>For Local Variables</h4>
+<h4>For Local Variables:</h4>
 Local Variables are automatically managed by the program stack, and will be cleared at the end of a batch of statements or a function call 
 <br>
 <br>
