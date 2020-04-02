@@ -53,7 +53,7 @@ r to show "redo"<br>
 <br>
 <p>
 <h4>Example of how o parameter works</h4>
->>`let f = x^2+x`
+>>```let f = x^2+x```
 <br>
 Loaded Function: `f`
 <br>
@@ -193,25 +193,25 @@ Operator precedence is defined below, in a case where two adjacent operations ha
  <h4>Try Running this code</h4>
 `t`<br>
 `let x = 2^16`<br>
-`const sqr =    (1-((1 - x))/2)`<br>
-`const sqr1 = (sqr-((sqr^2 - x))/(2*sqr))`<br>
-`const sqr2 = (sqr1-((sqr1^2 - x))/(2*sqr1))`<br>
-`const sqr3 = (sqr2-((sqr2^2 - x))/(2*sqr2))`<br>
-`const sqr4 = (sqr3-((sqr3^2 - x))/(2*sqr3))`<br>
-`const sqr5 = (sqr4-((sqr4^2 - x))/(2*sqr4))`<br>
-`const sqr6 =  (sqr5-((sqr5^2 - x))/(2*sqr5))`<br>
-`const sqr7 =  (sqr6-((sqr6^2 - x))/(2*sqr6))`<br>
-`const sqr8 =  (sqr7-((sqr7^2 - x))/(2*sqr7))`<br>
-`const sqr9 =  (sqr8-((sqr8^2 - x))/(2*sqr8))`<br>
-`const sqr10 = (sqr9-((sqr9^2 - x))/(2*sqr9))`<br>
-`const sqr11 = (sqr10-((sqr10^2 - x))/(2*sqr10))`<br>
-`const sqr12 = (sqr11-((sqr11^2 - x))/(2*sqr11))`<br>
-`const sqr13 = (sqr12-((sqr12^2 - x))/(2*sqr12))`<br>
-`const sqr14 = (sqr13-((sqr13^2 - x))/(2*sqr13))`<br>
-`const sqr15 = (sqr14-((sqr14^2 - x))/(2*sqr14))`<br>
-`print const sqr16 = (sqr15-((sqr15^2 - x))/(2*sqr15))`<br>
+```const sqr =    (1-((1 - x))/2)```<br>
+```const sqr1 = (sqr-((sqr^2 - x))/(2*sqr))```<br>
+```const sqr2 = (sqr1-((sqr1^2 - x))/(2*sqr1))```<br>
+```const sqr3 = (sqr2-((sqr2^2 - x))/(2*sqr2))```<br>
+```const sqr4 = (sqr3-((sqr3^2 - x))/(2*sqr3))```<br>
+```const sqr5 = (sqr4-((sqr4^2 - x))/(2*sqr4))```<br>
+```const sqr6 =  (sqr5-((sqr5^2 - x))/(2*sqr5))```<br>
+```const sqr7 =  (sqr6-((sqr6^2 - x))/(2*sqr6))```<br>
+```const sqr8 =  (sqr7-((sqr7^2 - x))/(2*sqr7))```<br>
+```const sqr9 =  (sqr8-((sqr8^2 - x))/(2*sqr8))```<br>
+```const sqr10 = (sqr9-((sqr9^2 - x))/(2*sqr9))```<br>
+```const sqr11 = (sqr10-((sqr10^2 - x))/(2*sqr10))```<br>
+```const sqr12 = (sqr11-((sqr11^2 - x))/(2*sqr11))```<br>
+```const sqr13 = (sqr12-((sqr12^2 - x))/(2*sqr12))```<br>
+```const sqr14 = (sqr13-((sqr13^2 - x))/(2*sqr13))```<br>
+```const sqr15 = (sqr14-((sqr14^2 - x))/(2*sqr14))```<br>
+```print const sqr16 = (sqr15-((sqr15^2 - x))/(2*sqr15))```<br>
 
-`delete x<br>
+```delete x```<br>
 
 `let sqr =x*0+ (1-((1 - x))/2)`<br>
 `let sqr1 = x*0+ (sqr(x)-((sqr(x)^2 - x))/(2*sqr(x)))`<br>
