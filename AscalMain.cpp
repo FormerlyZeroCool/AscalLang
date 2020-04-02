@@ -778,7 +778,7 @@ template <class t>
 t calculateExpression(std::string exp,std::vector<std::string> params,std::unordered_map<std::string,Object> &localMemory)
 {
 	int paramUse = 0;
-
+	std::unordered_map<std::string,Object> paramMemory;
 	//std::cout<<"Printing Params for exp: "<<exp<<std::endl;
 	//printVector(params);
 	//loop through exp
@@ -836,10 +836,12 @@ t calculateExpression(std::string exp,std::vector<std::string> params,std::unord
 	 {
 		 if(debug)
 		 {
+			 std::cout<<"Local Memory:";
 			 for(auto &[key,value]:localMemory)
 			 {
-				 std::cout<<"Local Memory: |"<<key<<'|'<<std::endl;
+				 std::cout<<" |"<<key<<"|";
 			 }
+			 std::cout<<std::endl;
 		 }
 		 SubStr varName(getVarName(exp,i));
 		 Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
@@ -987,10 +989,55 @@ t calculateExpression(std::string exp,std::vector<std::string> params,std::unord
 			 	 }
 				 currentChar = exp[i];
 			 }
+			 else if(paramMemory.count(varName.data))
+			 {
+				 Object paramData = paramMemory[varName.data];
+				 int endOfParams = paramData.setParams(exp[varName.end+1] == '('?exp.substr(varName.end+1):"");
+				 				 int startOfEnd = paramData.params.size()==0?varName.end+1:varName.end+endOfParams;
+				 				 endOfExp = exp.substr(startOfEnd,exp.length());
+				 				 std::vector<std::string> expressions = paramData.getInstructions();
+
+				 				 if(debug)
+				 				 {
+				 					 std::cout<<"In expression: "<<exp<<" ";
+				 				 }
+				 				 //Filling params of called functions with params from calling function where there are undefined vars
+				 				 for(int i =0; i<localData.params.size();i++)
+				 				 {
+
+				 					 //if after calc exp data.params[i] has changed, and the original
+				 					 if(debug)
+				 					 {
+				 						 std::cout<<"Resolving Local Data Parameter: "<<paramData.params[i]<<" To: ";
+				 					 }
+				 					paramData.params[i] = std::to_string(calculateExpression<double>(paramData.params[i],params,localMemory));
+				 					 if(debug)
+				 						 std::cout<<paramData.params[i]<<std::endl;
+				 				 }
+				 				 int j;
+				 				 for(j = 0;j<expressions.size()-1;j++)
+				 				 {
+				 					 calculateExpression<double>(expressions[j],paramData.params,localMemory);
+				 				 }
+				 				 if(expressions.size() == 1)
+				 					 j = -1;
+				 				 double varValue = calculateExpression<double>(expressions[j+1],paramData.params,localMemory);
+				 				 std::string value = std::to_string(varValue);
+				 				 //endOfExp = exp.substr(varName.end+1,exp.length());
+				 				 exp = exp.substr(0,varName.start) + value + endOfExp;
+				 				 i = varName.start;
+
+				 				 if(debug)
+				 				 {
+				 				 	 std::cout<<"Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp;
+				 				 	 std::cout<<"\nHello this is loading exp: "<<exp<<std::endl;
+				 			 	 }
+				 				 currentChar = exp[i];
+			 }
 			 else if(paramUse < params.size())
 			 {
 				 Object localVar(varName.data,params[paramUse++],"");
-				 localMemory[localVar.id] = localVar;
+				 paramMemory[localVar.id] = localVar;
 
 				 std::vector<std::string> expressions = localVar.getInstructions();
 				 int j;
