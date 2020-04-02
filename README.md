@@ -10,7 +10,7 @@ Note: functions have been tested to provide at least 160 levels of nesting, and 
 The not function returns 1 if a 0 is supplied, and zero with all other values, the true functions returns 1 if any value other than 0 is supplied
 <br>
 <h5>Your input testing the value supplied in this case 0</h5>
->>not(0)
+>>`not(0)`
 <p>
 <h5>Result of test:</h5> <br>Final Answer: 
 </p>
@@ -18,7 +18,7 @@ The not function returns 1 if a 0 is supplied, and zero with all other values, t
 <br>
 
 <h5>Your input testing the value supplied in this case 1</h5>
->>not(1)
+>>`not(1)`
 <p>
 <h5>Result of test:</h5> <br>Final Answer: 
 </p>
@@ -26,7 +26,7 @@ The not function returns 1 if a 0 is supplied, and zero with all other values, t
 <br>
 
 <h5>Your input testing the value supplied in this case 1</h5>
->>true(1)
+>>`true(1)`
 <br>
 <p>
 <h5>Result of test:</h5><br>Final Answer: 
@@ -35,7 +35,7 @@ The not function returns 1 if a 0 is supplied, and zero with all other values, t
 
 <br>
 <h5>Your input testing the value supplied in this case 0</h5>
->>true(0)
+>>`true(0)`
 <p>
 <h5>Result of test:</h5><br>Final Answer:
 </p> 
@@ -53,34 +53,34 @@ r to show "redo"<br>
 <br>
 <p>
 <h4>Example of how o parameter works</h4>
->>let f = x^2+x
+>>`let f = x^2+x`
 <br>
-Loaded Function: f
+Loaded Function: `f`
 <br>
-expression: x^2+x
+expression: `x^2+x`
 <br>
 <br>
 Final Answer:<br> 
 0<br>
->>o
+>>`o`
 <br>
 Show Operations Status: 1<br>
 <br>
->>f(2)
+>>`f(2)`
 <br>
-2^2 = 4
+`2^2 = 4`
 <br>
-4+2 = 6
+`4+2 = 6`
 <br>
 Final Answer: 
 <br>
 6
 <br>
->>o
+>>`o`
 <br>
 Show Operations Status: 0
 <br>
->>f(2)
+>>`f(2)`
 <br>
 Final Answer: 
 <br>
@@ -89,33 +89,33 @@ Final Answer:
 <br>
 <br>
 <h4>Example of how t parameter works</h4>
- >>t
+ >>`t`
 <br>
 Print time taken to run calculation Status: 1<br>
->>2+2
+>>`2+2`
 <br>
 finished computation at Thu Apr  2 15:00:01 2020<br>
 elapsed time: 0.00134s<br>
 Final Answer: <br>
 4<br>
->>t<br>
+>>`t`<br>
 Print time taken to run calculation Status: 0<br>
->>2+2<br>
+>>`2+2`<br>
 Final Answer: <br>
 4<br>
 <br>
 <h4>Examples of r and u parameters short for redo and undo</h4>
->>cos(pi)<br>
+>>`cos(pi)`<br>
 Final Answer: <br>
 -1<br>
 <br>
->>u<br>
-cos(pi)<br>
+>>`u`<br>
+`cos(pi)`<br>
 Final Answer: <br>
 -1<br>
 <br>
->>r<br>
-cos(pi)<br>
+>>`r`<br>
+`cos(pi)`<br>
 Final Answer:<br> 
 -1
 <br>
@@ -124,8 +124,8 @@ let [variableName] = [expression] to save an expression with the given variable 
 const [variableName] = [expression] will save the result of the expression with the given variable name to the global scope.<br>
 loc [variableName] = [expression] to save an expression with the given variable name to the local scope.<br>
 <br>
-currently loc is only useful with batched commands like loc x = value^2; x(4)
-or loc y = 5;loc x = 5;y+x<br>
+currently loc is only useful with batched commands like `loc x = value^2; x`(4)
+or `loc y = 5;loc x = 5;y+x`<br>
 which results in 10
 <br>
 Later loc will be used to declare local variables for multiline functions also, but 
@@ -133,8 +133,8 @@ Later loc will be used to declare local variables for multiline functions also, 
 to use a saved expression simply type the variable name, then in parenthesis supply any parameters
 <br>
 Example:<br>
-let x = c^2<br>
-x(4)<br>
+`let x = c^2`<br>
+`x(4)`<br>
 and the program will print the result of 4^2<br>
 because it replaces x with c^2, and c with the parameter supplied.
 <br>
@@ -191,41 +191,41 @@ Operator precedence is defined below, in a case where two adjacent operations ha
   <br><br>
   <p>
  <h4>Try Running this code</h4>
-t<br>
-let x = 2^16<br>
-const sqr =    (1-((1 - x))/2)<br>
-const sqr1 = (sqr-((sqr^2 - x))/(2*sqr))<br>
-const sqr2 = (sqr1-((sqr1^2 - x))/(2*sqr1))<br>
-const sqr3 = (sqr2-((sqr2^2 - x))/(2*sqr2))<br>
-const sqr4 = (sqr3-((sqr3^2 - x))/(2*sqr3))<br>
-const sqr5 = (sqr4-((sqr4^2 - x))/(2*sqr4))<br>
-const sqr6 =  (sqr5-((sqr5^2 - x))/(2*sqr5))<br>
-const sqr7 =  (sqr6-((sqr6^2 - x))/(2*sqr6))<br>
-const sqr8 =  (sqr7-((sqr7^2 - x))/(2*sqr7))<br>
-const sqr9 =  (sqr8-((sqr8^2 - x))/(2*sqr8))<br>
-const sqr10 = (sqr9-((sqr9^2 - x))/(2*sqr9))<br>
-const sqr11 = (sqr10-((sqr10^2 - x))/(2*sqr10))<br>
-const sqr12 = (sqr11-((sqr11^2 - x))/(2*sqr11))<br>
-const sqr13 = (sqr12-((sqr12^2 - x))/(2*sqr12))<br>
-const sqr14 = (sqr13-((sqr13^2 - x))/(2*sqr13))<br>
-const sqr15 = (sqr14-((sqr14^2 - x))/(2*sqr14))<br>
-print const sqr16 = (sqr15-((sqr15^2 - x))/(2*sqr15))<br>
+`t`<br>
+`let x = 2^16`<br>
+`const sqr =    (1-((1 - x))/2)`<br>
+`const sqr1 = (sqr-((sqr^2 - x))/(2*sqr))`<br>
+`const sqr2 = (sqr1-((sqr1^2 - x))/(2*sqr1))`<br>
+`const sqr3 = (sqr2-((sqr2^2 - x))/(2*sqr2))`<br>
+`const sqr4 = (sqr3-((sqr3^2 - x))/(2*sqr3))`<br>
+`const sqr5 = (sqr4-((sqr4^2 - x))/(2*sqr4))`<br>
+`const sqr6 =  (sqr5-((sqr5^2 - x))/(2*sqr5))`<br>
+`const sqr7 =  (sqr6-((sqr6^2 - x))/(2*sqr6))`<br>
+`const sqr8 =  (sqr7-((sqr7^2 - x))/(2*sqr7))`<br>
+`const sqr9 =  (sqr8-((sqr8^2 - x))/(2*sqr8))`<br>
+`const sqr10 = (sqr9-((sqr9^2 - x))/(2*sqr9))`<br>
+`const sqr11 = (sqr10-((sqr10^2 - x))/(2*sqr10))`<br>
+`const sqr12 = (sqr11-((sqr11^2 - x))/(2*sqr11))`<br>
+`const sqr13 = (sqr12-((sqr12^2 - x))/(2*sqr12))`<br>
+`const sqr14 = (sqr13-((sqr13^2 - x))/(2*sqr13))`<br>
+`const sqr15 = (sqr14-((sqr14^2 - x))/(2*sqr14))`<br>
+`print const sqr16 = (sqr15-((sqr15^2 - x))/(2*sqr15))`<br>
 
-delete x<br>
+`delete x<br>
 
-let sqr =x*0+ (1-((1 - x))/2)<br>
-let sqr1 = x*0+ (sqr(x)-((sqr(x)^2 - x))/(2*sqr(x)))<br>
-let sqr2 = x*0+ (sqr1(x)-((sqr1(x)^2 - x))/(2*sqr1(x)))<br>
-let sqr3 = x*0+ (sqr2(x)-((sqr2(x)^2 - x))/(2*sqr2(x)))<br>
-let sqr4 = x*0+ (sqr3(x)-((sqr3(x)^2 - x))/(2*sqr3(x)))<br>
-let sqr5 = x*0+ (sqr4(x)-((sqr4(x)^2 - x))/(2*sqr4(x)))<br>
-let sqr6 = x*0+ (sqr5(x)-((sqr5(x)^2 - x))/(2*sqr5(x)))<br>
-let sqr7 = x*0+ (sqr6(x)-((sqr6(x)^2 - x))/(2*sqr6(x)))<br>
-let sqr8 = x*0+ (sqr7(x)-((sqr7(x)^2 - x))/(2*sqr7(x)))<br>
-let sqr9 = x*0+ (sqr8(x)-((sqr8(x)^2 - x))/(2*sqr8(x)))<br>
-let sqr10 = x*0+ (sqr9(x)-((sqr9(x)^2 - x))/(2*sqr9(x)))<br>
-let sqr11 = x*0+ (sqr10(x)-((sqr10(x)^2 - x))/(2*sqr10(x)))<br>
-let sqr12 = x*0+ (sqr11(x)-((sqr11(x)^2 - x))/(2*sqr11(x)))<br>
-let sqr13 = x*0+ (sqr12(x)-((sqr12(x)^2 - x))/(2*sqr12(x)))<br>
-sqr10(49)
+`let sqr =x*0+ (1-((1 - x))/2)`<br>
+`let sqr1 = x*0+ (sqr(x)-((sqr(x)^2 - x))/(2*sqr(x)))`<br>
+`let sqr2 = x*0+ (sqr1(x)-((sqr1(x)^2 - x))/(2*sqr1(x)))`<br>
+`let sqr3 = x*0+ (sqr2(x)-((sqr2(x)^2 - x))/(2*sqr2(x)))`<br>
+`let sqr4 = x*0+ (sqr3(x)-((sqr3(x)^2 - x))/(2*sqr3(x)))`<br>
+`let sqr5 = x*0+ (sqr4(x)-((sqr4(x)^2 - x))/(2*sqr4(x)))`<br>
+`let sqr6 = x*0+ (sqr5(x)-((sqr5(x)^2 - x))/(2*sqr5(x)))`<br>
+`let sqr7 = x*0+ (sqr6(x)-((sqr6(x)^2 - x))/(2*sqr6(x)))`<br>
+`let sqr8 = x*0+ (sqr7(x)-((sqr7(x)^2 - x))/(2*sqr7(x)))`<br>
+`let sqr9 = x*0+ (sqr8(x)-((sqr8(x)^2 - x))/(2*sqr8(x)))`<br>
+`let sqr10 = x*0+ (sqr9(x)-((sqr9(x)^2 - x))/(2*sqr9(x)))`<br>
+`let sqr11 = x*0+ (sqr10(x)-((sqr10(x)^2 - x))/(2*sqr10(x)))`<br>
+`let sqr12 = x*0+ (sqr11(x)-((sqr11(x)^2 - x))/(2*sqr11(x)))`<br>
+`let sqr13 = x*0+ (sqr12(x)-((sqr12(x)^2 - x))/(2*sqr12(x)))`<br>
+`sqr10(49)`
  </p>
