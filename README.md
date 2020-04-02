@@ -125,7 +125,8 @@ const [variableName] = [expression] will save the result of the expression with 
 loc [variableName] = [expression] to save an expression with the given variable name to the local scope.<br>
 <br>
 currently loc is only useful with batched commands like loc x = value^2; x(4)
-or loc x = print value^2; x(4)
+or loc y = 5;loc x = 5;y+x<br>
+which results in 10
 <br>
 Later loc will be used to declare local variables for multiline functions also, but 
 <br>
