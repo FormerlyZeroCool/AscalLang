@@ -117,7 +117,7 @@ template <typename t>
 class stack : public std::vector<t>{
 
 public:
-	stack(){ this->reserve(128);}
+	stack(){}
 	void push(t data);
 	void pop();
 	void top(t&data);
