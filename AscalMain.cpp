@@ -19,18 +19,31 @@
 #include "setting.h"
 #include "Object.h"
 
+const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 //////////////////////////////////////////////////////////
 //Start Ascal System Defined  Keyword functionality Executed by lookup in inputMapper unordered_map
 
-double printCommand(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast);
 void printVar(const std::string &expr,bool saveLast);
-double printCalculation(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast);
-double constNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast);
-double letNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast);
 void printHelpMessage(const std::string &expr);
-double deleteObject(const std::string& expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast);
-double undoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory, bool s);
-double redoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory, bool s);
+
+std::string clocNewVar(const std::string &exp,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
+std::string locNewVar(const std::string &exp,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
+std::string printCommand(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
+std::string printCalculation(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
+std::string constNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
+std::string letNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
+std::string deleteObject(const std::string& expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
+std::string undoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool s);
+std::string redoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool s);
 //End Ascal System Defined  Keyword functionality
 //////////////////////////////////////////////////////////
 
@@ -70,7 +83,7 @@ void initOperations();
 ////////////////////////////
 //regular logic
 template <class t>
-t calculateExpression(std::string exp,std::vector<std::string>,std::unordered_map<std::string,Object> &localMemory);
+t calculateExpression(std::string exp,std::vector<std::string>&,std::unordered_map<std::string,Object> &localMemory);
 template <class t>
 t calc(char op,t and1,t and2);
 template <class t>
@@ -135,7 +148,7 @@ std::vector<Object> systemDefinedFunctions;
 std::unordered_map<std::string,setting<bool> > boolsettings;
 //Interpreter hash map for system keywords
 //template <class t>
-std::unordered_map<std::string,double (*)(const std::string&,std::unordered_map<std::string,Object>&,bool)> inputMapper;
+std::unordered_map<std::string,std::string (*)(const std::string&,std::unordered_map<std::string,Object>&,std::vector<std::string>&,bool)> inputMapper;
 
 template <class t>
 std::unordered_map<char,t (*)(t&,t&)> operations;
@@ -289,6 +302,8 @@ void initParamMapper()
 	inputMapper["print"] = printCommand;
 	inputMapper["const"] = constNewVar;
 	inputMapper["let"] = letNewVar;
+	inputMapper["loc"] = locNewVar;
+	inputMapper["cloc"] = clocNewVar;
 	inputMapper["delete"] = deleteObject;
 	inputMapper["u"] = undoAction;
 	inputMapper["r"] = redoAction;
@@ -401,9 +416,10 @@ int main(int argc,char* argv[])
   }
   return 0;
 }
-double redoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory, bool s)
+std::string redoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool s)
 {
-	double value = 0;
+	std::string value = "0";
 	if(!undoneExp.isEmpty()){
 		std::string last = "";
 		undoneExp.top(last);
@@ -411,14 +427,15 @@ double redoAction(const std::string & expr,std::unordered_map<std::string,Object
 		lastExp.push(last);
 		std::cout<<last<<std::endl;
     	std::unordered_map<std::string,Object> localMemory;
-		value = interpretParam(last,localMemory,false);
+		value = std::to_string(interpretParam(last,localMemory,false));
 		*boolsettings["p"] = false;
 	}
 	else
 		std::cout<<"No statements can be redone"<<std::endl;
 	return value;
 }
-double undoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory, bool s)
+std::string undoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool s)
 {
 	double value = 0;
 	if(!lastExp.isEmpty()){
@@ -433,12 +450,13 @@ double undoAction(const std::string & expr,std::unordered_map<std::string,Object
 	}
 	else
 		std::cout<<"No previous statements"<<std::endl;
-	return value;
+	return std::to_string(value);
 }
-double deleteObject(const std::string& expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast)
+std::string deleteObject(const std::string& expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
 {
 
-	if(cmpstr(expr.substr(6,3),"all"))
+	if(cmpstr(expr.substr(7,3),"all"))
 	{
 		memory.clear();
 		localMemory.clear();
@@ -512,7 +530,8 @@ void printHelpMessage(const std::string &expr)
 
 	std::cout<<"\nYou can print all variables, and their expressions by typing printall\n";
 }
-double letNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast)
+std::string letNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
 {
 	//find index of first char that is alpha find index of last alpha before space or =
 
@@ -534,18 +553,18 @@ double letNewVar(const std::string &expr,std::unordered_map<std::string,Object>&
 				}
 				//set var defined's value in hashmap
 				loadUserDefinedFn(var);
-				return 0;
+				return MAX;
 }
-double constNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast)
+std::string constNewVar(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
 {
 
 	SubStr exPart = getExpr(expr);
 	SubStr newVarPart = getNewVarName(expr);
-	std::vector<std::string> params;
 	bool print = *boolsettings["p"];
-	double value = calcWithOptions(exPart.data,localMemory,params);
+	std::string value = std::to_string(calcWithOptions(exPart.data,localMemory,params));
 	*boolsettings["p"] = print;
-	Object var(newVarPart.data,std::to_string(value),"");
+	Object var(newVarPart.data,value,"");
 
 
 	std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
@@ -559,12 +578,42 @@ double constNewVar(const std::string &expr,std::unordered_map<std::string,Object
 	loadUserDefinedFn(var);
 	return value;
 }
-double printCalculation(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast)
+std::string locNewVar(const std::string &exp,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
+{
+	SubStr localName = getVarName(exp,4);
+	SubStr subexp = getExpr(exp);
+
+	Object newLocalVar(localName.data,subexp.data,"");
+	if(*boolsettings["p"])
+	{
+		std::cout<<std::endl<<"Name: "<<localName.data<< " subexp: "<<newLocalVar.instructionsToString()<<std::endl;
+	}
+	localMemory[newLocalVar.id] = newLocalVar;
+	return MAX;
+}
+std::string clocNewVar(const std::string &exp,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
+{
+	SubStr localName = getVarName(exp,4);
+	SubStr subexp = getExpr(exp);
+
+	std::string value = std::to_string(calcWithOptions(localName.data,localMemory,params));
+	Object newLocalVar(localName.data,subexp.data,"");
+	if(*boolsettings["p"])
+	{
+		std::cout<<std::endl<<"Name: "<<localName.data<< " subexp: "<<newLocalVar.instructionsToString()<<std::endl;
+	}
+	localMemory[newLocalVar.id] = newLocalVar;
+	return value;
+}
+std::string printCalculation(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
 {
 	std::string subexpr = expr.substr(6,expr.length());
 	bool print = *boolsettings["p"];
 	*boolsettings["p"] = true;
-	double value = interpretParam(subexpr,localMemory,false);
+	std::string value = std::to_string(calcWithOptions(subexpr,localMemory,params));
 	*boolsettings["p"] = print;
 	return value;
 }
@@ -572,10 +621,11 @@ void printVar(const std::string &expr,bool saveLast)
 {
 	std::cout<<memory[getVarName(expr,10).data].instructionsToString()<<std::endl;
 }
-double printCommand(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,bool saveLast)
+std::string printCommand(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
 {
 	std::cout<<std::endl;
-	double value  = 0;
+	std::string value  = MAX;
 			if(cmpstr(expr.substr(6,3),"all"))
 			{
 				printAllFunctions();
@@ -595,7 +645,7 @@ double printCommand(const std::string &expr,std::unordered_map<std::string,Objec
 			else
 			{
 				bool print = *boolsettings["p"];
-				value = printCalculation(expr,localMemory,saveLast);
+				printCalculation(expr,localMemory,params,saveLast);
 				*boolsettings["p"] = print;
 			}
 			return value;
@@ -612,7 +662,7 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 {
 	double value = 0;
 	std::string firstWord = getVarName(expr,0).data;
-	//std::cout<<"From INterpret param: "<<firstWord;
+	//std::cout<<"From Interpret param: "<<firstWord;
 	if(expr.length() == 0) {}
 	else if(memory.count(firstWord) != 0 || (expr[0] >= 48 && expr[0] < 58) || expr[0] == '-' ||
 			cmpstr(firstWord,"loc") || localMemory.count(firstWord) != 0 || inputMapper.count(firstWord) != 0 )
@@ -707,18 +757,22 @@ double calcWithOptions(std::string expr,std::unordered_map<std::string,Object> &
 	//-------------------------
 	double result = calculateExpression<double>(expr,params,localMemory);
 	//------------------------
-	if(timeInstruction && *boolsettings["p"]){
-		end = std::chrono::system_clock::now();
-
-		std::chrono::duration<double> elapsed_seconds = end-start;
-		std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-
-		std::cout << "finished computation at " << std::ctime(&end_time)
-		          << "elapsed time: " << elapsed_seconds.count() << "s\n";
-	}
-	if(*boolsettings["p"])
+	//std::cout<<std::to_string(result).length()<<"  max len "<<MAX.length()<<std::endl;
+	if(std::to_string(result).length() != MAX.length())//returned by function that doesn't return a result
 	{
-		std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
+		if(timeInstruction && *boolsettings["p"]){
+			end = std::chrono::system_clock::now();
+
+			std::chrono::duration<double> elapsed_seconds = end-start;
+			std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+			std::cout << "finished computation at " << std::ctime(&end_time)
+			          << "elapsed time: " << elapsed_seconds.count() << "s\n";
+		}
+		if(*boolsettings["p"])
+		{
+			std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
+		}
 	}
 	return result;
 
@@ -741,18 +795,20 @@ int getClosingIndex(char opening,const std::string &data)
 }
 SubStr getExpr(const std::string &data)
 {
-	int index = (data.find("let")<500 || data.find("const")<500 || data.find("loc")<500)?data.find("="):0;
-	index++;
+	int index = (data.find("let")<500 || data.find("const")<500 || data.find("loc")<500)?data.find("=")+1:0;
+
 	int count;
 	int openingCount = 0;
 	std::string result;
 	std::string line = data;
+	std::cout<<std::endl;
+	//std::cout<<"Parsing Expression"<<line[index];
 	do{
 		count = 0;
 
-		while(!isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]))
+		//std::cout<<","<<line[index];
+		while(line[index] && !isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]))
 		{
-			index++;
 			if(line[index] == '{')
 			{
 				openingCount++;
@@ -761,26 +817,34 @@ SubStr getExpr(const std::string &data)
 			{
 				openingCount--;
 			}
+			index++;
 		}
-		while(line[index + count] && (line[index + count] != ';' && line[index + count] != '\n') && line[index+count] != '}')
+		while(line[index + count] && (line[index + count] != ';' && line[index + count] != '\n')
+				&& !(line[index+count] == '}' && openingCount == 1))
 		{
+			//std::cout<<"|"<<line[index+count];
 			count++;
+			if(line[index+count] == '{')
+			{
+				openingCount++;
+			}
+			else if(line[index+count] == '}')
+			{
+				openingCount--;
+			}
+
 		}
 		if(count > 0){
-			if(line[index+count] == '{')
-					{
-						openingCount++;
-					}
-					else if(line[index+count] == '}')
-					{
-						openingCount--;
-					}
+			if(line[index+count] == '}')
+			{
+				openingCount--;
+			}
 		}
 		if(count >0)
 			result += line.substr(index>line.length()?line.length():index,count)+";";
-		if(openingCount > 0)
+		if(openingCount > 0 && line.length())
 		{
-			  getline(std::cin, line);
+			getline(std::cin, line);
 		}
 		  index = 0;
 	}while(openingCount > 0);
@@ -828,7 +892,7 @@ std::string replace(std::string &original,std::string &replace,std::string &repl
 	return original;
 }
 template <class t>
-t calculateExpression(std::string exp,std::vector<std::string> params,std::unordered_map<std::string,Object> &localMemory)
+t calculateExpression(std::string exp,std::vector<std::string> &params,std::unordered_map<std::string,Object> &localMemory)
 {
 	int paramUse = 0;
 	std::unordered_map<std::string,Object> paramMemory;
@@ -875,9 +939,6 @@ t calculateExpression(std::string exp,std::vector<std::string> params,std::unord
 	  if(debug){
 	  std::cout<<"Calculating expression: "<<exp<<std::endl;
 	  }
-	if(debug){
-	  std::cout<<"Intial Processing: "<<exp<<std::endl;
-	}
 	//This loop handles parsing the numbers, and adding the data from the expression
 	//to the stacks
 	for(int i = 0;i <= exp.length();i++)
@@ -905,43 +966,25 @@ t calculateExpression(std::string exp,std::vector<std::string> params,std::unord
 		 //including statements defined in variables
 		 if(inputMapper.count(varName.data) != 0)
 		 {
-			 inputMapper[varName.data](exp,localMemory,false);
+			 std::string result = inputMapper[varName.data](exp,localMemory,params,false);
+
 			 while(exp[i] && (exp[i] != ';' && exp[i] != '\n'))
 			 {
 				 i++;
 			 }
 			 //if(exp[i] == ';' || exp[i] == '\n')
 			//	 *boolsettings["p"] = false;
-			 exp = exp.substr(i,exp.length());
+			 if((exp[i] == 0 || exp[i+1] == 0) && cmpstr(result,MAX))
+			 {
+				 //std::cout<<"HEllow from calcuelt"<<std::endl;
+				 exp = MAX;
+			 }
+			 else
+			 {
+				 exp = exp.substr(i,exp.length());
+			 }
 			 i = 0;
 			 currentChar = exp[i];
-		 }
-		 //manual local variable instantiation
-		 else if (cmpstr(varName.data,"loc"))
-		 {
-			 SubStr localName = getVarName(exp,4+i);
-			 SubStr subexp = getExpr(exp);
-			 while(exp[i] && (exp[i] != ';' && exp[i] != '\n'))
-			 {
-				 i++;
-			 }
-			 if(exp[i])
-				 i++;
-
-			 Object newLocalVar(localName.data,subexp.data,"");
-			 if(debug)
-			 {
-				 std::cout<<std::endl<<"Name: "<<localName.data<< " subexp: "<<newLocalVar.instructionsToString()<<std::endl;
-
-			 }
-			 localMemory[newLocalVar.id] = newLocalVar;
-			 exp = exp.substr(exp[i]==';'?i+1:i, exp.length());
-			 //std::cout<<"ehllo  "<<exp<<" Index: "<<i<<std::endl;
-			 printLoadedMemMessage(newLocalVar);
-			 i = -1;
-			 currentChar = exp[0];
-			 continue;
-
 		 }
 		 //Variable handling section
 		 else if(data.id.length() != 0)
@@ -1154,6 +1197,7 @@ t calculateExpression(std::string exp,std::vector<std::string> params,std::unord
 		 }
 
 	 }
+	 else
 	    if (currentChar==')')
 	    {
 	      if(debug){
