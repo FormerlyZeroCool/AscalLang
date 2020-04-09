@@ -131,11 +131,11 @@ loc, and cloc are useful with batched commands like `loc x = value^2; x`(4)
 or `loc y = 5;loc x = 5;y+x`<br>
 which results in 10
 <br>
-loc, and cloc can also be used inside of multi-line functions implemented like 
-let x = {
-loc y = z^2
-y(c^2)
-}
+loc, and cloc can also be used inside of multi-line functions implemented like:<br>
+let x = {<br>
+loc y = z^2<br>
+y(c^2)<br>
+}<br>
 which defines the global function x for later reference, the expression x will be defined with is:loc y = z^2;y(c^2);<br>
 when we run the function x it will define y in its local scope, so when in the next statement is executed y will be defined, and c will be taken from the parameter supplied to the function x
 <br>
