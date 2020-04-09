@@ -7,6 +7,7 @@
 // A.S.Cal.
 // Andrew's Simple Calculator Language
 //============================================================================
+//#include "Ascal.h"
 
 #include <unordered_map>
 #include <map>
@@ -26,6 +27,8 @@ const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 
+std::string whenAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast);
 std::string clocNewVar(const std::string &exp,std::unordered_map<std::string,Object>& localMemory,
 		std::vector<std::string> &params,bool saveLast);
 std::string locNewVar(const std::string &exp,std::unordered_map<std::string,Object>& localMemory,
@@ -181,7 +184,6 @@ void loadFn(Object function)
 {
 		memory[function.id] = function;
 		systemDefinedFunctions.push_back(function);
-
 }
 void loadUserDefinedFn(Object function)
 {
@@ -205,9 +207,9 @@ void loadUserDefinedFn(Object function)
 void loadInitialFunctions()
 {
 	//Unary boolean Operations
-	Object not1("not","value=0","");
-	loadFn(not1);
-	Object isTrue("true","not(value=0)","");
+	Object notTrue("not","value=0","");
+	loadFn(notTrue);
+	Object isTrue("true","value=0=0)","");
 	loadFn(isTrue);
 
 	//Calculus Functions
@@ -227,14 +229,28 @@ void loadInitialFunctions()
 	loadFn(cosD);
 	Object cos("cos","notcos(theta%(2*pi))","");
 	loadFn(cos);
-	Object notCos("notcos","1-theta^2/2+theta^4/24-theta^6/720+theta^8/40320-theta^10/3628800+theta^12/479001600-theta^14/fact(14)","");
+	Object notCos("notcos","1-theta^2/2+theta^4/24-theta^6/720+theta^8/40320-theta^10/3628800+"
+			"theta^12/479001600-theta^14/fact(14)","");
 	loadFn(notCos);
 	Object sec("sec","1/cos(theta)","");
 	loadFn(sec);
 	Object tan("tan","sin(theta)/cos(theta)","");
 	loadFn(tan);
-
+	std::stackAvail();
 	//Helpful functions
+	Object sumBetween("sumBetween","0*numberzxa*numberzxb + "
+			"when (numberzxb<numberzx)+(numberzxb=numberzx) then sumOneTo(numberzxb)-sumOneTo(numberzxa)"
+			"when (numberzxb>numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb) end"
+			,"");
+	loadFn(sumBetween);
+	Object sumOneTo("sumOneTo","(numberzxa(numberzxa+1))/2","");
+	loadFn(sumOneTo);
+	//factorial of >= 171 overflows double datatype
+	Object rfact("rfact",
+			"when (i>1)*(i<171) then rfact(i-1)*i when not(i>1) then 1 when not(i<171) then 0 end","");
+	loadFn(rfact);
+	Object absoluteValue("abs","when numberx<0 then numberx*-1 when not(numberx<0) then numberx end","");
+	loadFn(absoluteValue);
 	Object ln("ln","e@argument","");
 	loadFn(ln);
 	Object log("log","10@argument","");
@@ -243,7 +259,7 @@ void loadInitialFunctions()
 	loadFn(logbx);
 	Object sqrt("sqrt","2$radicand","");
 	loadFn(sqrt);
-	Object factorial("fact","numberzxaPnumberzxa","");
+	Object factorial("fact","when numberzxa<171 then numberzxaPnumberzxa when not(numberzxa<171) then 0 end","");
 	loadFn(factorial);
 	Object dist("dist","2$((dx)^2+(dy)^2)","");
 	loadFn(dist);
@@ -299,6 +315,7 @@ void printAllSDF()
 void initParamMapper()
 {
 
+	inputMapper["when"] = whenAction;
 	inputMapper["print"] = printCommand;
 	inputMapper["const"] = constNewVar;
 	inputMapper["let"] = letNewVar;
@@ -598,19 +615,82 @@ std::string clocNewVar(const std::string &exp,std::unordered_map<std::string,Obj
 	SubStr localName = getVarName(exp,4);
 	SubStr subexp = getExpr(exp);
 
-	std::string value = std::to_string(calcWithOptions(localName.data,localMemory,params));
+	std::string value = std::to_string(calcWithOptions(subexp.data,localMemory,params));
 	Object newLocalVar(localName.data,subexp.data,"");
 	if(*boolsettings["p"])
 	{
-		std::cout<<std::endl<<"Name: "<<localName.data<< " subexp: "<<newLocalVar.instructionsToString()<<std::endl;
+		std::cout<<std::endl<<"Name: "<<localName.data<< " subexp: "<<value<<std::endl;
 	}
 	localMemory[newLocalVar.id] = newLocalVar;
 	return value;
 }
+
+std::string whenAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool saveLast)
+{
+	//parse expression, start from substr when go up until substr end is found
+	//extract substring, and save the other parts of the expression
+	//find when evaluate expression between it and then
+	//if the expression evaluates to anything other than 0
+	//then extract the expression proceeding the then statement
+	//std::cout<<"Expression before When:"<<expr<<std::endl;
+	const int startIndex = expr.find("when")<1000?expr.find("when"):0;
+	const int endIndex = expr.find("end")<1000?expr.find("end"):0;
+	//std::cout<<"startIndex: "<<startIndex<<" EndIndex: "<<endIndex<<std::endl;
+	//std::cout<<"expression in when: "<<expr<<std::endl;
+	std::string startOfExp = expr.substr(0,startIndex);
+	std::string endOfExp = expr.substr(endIndex+3,expr.length());
+	std::string value;
+	int index = startIndex + 4;
+	std::vector<char> exp;
+	//should always start after when is finished to build boolean expression
+	int thenIndex;
+	double boolExpValue;
+	//std::cout<<"start: "<<startOfExp<<" End: "<<endOfExp<<std::endl;
+	do {
+		thenIndex = expr.find("then",index);
+		//std::cout<<"Starting of exp: "<<index<<":"<<expr[index]<<" thenIndex: "<<thenIndex<<":"<<expr[thenIndex]
+		//		<<" endIndex: "<<endIndex<<":"<<expr[endIndex]<<std::endl;
+		while(index < endIndex && index < thenIndex)
+		{
+			//std::cout<<expr[index];
+			exp.push_back(expr[index]);
+			index++;
+		}
+		//std::cout<<std::endl;
+		std::string booleanExpression(exp.begin(),exp.end());
+		exp.clear();
+		boolExpValue = calculateExpression<double>(booleanExpression,params,localMemory);
+		//std::cout<<"Boolean Expression: "<<booleanExpression<<" result: "<<boolExpValue<<std::endl;
+	//false case simply set the index to the next instance of when+4
+	//and repeat until true, or at end of case when
+		if(boolExpValue == 0)
+		{
+			index = expr.find("when",index) + 5;
+		}
+	//true case get sub expression associated with this when
+	//we have the index of the then so we essentially
+		else
+		{
+		//need to get expression //run calc
+			index += 5;
+			thenIndex =expr.find("when",index);
+			thenIndex = thenIndex==-1?endIndex+1:thenIndex;
+			//std::cout<<"Final Then index: "<<thenIndex<<std::endl;
+			value = getExpr(expr.substr(index,std::min(endIndex,thenIndex)-index-1)).data;
+			//set value = result of calc
+			//std::cout<<"Start: "<<startOfExp<<" value: "<<value<<" endOfExp: "<<endOfExp<<std::endl;
+			if(*boolsettings["o"])
+				std::cout<<"In choice: "<<expr<<" taking path: "<<value<<std::endl;
+			value = startOfExp+value+endOfExp;
+		}
+	} while(expr[index] && boolExpValue == 0 && index < endIndex);
+	return "a"+value;
+}
 std::string printCalculation(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		std::vector<std::string> &params,bool saveLast)
 {
-	std::string subexpr = expr.substr(6,expr.length());
+	std::string subexpr = getExpr(expr.substr(expr.find("print")+5,expr.length())).data;
 	bool print = *boolsettings["p"];
 	*boolsettings["p"] = true;
 	std::string value = std::to_string(calcWithOptions(subexpr,localMemory,params));
@@ -801,7 +881,7 @@ SubStr getExpr(const std::string &data)
 	int openingCount = 0;
 	std::string result;
 	std::string line = data;
-	std::cout<<std::endl;
+	//std::cout<<std::endl;
 	//std::cout<<"Parsing Expression"<<line[index];
 	do{
 		count = 0;
@@ -966,6 +1046,7 @@ t calculateExpression(std::string exp,std::vector<std::string> &params,std::unor
 		 //including statements defined in variables
 		 if(inputMapper.count(varName.data) != 0)
 		 {
+
 			 std::string result = inputMapper[varName.data](exp,localMemory,params,false);
 
 			 while(exp[i] && (exp[i] != ';' && exp[i] != '\n'))
@@ -978,6 +1059,22 @@ t calculateExpression(std::string exp,std::vector<std::string> &params,std::unor
 			 {
 				 //std::cout<<"HEllow from calcuelt"<<std::endl;
 				 exp = MAX;
+				 i = 0;
+				 currentChar = exp[i];
+			 }
+			 else if(isalpha(result[0]))
+			 {
+				 //for returning altered versions of the expression up till a statement separator like ;
+				 //use cases: getting user input outside functions and variables
+				 //when then when then end if else.
+				 //while loops?
+				 //just make sure first character in returned string is a throwaway alphabetical character
+				 //it will not be parsed so ensure it is not meaningful code
+				 exp = result.substr(1,exp.length());
+				 //std::cout<<"expression returned from when action: "<<exp<<std::endl;
+				 i = -1;
+				 //currentChar = exp[i];
+				 continue;
 			 }
 			 else
 			 {
@@ -1007,7 +1104,13 @@ t calculateExpression(std::string exp,std::vector<std::string> &params,std::unor
 				 {
 					 std::cout<<"Resolving Parameter: "<<data.params[i]<<" To: ";
 				 }
-				 data.params[i] = std::to_string(calculateExpression<double>(data.params[i],params,localMemory));
+				 std::unordered_map<std::string,Object> localParamRuntimeMem;
+				 for(auto &[key,value]:localMemory)
+					 localParamRuntimeMem[key] = value;
+				 for(auto &[key,value]:paramMemory)
+					 localParamRuntimeMem[key] = value;
+				 data.params[i] =
+						 std::to_string(calculateExpression<double>(data.params[i],params,localParamRuntimeMem));
 				 if(debug)
 					 std::cout<<data.params[i]<<std::endl;
 			 }
@@ -1178,7 +1281,8 @@ t calculateExpression(std::string exp,std::vector<std::string> &params,std::unor
 				 //loop until cannot find anymore of the same var
 				 std::string name = varName.data;
 				 int originalStart = varName.start;
-				 do{
+				 localMemory[varName.data] = Object(varName.data,input,"");
+				 /*do{
 					 if(debug)
 					 {
 						 std::cout<<"VarName:"<<varName.data<<" original name:"<<name<<std::endl;
@@ -1189,7 +1293,7 @@ t calculateExpression(std::string exp,std::vector<std::string> &params,std::unor
 							 exp.length() - (varName.end+1<exp.length()?varName.end+1:exp.length()));
 					 exp = exp.substr(0,varName.start<exp.length()?varName.start:exp.length()-1)+input+endOfExp;
 					 varName = getVarName(exp,exp.find(name));
-				 } while(cmpstr(name,varName.data));
+				 } while(cmpstr(name,varName.data));*/
 
 				 i = originalStart;
 				 currentChar = exp[i];
@@ -1233,7 +1337,7 @@ t calculateExpression(std::string exp,std::vector<std::string> &params,std::unor
 	      }
 
 	if(debug){
-	  std::cout<<"Back to initial processing: "<<exp<<and2<<std::endl;
+	  std::cout<<"Result of PP: "<<and2<<" Back to initial processing: "<<exp<<std::endl;
 	}
 	    }
 	    //Section to parse numeric values from expression as a string to be inserted into
@@ -1550,7 +1654,7 @@ t rootOp(t &and1,t &and2){	return root(and2,and1);}
 template <class t>
 t equals(t &and1,t &and2){	return and1==and2;}
 template <class t>
-t lessThan(t &and1,t &and2){	return and1<and2;}
+t lessThan(t &and1,t &and2){return and1<and2;}
 template <class t>
 t greaterThan(t &and1,t &and2){	return and1>and2;}
 
