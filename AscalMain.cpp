@@ -27,6 +27,8 @@ const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 
+std::string quitAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool s);
 std::string whenAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		std::vector<std::string> &params,bool saveLast);
 std::string clocNewVar(const std::string &exp,std::unordered_map<std::string,Object>& localMemory,
@@ -236,7 +238,6 @@ void loadInitialFunctions()
 	loadFn(sec);
 	Object tan("tan","sin(theta)/cos(theta)","");
 	loadFn(tan);
-	std::stackAvail();
 	//Helpful functions
 	Object sumBetween("sumBetween","0*numberzxa*numberzxb + "
 			"when (numberzxb<numberzx)+(numberzxb=numberzx) then sumOneTo(numberzxb)-sumOneTo(numberzxa)"
@@ -316,6 +317,7 @@ void initParamMapper()
 {
 
 	inputMapper["when"] = whenAction;
+	inputMapper["quit"] = quitAction;
 	inputMapper["print"] = printCommand;
 	inputMapper["const"] = constNewVar;
 	inputMapper["let"] = letNewVar;
@@ -432,6 +434,14 @@ int main(int argc,char* argv[])
 	  std::cout<<std::endl<<"Calculator exited"<<std::endl;
   }
   return 0;
+}
+std::string quitAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		std::vector<std::string> &params,bool s)
+{
+	if(*boolsettings["p"])
+		std::cout<<"Quitting Ascal, have a nice day!"<<std::endl;
+	*boolsettings["l"] = false;
+	return MAX;
 }
 std::string redoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		std::vector<std::string> &params,bool s)
@@ -677,7 +687,7 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 			thenIndex =expr.find("when",index);
 			thenIndex = thenIndex==-1?endIndex+1:thenIndex;
 			//std::cout<<"Final Then index: "<<thenIndex<<std::endl;
-			value = getExpr(expr.substr(index,std::min(endIndex,thenIndex)-index-1)).data;
+			value = getExpr(expr.substr(index,std::min(endIndex,thenIndex)-index)).data;
 			//set value = result of calc
 			//std::cout<<"Start: "<<startOfExp<<" value: "<<value<<" endOfExp: "<<endOfExp<<std::endl;
 			if(*boolsettings["o"])
@@ -1282,6 +1292,9 @@ t calculateExpression(std::string exp,std::vector<std::string> &params,std::unor
 				 std::string name = varName.data;
 				 int originalStart = varName.start;
 				 localMemory[varName.data] = Object(varName.data,input,"");
+				 endOfExp = exp.substr(varName.end+1<exp.length()?varName.end+1:exp.length()-1,
+						 exp.length() - (varName.end+1<exp.length()?varName.end+1:exp.length()));
+				 exp = exp.substr(0,varName.start<exp.length()?varName.start:exp.length()-1)+input+endOfExp;
 				 /*do{
 					 if(debug)
 					 {
