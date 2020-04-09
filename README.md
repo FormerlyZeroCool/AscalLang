@@ -2,11 +2,12 @@
 <h3>Andrew's Simple Calculator Language</h3>
 Ascal is a language designed for people in STEM fields who deal with long mathematical expressions, and formula.<br>
 Ascal provides an easy way to save commonly used mathematical functions, and run them with dynamically specified parameters<br>
+There are also now plans to encapsulate Ascal within a class for use as a programming language in other C++ programs<br>
 <br>
 Ascal tries to be as succinct as possible while expressing the mathematical functions, and aims to use a mathematical syntax, it does this to make the UX as easy as possible for people in STEM to get used to.<br>
 <br>
 <h3>A quick help guide to using the language, further documentation to come</h3>
-Note: functions have been tested to provide at least 160 levels of nesting, and although it does not currently exist support for loops, and other conditional execution modules like if and else; however, not, and true built in functions, along with the boolean operators = , <,> can be used for boolean logic<br>
+Note: functions have been tested to provide at least 160 levels of nesting, and although it does not currently exist support for loops, and other conditional execution modules like if and else; however, not, and true built in functions, along with the boolean operators = , <,> can be used for boolean logic, and we now have support for the when then end keywords allowing basic decision control structures  wo we also support recursion now! In my tests on Mac OSX High Sierra I can do about 6000 recursive stack frames with default stack size settings, unfortunately you just get the error segmentation fault if a stack overflow occurs.<br>
 The not function returns 1 if a 0 is supplied, and zero with all other values, the true functions returns 1 if any value other than 0 is supplied
 <br>
 <h5>Your input testing the value supplied in this case 0</h5>
@@ -123,14 +124,21 @@ Final Answer:<br>
 let [variableName] = [expression] to save an expression with the given variable name, to the global scope.<br>
 const [variableName] = [expression] will save the result of the expression with the given variable name to the global scope.<br>
 loc [variableName] = [expression] to save an expression with the given variable name to the local scope.<br>
+cloc [variableName] = [expression] to save the result of calculating the provided expression with the given variable name to the local scope.<br>
+Think locally scoped version of const
 <br>
-currently loc is only useful with batched commands like `loc x = value^2; x`(4)
+loc, and cloc are useful with batched commands like `loc x = value^2; x`(4)
 or `loc y = 5;loc x = 5;y+x`<br>
 which results in 10
 <br>
-Later loc will be used to declare local variables for multiline functions also, but 
+loc, and cloc can also be used inside of multi-line functions implemented like 
+let x = {
+loc y = z^2
+y(c^2)
+}
+which defines the global function x for later reference, the expression x will be defined with is:loc y = z^2;y(c^2);<br>
+when we run the function x it will define y in its local scope, so when in the next statement is executed y will be defined, and c will be taken from the parameter supplied to the function x
 <br>
-to use a saved expression simply type the variable name, then in parenthesis supply any parameters
 <br>
 Example:<br>
 `let x = c^2`<br>
@@ -138,8 +146,17 @@ Example:<br>
 and the program will print the result of 4^2<br>
 because it replaces x with c^2, and c with the parameter supplied.
 <br>
-<br>
 
+<br>
+<h3>The when then end set of keywords.</h3>
+<p>
+The when then end keywords are the first way in Ascal to conditionally execute your code, allowing for recursion.<br>
+This functionality is still in development, and does not support multi-variable functions currently(issues with parameter memory scoping)<br>
+Example Ascal Code for a recursive summation series function:<br>
+let f = when x>1 then f(x-1)+x when x<1 + x=1 then 1 end;<br>
+If the parser sees the keyword when it will evaluate the expression between the when, and the proceeding then. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
+*Note if you end up with a stack overflow you will currenty get a segmentation fault, and the Ascal Interpreter will crash
+                                        </p>
 <h3>Print Commmands:</h3>
 By default when running any expression the Ascal Interpreter will print out the result of any expressions calculations, but keep reading to learn how to print information about variables saved in memory.<br>
 <br>
