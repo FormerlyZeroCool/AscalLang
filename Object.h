@@ -7,13 +7,13 @@
 
 #ifndef OBJECT_H_
 #define OBJECT_H_
-#include <string>
-#include <vector>
 #include <iostream>
+#include "AscalParameters.h"
 class Object {
 public:
 	std::string id;
-	std::vector<std::string> params,instructions;
+	AscalParameters params;
+	std::vector<std::string> instructions;
 	//returns end index of params in string
 	int setParams(std::string param);
 	Object();
