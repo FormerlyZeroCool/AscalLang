@@ -244,7 +244,7 @@ Operator precedence is defined below, in a case where two adjacent operations ha
 `let sqr11 = x*0+ (sqr10(x)-((sqr10(x)^2 - x))/(2*sqr10(x)))`<br>
 `let sqr12 = x*0+ (sqr11(x)-((sqr11(x)^2 - x))/(2*sqr11(x)))`<br>
 `let sqr13 = x*0+ (sqr12(x)-((sqr12(x)^2 - x))/(2*sqr12(x)))`<br>
-`sqr10(49)`
-`let ack = when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when (m + n)>0 then ack(m-1,ack(m,n-1)) end`
+`sqr10(49)`<br>
+`let ack = when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when (m + n)>0 then ack(m-1,ack(m,n-1)) end`<br>
 `ack(3,2)`
  </p>
