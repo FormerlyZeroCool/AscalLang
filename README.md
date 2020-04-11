@@ -239,12 +239,10 @@ Operator precedence is defined below, in a case where two adjacent operations ha
 `let sqr6 = x*0+ (sqr5(x)-((sqr5(x)^2 - x))/(2*sqr5(x)))`<br>
 `let sqr7 = x*0+ (sqr6(x)-((sqr6(x)^2 - x))/(2*sqr6(x)))`<br>
 `let sqr8 = x*0+ (sqr7(x)-((sqr7(x)^2 - x))/(2*sqr7(x)))`<br>
-`let sqr9 = x*0+ (sqr8(x)-((sqr8(x)^2 - x))/(2*sqr8(x)))`<br>
-`let sqr10 = x*0+ (sqr9(x)-((sqr9(x)^2 - x))/(2*sqr9(x)))`<br>
-`let sqr11 = x*0+ (sqr10(x)-((sqr10(x)^2 - x))/(2*sqr10(x)))`<br>
-`let sqr12 = x*0+ (sqr11(x)-((sqr11(x)^2 - x))/(2*sqr11(x)))`<br>
-`let sqr13 = x*0+ (sqr12(x)-((sqr12(x)^2 - x))/(2*sqr12(x)))`<br>
-`sqr10(49)`<br>
+`sqr8(49)`<br>
+`let rsqrt = when rem>0 +radicand*0 then (rsqrt(rem-1,radicand) - (rsqrt(rem-1,radicand)^2-radicand)/(2*rsqrt(rem-1,radicand))) when not(rem>0) then (1-((1 - radicand))/2) end`<br>
+`rsqrt(8,49)`<br>
 `let ack = when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when (m + n)>0 then ack(m-1,ack(m,n-1)) end`<br>
 `ack(3,2)`
+
  </p>
