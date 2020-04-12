@@ -245,4 +245,9 @@ Operator precedence is defined below, in a case where two adjacent operations ha
 `let ack = when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when (m + n)>0 then ack(m-1,ack(m,n-1)) end`<br>
 `ack(3,2)`
 
+<h5>Code to write an exponentiation function that only uses addition, and subtraction</h5>
+`let mult = when a>0 then b+mult(a-1,b) when not(a>0) then 0 end
+let optmult = when a>b then mult(b,a) when not(a>b) then mult(a,b) end
+let pow = when a*b*0 + b>1 then  optmult(a,pow(a,b-1)) when not(b>1) then a end`
+
  </p>
