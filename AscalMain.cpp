@@ -27,6 +27,8 @@ const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 
+std::string plotAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::unordered_map<std::string,Object> &paramMemory,bool saveLast);
 std::string quitAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::unordered_map<std::string,Object> &paramMemory,bool s);
 std::string whenAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
@@ -106,25 +108,30 @@ t pow(t a,t b)
 template <class t>
 t root(t b,t p)
 {
-
-	t result = 100,base = b,one = 1;
-	t newPow = p-one;
-	t den;
-	t num;
-	t delta =  1,prev;
-	int count = 0;
-	while(delta > 0.000001 && count < 1000)
+	t result = 100;
+	if(b>0)
 	{
-		num = pow(result,p) - base;
-		den = pow(result,newPow)*p;
-		prev = result;
-		result = (result*den - num)/den;
-		delta = result - prev;
-		if(delta < 0)
-			delta *= -1;
+		t base = b,one = 1;
+		t newPow = p-one;
+		t den;
+		t num;
+		t delta =  1,prev;
+		int count = 0;
+		while(delta > 0.000001 && count < 1000)
+		{
+			num = pow(result,p) - base;
+			den = pow(result,newPow)*p;
+			prev = result;
+			result = (result*den - num)/den;
+			delta = result - prev;
+			if(delta < 0)
+				delta *= -1;
 
-		count++;
+			count++;
+		}
 	}
+	else
+		result = -10000000000000000000000000000000000000000.0786;
 	//std::cout<<"to do radical: "<<count<<std::endl;
 	return result;
 }
@@ -243,9 +250,11 @@ void loadInitialFunctions()
 	Object tan("tan","sin(theta)/cos(theta)","");
 	loadFn(tan);
 	//Helpful functions
+	Object gcd("gcd","a*b*0+ when b=0 then a when a=0=0 then gcd(b,a%b) end","");
+	loadFn(gcd);
 	Object sumBetween("sumBetween","0*numberzxa*numberzxb + "
-			"when (numberzxb<numberzx)+(numberzxb=numberzx) then sumOneTo(numberzxb)-sumOneTo(numberzxa)"
-			"when (numberzxb>numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb) end"
+			"when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb)"
+			"when (numberzxb>numberzxa) then sumOneTo(numberzxb)-sumOneTo(numberzxa) end"
 			,"");
 	loadFn(sumBetween);
 	Object sumOneTo("sumOneTo","(numberzxa(numberzxa+1))/2","");
@@ -321,6 +330,7 @@ void initParamMapper()
 {
 
 	inputMapper["when"] = whenAction;
+	inputMapper["plot"] = plotAction;
 	inputMapper["quit"] = quitAction;
 	inputMapper["print"] = printCommand;
 	inputMapper["const"] = constNewVar;
@@ -437,7 +447,7 @@ int main(int argc,char* argv[])
   } while(*boolsettings["l"]);
   if(undoneExp.length() > 1 || lastExp.length()>1)
   {
-	  std::cout<<std::endl<<"Calculator exited"<<std::endl;
+	  std::cout<<std::endl<<"Ascal exited"<<std::endl;
   }
   return 0;
 }
@@ -532,10 +542,10 @@ void printHelpMessage(const std::string &expr)
 {
 
 	std::cout<<std::endl;
-	for(char a:expr)
+	/*for(char a:expr)
 	{
 		std::cout<<(int)a<<std::endl;
-	}
+	}*/
 	/*
 	 * up
 	 * 27,91,65
@@ -552,7 +562,7 @@ void printHelpMessage(const std::string &expr)
 	 * left
 	 * 27,91,68
 	 */
-	//std::cout<<"Error Invalid Parameter \""<<expr<<"\""<<std::endl;
+	std::cout<<"Error Invalid Parameter \""<<expr<<"\""<<std::endl;
 	std::cout<<"Enter a mathematical expression, or you can also use \nparameters to choose between the following options or see below \"redo\" for how to handle variables/functions."<<
 			"\nvalid params are:\nt to show time taken to interpret,";
 	std::cout<<" and calculate expression";
@@ -661,6 +671,150 @@ std::string clocNewVar(const std::string &exp,std::unordered_map<std::string,Obj
 	localMemory[newLocalVar.id] = newLocalVar;
 	return value;
 }
+int min(int a,int b)
+{
+	return a<b?a:b;
+}
+double getNextDoubleS(const std::string &data,int &index)
+{
+  bool stillReading = true;
+  bool isNegative = false;
+  bool afterDecimal = false;
+  char previous;
+  double num = 0;
+  int afterDecimalCount = 1;
+
+  if(index-1 >= 0)
+  {
+    previous = data[index-1];
+  }
+  else
+  {
+    previous = '&';
+  }
+  if(data[index] == '-')
+  {
+    isNegative = true;
+    index++;
+  }
+  while(stillReading)
+  {
+	  //std::cout<<"index: "<<index<<" "<<data[index]<<" "<<num<<std::endl;
+    if(data[index]>=48 && data[index]<58)
+    {
+    	if(!afterDecimal){
+    		num *= 10;
+    		num += (double)(data[index]-48);
+    	}
+    	else
+    	{
+    		num += (double) (data[index]-48)/afterDecimalCount;
+    	}
+    }
+    if(data[index] == '.')
+    {
+    	afterDecimal = true;
+    }
+    else if(!isOperator(previous) && index != 0)
+  {
+
+    if(data[index]<48 || data[index]>=58)
+    {
+      stillReading = false;
+    }
+
+  }
+    if(afterDecimal)
+    {
+    	afterDecimalCount *= 10;
+    }
+    previous = data[index++];
+
+  }
+  index -= 2;
+  if(isNegative)
+    num *= -1;
+  return num;
+}
+std::string plotAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::unordered_map<std::string,Object> &paramMemory,bool saveLast)
+{
+	const int plotKeyWordIndex = expr.find("plot");
+	const int endOfFun = expr.find(",");
+	const int endOfDomain = expr.find(",",endOfFun+1);
+	int index = plotKeyWordIndex+4;
+	while(expr[index] && expr[index] == ' ')
+		index++;
+	std::string function = expr.substr(index,endOfFun - (index));
+	index = endOfFun+1;
+	const double xMin = getNextDoubleS(expr,index);
+	index+=2;
+	const double xMax = getNextDoubleS(expr,index);
+	index = endOfDomain+1;
+	const double yMin = getNextDoubleS(expr,index);
+	index +=2;
+	const double yMax = getNextDoubleS(expr,index);
+	index +=2;
+	const double xStepSize = getNextDoubleS(expr,index);
+	std::cout<<xStepSize<<std::endl;
+	int tableSize = (xMax-xMin)/xStepSize;
+	std::vector<double> outPut;
+	double dx = (xMax-xMin)/tableSize;
+	double yClosestToZero = std::numeric_limits<double>::max();
+	double sumArea = 0;
+	for(int i = 0;i<tableSize;i++)
+	{
+		//std::cout<<" P: "<<function+"("+std::to_string(xMin+dx*(i))+")"<<std::endl;
+		double xi = xMin+dx*(i);
+		outPut.push_back(
+				calculateExpression<double>(function+"("+std::to_string(xi)+")",params,paramMemory,localMemory));
+		sumArea += outPut[i]*dx;
+		if(!*boolsettings["o"])
+			std::cout<<" exp: "<<function+"("+std::to_string(xi)+")"<<"="<<outPut[i]<<",";
+		if(abs(xi) < yClosestToZero)
+			yClosestToZero = abs(xi);
+
+	}
+
+
+	std::cout<<" "<<std::endl;
+	for(int i = 0;i<=tableSize;i++)
+	{
+		int xi = (int)round(dx*i+xMin);
+		if(i%5 == 0)
+			std::cout<<(xi>0?" ":"")<<xi;
+		else if((i-1)%5 == 0){}
+		else if((i-2)%5 == 0 && (xi>=10 || xi<=-10)){}
+		else
+			std::cout<<" ";
+	}
+	std::cout<<" "<<std::endl;
+	for(int x = 0;x<tableSize;x++)
+	{
+		std::cout<<"|";
+	}
+	std::cout<<std::endl;
+	for(int y = yMax;y>=yMin;y--)
+	{
+		for(int x = 0;x<tableSize;x++)
+		{
+			if(y == ((int)outPut[x]))
+				std::cout<<"*";
+			else if(y == 0)
+				std::cout<<"-";
+			else if( xMin+dx*x == yClosestToZero)
+				std::cout<<"|";
+			else
+				std::cout<<" ";
+		}
+		std::cout<<" "<<y<<std::endl;
+	}
+	std::cout<<"function plotted: "<<function<<" domain:"<<xMin<<" to "<<xMax<<", range:"<<
+			yMin<<" to "<<yMax<<" with a step size in the x of:"<<xStepSize<<std::endl;
+	std::cout<<"Area Under Curve calculated with reimann sum using "<<tableSize<<" partitions: "<<sumArea<<std::endl;
+
+	return MAX;
+}
 
 std::string whenAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::unordered_map<std::string,Object> &paramMemory,bool saveLast)
@@ -690,7 +844,11 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 	std::vector<char> exp;
 	//should always start after when is finished to build boolean expression
 	int thenIndex;
+	int whenIndex = startIndex;
 	double boolExpValue;
+	int elseIndex = expr.find("else");
+	elseIndex = elseIndex==-1?1000000:elseIndex;
+	int lastThen = 0;
 	//std::cout<<"start: "<<startOfExp<<" End: "<<endOfExp<<std::endl;
 	do {
 		thenIndex = expr.find("then",index);
@@ -705,13 +863,25 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 		//std::cout<<std::endl;
 		std::string booleanExpression(exp.begin(),exp.end());
 		exp.clear();
+		bool showOp = *boolsettings["o"];
+		*boolsettings["o"] = false;
 		boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
+		*boolsettings["o"] = showOp;
 		//std::cout<<"Boolean Expression: "<<booleanExpression<<" result: "<<boolExpValue<<std::endl;
 	//false case simply set the index to the next instance of when+4
 	//and repeat until true, or at end of case when
 		if(boolExpValue == 0)
 		{
 			index = expr.find("when",index) + 5;
+			whenIndex = index - 5;
+			if(whenIndex == -1)
+			{
+				value = getExpr(expr.substr(elseIndex+4,endIndex-(elseIndex+4))).data;
+				index = endIndex;
+				value = startOfExp+value+endOfExp;
+				//std::cout<<value<<std::endl;
+			}
+
 		}
 	//true case get sub expression associated with this when
 	//we have the index of the then so we essentially
@@ -719,10 +889,11 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 		{
 		//need to get expression //run calc
 			index += 5;
-			thenIndex =expr.find("when",index);
+			thenIndex = expr.find("when",index);
+			//std::cout<<"Next when index: "<<thenIndex<<" Previous When: "<<whenIndex<<std::endl;
 			thenIndex = thenIndex==-1?endIndex+1:thenIndex;
 			//std::cout<<"Final Then index: "<<thenIndex<<std::endl;
-			value = getExpr(expr.substr(index,std::min(endIndex,thenIndex)-index)).data;
+			value = getExpr(expr.substr(index,std::min(std::min(endIndex,thenIndex),elseIndex)-index)).data;
 			//set value = result of calc
 			//std::cout<<"Start: "<<startOfExp<<" value: "<<value<<" endOfExp: "<<endOfExp<<std::endl;
 			if(*boolsettings["o"])
@@ -737,6 +908,7 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 			}
 			value = startOfExp+value+endOfExp;
 		}
+		lastThen = thenIndex;
 	} while(expr[index] && boolExpValue == 0 && index < endIndex);
 	return "a"+value;
 }
@@ -893,7 +1065,7 @@ double calcWithOptions(std::string expr,std::unordered_map<std::string,Object> &
 	double result = calculateExpression<double>(expr,params,paramMemory,localMemory);
 	//------------------------
 	//std::cout<<std::to_string(result).length()<<"  max len "<<MAX.length()<<std::endl;
-	if(std::to_string(result).length() != MAX.length())//returned by function that doesn't return a result
+	//if()//returned by function that doesn't return a result
 	{
 		if(timeInstruction && *boolsettings["p"]){
 			end = std::chrono::system_clock::now();
@@ -904,7 +1076,7 @@ double calcWithOptions(std::string expr,std::unordered_map<std::string,Object> &
 			std::cout << "finished computation at " << std::ctime(&end_time)
 			          << "elapsed time: " << elapsed_seconds.count() << "s\n";
 		}
-		if(*boolsettings["p"])
+		if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
 		{
 			std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
 		}
@@ -1584,7 +1756,7 @@ double getNextDouble(const std::string &data,int &index)
   {
     previous = '&';
   }
-  if(isOperator(data[index]) && (isOperator(previous) || index == 0))
+  if(data[index] == '-' && (isOperator(previous) || index == 0))
   {
     if(data[index] == '-')
       isNegative = true;
@@ -1592,6 +1764,7 @@ double getNextDouble(const std::string &data,int &index)
   }
   while(stillReading)
   {
+	  //std::cout<<"index: "<<index<<" "<<data[index]<<" "<<num<<std::endl;
     if(data[index]>=48 && data[index]<58)
     {
     	if(!afterDecimal){
