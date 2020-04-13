@@ -177,6 +177,15 @@ Or delete all saved variables by typing delete all<br>
 Local Variables are automatically managed by the program stack, and will be cleared at the end of a batch of statements or a function call 
 <br>
 <br>
+<h3>The plot keyword:</h3>
+<p>
+The "plot" keyword in Ascal currently is a simple tool to graph your non-recursive functions in the command line<br>
+To use it type: plot [your_function_name];[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size]<br>
+`let f = x^2-4`<br>
+`plot f,-5<>5,-5<>15,0.1`<br>
+ you should see the graph of f(x) = x^2-4 from -5 to 5 in the x, and -5 to 15 in the y axis.<br>
+</p>
+<br>
 <h3>Operators Documentation:</h3>
 Operator precedence is defined below, in a case where two adjacent operations have the same priority the left most operation will occur first<br>
 <br>
@@ -251,3 +260,4 @@ Operator precedence is defined below, in a case where two adjacent operations ha
 `let pow = when a*b*0 + b>1 then  optmult(a,pow(a,b-1)) when not(b>1) then a end`<br>
 `pow(2,5)`
  </p>
+<br>
