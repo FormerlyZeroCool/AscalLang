@@ -18,6 +18,7 @@ public:
 	AscalParameters();
 	AscalParameters& operator++();
 	int getUseCount();
+	void resetParamUse();
 };
 
 #endif /* ASCALPARAMETERS_H_ */

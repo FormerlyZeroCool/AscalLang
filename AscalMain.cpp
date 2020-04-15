@@ -297,6 +297,8 @@ void loadInitialFunctions()
 	loadFn(pi);
 	Object e("e","2.718281828459045","");
 	loadFn(e);
+	Object inf("nf",MAX+"2","");
+	loadFn(inf);
 }
 void printAllFunctions()
 {
@@ -766,11 +768,15 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 	{
 		//std::cout<<" P: "<<function+"("+std::to_string(xMin+dx*(i))+")"<<std::endl;
 		double xi = xMin+dx*(i);
+		std::unordered_map<std::string,Object> localMemory1;
+		std::unordered_map<std::string,Object> paramMemory1;
+		AscalParameters params1;
+		params.resetParamUse();
 		outPut.push_back(
-				calculateExpression<double>(function+"("+std::to_string(xi)+")",params,paramMemory,localMemory));
+				calculateExpression<double>(function+"("+std::to_string(xi)+")",params1,paramMemory1,localMemory1));
 		sumArea += outPut[i]*dx;
-		if(!*boolsettings["o"])
-			std::cout<<" exp: "<<function+"("+std::to_string(xi)+")"<<"="<<outPut[i]<<",";
+		if(!*boolsettings["o"] && *boolsettings["p"])
+			std::cout<<function<<"("<<std::to_string(xi)<<")"<<"="<<outPut[i]<<",";
 		if(abs(xi) < yClosestToZero)
 			yClosestToZero = abs(xi);
 
@@ -780,11 +786,10 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 	std::cout<<" "<<std::endl;
 	for(int i = 0;i<=tableSize;i++)
 	{
-		int xi = (int)round(dx*i+xMin);
+		double xi = (dx*i+xMin);
 		if(i%5 == 0)
-			std::cout<<(xi>0?" ":"")<<xi;
-		else if((i-1)%5 == 0){}
-		else if((i-2)%5 == 0 && (xi>=10 || xi<=-10)){}
+			std::cout<<std::to_string(xi).substr(0,4);
+		else if((i-1)%5 == 0 || (i-2)%5 == 0|| (i-3)%5 == 0){}
 		else
 			std::cout<<" ";
 	}
@@ -798,7 +803,7 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 	{
 		for(int x = 0;x<tableSize;x++)
 		{
-			if(y == ((int)outPut[x]))
+			if(y == round(outPut[x]))
 				std::cout<<"*";
 			else if(y == 0)
 				std::cout<<"-";
@@ -809,7 +814,8 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 		}
 		std::cout<<" "<<y<<std::endl;
 	}
-	std::cout<<"function plotted: "<<function<<" domain:"<<xMin<<" to "<<xMax<<", range:"<<
+
+	std::cout<<expr<<"\nfunction plotted: "<<function<<" = "<<memory[function].instructionsToString()<<"domain:"<<xMin<<" to "<<xMax<<", range:"<<
 			yMin<<" to "<<yMax<<" with a step size in the x of:"<<xStepSize<<std::endl;
 	std::cout<<"Area Under Curve calculated with reimann sum using "<<tableSize<<" partitions: "<<sumArea<<std::endl;
 
@@ -854,7 +860,9 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 		thenIndex = expr.find("then",index);
 		//std::cout<<"Starting of exp: "<<index<<":"<<expr[index]<<" thenIndex: "<<thenIndex<<":"<<expr[thenIndex]
 		//		<<" endIndex: "<<endIndex<<":"<<expr[endIndex]<<std::endl;
-		while(index < endIndex && index < thenIndex)
+		while(expr[index] == ' ' && index < endIndex && index < thenIndex)
+			index++;
+		while(expr[index] && index < endIndex && index < thenIndex)
 		{
 			//std::cout<<expr[index];
 			exp.push_back(expr[index]);
@@ -879,7 +887,7 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 				value = getExpr(expr.substr(elseIndex+4,endIndex-(elseIndex+4))).data;
 				index = endIndex;
 				value = startOfExp+value+endOfExp;
-				//std::cout<<value<<std::endl;
+				//std::cout<<"In Else Case rtn val: "<<value<<std::endl;
 			}
 
 		}

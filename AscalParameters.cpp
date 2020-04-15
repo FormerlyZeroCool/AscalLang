@@ -21,3 +21,8 @@ int AscalParameters::getUseCount()
 {
 	return useCount;
 }
+
+void AscalParameters::resetParamUse()
+{
+	useCount = 0;
+}
