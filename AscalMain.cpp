@@ -20,6 +20,11 @@
 #include "setting.h"
 #include "Object.h"
 
+//Parallel reimann sums
+//thread count = number of partitions/20 + 1
+//dynamic array as long as thread count passed to each thread, along with thread index number to save result of calculation
+//when all threads are finished running sum up result in array, maybe use simd if
+
 const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 //////////////////////////////////////////////////////////
 //Start Ascal System Defined  Keyword functionality Executed by lookup in inputMapper unordered_map
@@ -153,27 +158,27 @@ double calcWithOptions(std::string,std::unordered_map<std::string,Object> &local
 
 /////////////////////////////
 //Program Global Memory Declaration
-std::unordered_map<std::string,Object> memory;
+static std::unordered_map<std::string,Object> memory;
 std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
 //Interpreter Settings HashMap for toggle flags, like show time, or operations
-std::unordered_map<std::string,setting<bool> > boolsettings;
+static std::unordered_map<std::string,setting<bool> > boolsettings;
 //Interpreter hash map for system keywords
 //template <class t>
-std::unordered_map
+static std::unordered_map
 <std::string,
 std::string (*)(
 		const std::string&,std::unordered_map<std::string,Object>&,AscalParameters &,
 			std::unordered_map<std::string,Object>&,bool)> inputMapper;
 
 template <class t>
-std::unordered_map<char,t (*)(t&,t&)> operations;
+static std::unordered_map<char,t (*)(t&,t&)> operations;
 //End Program Global Memory Declaration
 /////////////////////////////
 //list of previous expressions for u command in interpretParam fn
-stack<std::string> lastExp;
+static stack<std::string> lastExp;
 //list of previous undone expressions for r command in interpretParam fn
-stack<std::string> undoneExp;
+static stack<std::string> undoneExp;
 /////////////////////////////
 
 void printLoadedMemMessage(Object function)
@@ -744,10 +749,31 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 	const int plotKeyWordIndex = expr.find("plot");
 	const int endOfFun = expr.find(",");
 	const int endOfDomain = expr.find(",",endOfFun+1);
+	std::vector<double> sumArea;
+	sumArea.push_back(0);
+	std::vector<std::vector<double> > outPuts;
+	outPuts.push_back(std::vector<double>());
 	int index = plotKeyWordIndex+4;
 	while(expr[index] && expr[index] == ' ')
+	{
 		index++;
-	std::string function = expr.substr(index,endOfFun - (index));
+	}
+	std::vector<std::string> functions;
+	int trailer = index;
+	{
+		while(expr[index] && expr[index] != ',')
+		{
+			if(expr[index] == '|')
+			{
+				functions.push_back(expr.substr(trailer,index-(trailer)));
+				outPuts.push_back(std::vector<double>());
+				sumArea.push_back(0);
+				trailer = index+1;
+			}
+				index++;
+		}
+	}
+	functions.push_back(expr.substr(trailer,endOfFun - (trailer)));
 	index = endOfFun+1;
 	const double xMin = getNextDoubleS(expr,index);
 	index+=2;
@@ -758,35 +784,42 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 	const double yMax = getNextDoubleS(expr,index);
 	index +=2;
 	const double xStepSize = getNextDoubleS(expr,index);
-	std::cout<<xStepSize<<std::endl;
-	int tableSize = (xMax-xMin)/xStepSize;
-	std::vector<double> outPut;
-	double dx = (xMax-xMin)/tableSize;
+	index += 2;
+	const double yStepSize = getNextDoubleS(expr,index);
+	//std::cout<<"Y Step Size: "<<yStepSize<<std::endl;
+	int tableWidth = (xMax-xMin)/(xStepSize>0?xStepSize:1);
+	int tableHeight = (yMax-yMin)/(yStepSize>0?yStepSize:1);
+	double dx = (xMax-xMin)/tableWidth;
+	double dy = yStepSize>0?yStepSize:1;
 	double yClosestToZero = std::numeric_limits<double>::max();
-	double sumArea = 0;
-	for(int i = 0;i<tableSize;i++)
+	double xi;
+	for(int j = 0;j<functions.size();j++)
 	{
-		//std::cout<<" P: "<<function+"("+std::to_string(xMin+dx*(i))+")"<<std::endl;
-		double xi = xMin+dx*(i);
-		std::unordered_map<std::string,Object> localMemory1;
-		std::unordered_map<std::string,Object> paramMemory1;
-		AscalParameters params1;
-		params.resetParamUse();
-		outPut.push_back(
-				calculateExpression<double>(function+"("+std::to_string(xi)+")",params1,paramMemory1,localMemory1));
-		sumArea += outPut[i]*dx;
-		if(!*boolsettings["o"] && *boolsettings["p"])
-			std::cout<<function<<"("<<std::to_string(xi)<<")"<<"="<<outPut[i]<<",";
-		if(abs(xi) < yClosestToZero)
-			yClosestToZero = abs(xi);
+		std::string function = functions[j];
+		std::cout<<"\nProcessing: "<<function<<std::endl;
+		for(int i = 0;i<tableWidth;i++)
+		{
+			//std::cout<<" P: "<<function+"("+std::to_string(xMin+dx*(i))+")"<<std::endl;
+			xi = xMin+dx*(i);
+			std::unordered_map<std::string,Object> localMemory1;
+			std::unordered_map<std::string,Object> paramMemory1;
+			AscalParameters params1;
+			outPuts[j].push_back(
+					calculateExpression<double>(function+"("+std::to_string(xi)+")",params1,paramMemory1,localMemory1));
+			sumArea[j] += outPuts[j][i]*dx;
+			if(!*boolsettings["o"] && *boolsettings["p"])
+				std::cout<<function<<"("<<std::to_string(xi)<<")"<<"="<<outPuts[j][i]<<",";
+			if(abs(xi) < yClosestToZero)
+				yClosestToZero = abs(xi);
 
+		}
 	}
 
 
-	std::cout<<" "<<std::endl;
-	for(int i = 0;i<=tableSize;i++)
+	std::cout<<std::endl;
+	for(int i = 0;i<=tableWidth;i++)
 	{
-		double xi = (dx*i+xMin);
+		xi = (dx*i+xMin);
 		if(i%5 == 0)
 			std::cout<<std::to_string(xi).substr(0,4);
 		else if((i-1)%5 == 0 || (i-2)%5 == 0|| (i-3)%5 == 0){}
@@ -794,30 +827,58 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 			std::cout<<" ";
 	}
 	std::cout<<" "<<std::endl;
-	for(int x = 0;x<tableSize;x++)
+	for(int x = 0;x<tableWidth;x++)
 	{
 		std::cout<<"|";
 	}
 	std::cout<<std::endl;
-	for(int y = yMax;y>=yMin;y--)
+	char symbols[10] = {'*','#','%','$','-','@','&','+','!','='};
+	for(double y = tableHeight;y>=0;y--)
 	{
-		for(int x = 0;x<tableSize;x++)
+
+		for(int x = 0;x<tableWidth;x++)
 		{
-			if(y == round(outPut[x]))
-				std::cout<<"*";
-			else if(y == 0)
-				std::cout<<"-";
-			else if( xMin+dx*x == yClosestToZero)
-				std::cout<<"|";
-			else
-				std::cout<<" ";
+			bool draw = true;
+			for(int z = 0; z<outPuts.size();z++)
+			{
+				const double roundedFunctionOutput = (round((outPuts[z][x] - yMin) / dy) * dy) + yMin;
+				bool drawFn = true;
+				for(int a = z+1;drawFn && a<outPuts.size();a++)
+				{
+					drawFn = (roundedFunctionOutput != (round((outPuts[a][x] - yMin) / dy) * dy) + yMin);
+				}
+				if(drawFn && y*dy+yMin == roundedFunctionOutput)
+				{
+					std::cout<<symbols[z];
+					draw = false;
+				}
+			}
+			if(draw)
+			{
+				if(y == tableHeight/2)
+					std::cout<<"-";
+				else if(xMin+dx*x == yClosestToZero)
+					std::cout<<"|";
+				else
+					std::cout<<" ";
+			}
 		}
-		std::cout<<" "<<y<<std::endl;
+		std::cout<<" "<<y*dy+yMin<<std::endl;
 	}
 
-	std::cout<<expr<<"\nfunction plotted: "<<function<<" = "<<memory[function].instructionsToString()<<"domain:"<<xMin<<" to "<<xMax<<", range:"<<
-			yMin<<" to "<<yMax<<" with a step size in the x of:"<<xStepSize<<std::endl;
-	std::cout<<"Area Under Curve calculated with reimann sum using "<<tableSize<<" partitions: "<<sumArea<<std::endl;
+	//std::cout<<" "<<std::endl;
+	for(int x = 0;x<tableWidth;x++)
+	{
+		std::cout<<"|";
+	}
+	std::cout<<std::endl<<expr<<std::endl;
+	std::cout<<"domain:"<<xMin<<" to "<<xMax<<", range:"<<
+			yMin<<" to "<<yMax<<" with a step size in the x of:"<<xStepSize<<", and in the y: "<<yStepSize<<std::endl;
+	for(int i =0; i<functions.size();i++)
+	{
+		std::cout<<"\nFunction: "<<functions[i]<<", plotted using symbol: "<<symbols[i]<<", function defined as: "<<memory[functions[i]].instructionsToString();
+		std::cout<<"Area Under Curve calculated with reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<std::endl;
+	}
 
 	return MAX;
 }
@@ -1075,7 +1136,7 @@ double calcWithOptions(std::string expr,std::unordered_map<std::string,Object> &
 	//std::cout<<std::to_string(result).length()<<"  max len "<<MAX.length()<<std::endl;
 	//if()//returned by function that doesn't return a result
 	{
-		if(timeInstruction && *boolsettings["p"]){
+		if(timeInstruction){
 			end = std::chrono::system_clock::now();
 
 			std::chrono::duration<double> elapsed_seconds = end-start;
