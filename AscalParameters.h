@@ -19,6 +19,7 @@ public:
 	AscalParameters& operator++();
 	int getUseCount();
 	void resetParamUse();
+	std::string toString();
 };
 
 #endif /* ASCALPARAMETERS_H_ */
