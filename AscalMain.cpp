@@ -1587,13 +1587,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 }
 			 else
 			 {
-				 std::cout<<"Invalid reference: "<<varName.data<<std::endl;
-				 std::cout<<"In Expression: "<<exp<<std::endl;
-
-				 std::cout<<"Exiting Calculation"<<std::endl;
-				 exp = MAX;
-				 i = 0;
-				 currentChar = exp[i];
+				 throw std::string("Invalid reference: "+varName.data+"\n"+"In Expression: "+exp+"\nExiting Calculation");
 			 }
 		 }
 
