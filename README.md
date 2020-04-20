@@ -151,7 +151,7 @@ because it replaces x with c^2, and c with the parameter supplied.
 <h3>The when then end set of keywords.</h3>
 <p>
 The when then end keywords are the first way in Ascal to conditionally execute your code, allowing for recursion.<br>
-This functionality is still in development, and does not support multi-variable functions currently(issues with parameter memory scoping)<br>
+This functionality is still in testing, but it appears stable in this release<br>
 Example Ascal Code for a recursive summation series function:<br>
 let f = when x>1 then f(x-1)+x when x<1 + x=1 then 1 end;<br>
 If the parser sees the keyword when it will evaluate the expression between the when, and the proceeding then. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
