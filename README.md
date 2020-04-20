@@ -195,7 +195,7 @@ Operator precedence is defined below, in a case where two adjacent operations ha
   This operator cannot handle fractional powers, and will return the result as if it was raised to the power of 0<br>
   written like : x^z<br>
   
-  'X' , '/' , '%' ,'$' , 'P' all have the same third level of priority<br>
+  'X' , '/' , '%' ,'$' , 'P','C' all have the same third level of priority<br>
   <br>
   Asterisk or 'X' is the multiplication operator<br>
   <br>
@@ -210,6 +210,9 @@ Operator precedence is defined below, in a case where two adjacent operations ha
   Although the exponentiation operator cannot handle fractional powers<br>
   <br>
   'P' is the permutation operator from statistics or factorial(leftOperand)/factorial(leftOperand-rightOperand)<br>
+  <br>
+  <br>
+  'C' is the permutation operator from statistics or factorial(leftOperand)/(factorial(leftOperand-rightOperand)*factorial(rightOperand))<br>
   <br>
   '+' , '-' after that the next priority level is for addition, and subtraction<br>
   <br>
