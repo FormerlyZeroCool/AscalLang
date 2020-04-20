@@ -21,6 +21,7 @@
 #include "stack.h"
 #include "setting.h"
 #include "Object.h"
+#include "Vect2D.h"
 
 
 /////////////////////////////
@@ -47,7 +48,7 @@ static std::unordered_map<char,t (*)(t&,t&)> operations;
 
 #define DEBUG 1
 
-#if DEBUG==0
+#if DEBUG==1
 #define LOG_DEBUG(x)  if(*boolsettings["d"]) {std::cout<<x<<std::endl;}
 #else
 #define LOG_DEBUG(x)
@@ -263,7 +264,7 @@ void loadInitialFunctions()
 	loadFn(sinD);
 	Object sin("sin","notSin(theta%(2*pi))","");
 	loadFn(sin);
-	Object notSin("notSin","theta-theta^3/6+theta^5/120-theta^7/5040+theta^9/362800-theta^11/39916800+theta^13/6227020800-theta^15/fact(15)","");
+	Object notSin("notSin","theta-theta^3/6+theta^5/120-theta^7/5040+theta^9/362800-theta^11/39916800+theta^13/6227020800-theta^15/(15P15)","");
 	loadFn(notSin);
 	Object csc("csc","1/sin(theta)","");
 	loadFn(csc);
@@ -455,7 +456,13 @@ int main(int argc,char* argv[])
     	std::unordered_map<std::string,Object> localMemory;
     	std::map<std::string,Object> paramMemory;
     	arg = argv[i];
+    	try{
     	interpretParam(arg,localMemory,paramMemory,true);
+	}
+	catch(std::string &exception)
+	{
+		std::cout<<exception<<std::endl;
+	}
     }
   }
   //End of section interpreting program parameters from command line
@@ -477,7 +484,13 @@ int main(int argc,char* argv[])
 
 	    	std::unordered_map<std::string,Object> localMemory;
 	    	std::map<std::string,Object> paramMemory;
+	    	try{
 		  interpretParam(expr,localMemory,paramMemory,true);
+		}
+		catch(std::string &exception)
+		{
+			std::cout<<exception<<std::endl;
+		}
 
 	  }
   } while(*boolsettings["l"]);
@@ -804,7 +817,6 @@ double getNextDoubleS(const std::string &data,int &index)
     num *= -1;
   return num;
 }
-#include "Vect2D.h"
 
 std::string plotAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
@@ -1122,40 +1134,11 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 		if(firstWord.size() != 1 && firstWord[0] != 'p')
 		*boolsettings["p"] = print;
 	}
-	/*else if(inputMapper.count(firstWord) != 0)
-	{
-		value = inputMapper[firstWord](expr,saveLast);
-	}*/
 	else
 	{
 		printHelpMessage(expr);
 	}
 	return value;
-/*
-	else if(cmpstr(expr.substr(0,3),"let"))
-	{
-		letNewVar(expr,saveLast);
-	}
-	else if(cmpstr(expr.substr(0,5),"const"))
-	{
-		constNewVar(expr,saveLast);
-	}
-	else if(cmpstr(expr.substr(0,5),"print"))
-	{
-		printCommand(expr,saveLast);
-	}
-	else if(cmpstr(expr.substr(0,6),"delete"))
-	{
-		deleteObject(expr,saveLast);
-	}
-	else if (cmpstr(expr,"u") || cmpstr(expr,"-u"))//undo
-	{
-		undoAction(expr,false);
-	}
-	else if (cmpstr(expr,"r") || cmpstr(expr,"-r"))//redo
-	{
-		redoAction(expr,false);
-	}*/
 }
 
 bool cmpstr(const std::string &s1,const std::string &s2)
@@ -1604,7 +1587,6 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 }
 			 else
 			 {
-				 std::string input;
 				 std::cout<<"Invalid reference: "<<varName.data<<std::endl;
 				 std::cout<<"In Expression: "<<exp<<std::endl;
 
@@ -1612,27 +1594,6 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 exp = MAX;
 				 i = 0;
 				 currentChar = exp[i];
-				 //loop until cannot find anymore of the same var
-				 /*std::string name = varName.data;
-				 int originalStart = varName.start;
-				 localMemory[varName.data] = Object(varName.data,input,"");
-				 endOfExp = exp.substr(varName.end+1<exp.length()?varName.end+1:exp.length()-1,
-						 exp.length() - (varName.end+1<exp.length()?varName.end+1:exp.length()));
-				 exp = exp.substr(0,varName.start<exp.length()?varName.start:exp.length()-1)+input+endOfExp;
-				 */
-				 /*do{
-					 if(debug)
-					 {
-						 std::cout<<"VarName:"<<varName.data<<" original name:"<<name<<std::endl;
-						 std::cout<<"start:"<<(varName.end+1<exp.length()?varName.end+1:exp.length())<<" substrLen: "<<exp.length() - (varName.end+1<exp.length()?varName.end+1:0);
-
-					 }
-					 endOfExp = exp.substr(varName.end+1<exp.length()?varName.end+1:exp.length()-1,
-							 exp.length() - (varName.end+1<exp.length()?varName.end+1:exp.length()));
-					 exp = exp.substr(0,varName.start<exp.length()?varName.start:exp.length()-1)+input+endOfExp;
-					 varName = getVarName(exp,exp.find(name));
-				 } while(cmpstr(name,varName.data));*/
-
 			 }
 		 }
 
@@ -1664,6 +1625,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 	      initialOperators.pop();
 	      //Send expression in parentheses to processStack for evaluation
 	      and2 = processStack(inParenthesesOperands,inParenthesesOperators);
+
 	      initialOperands.push(and2);
 	      if(isNumeric(exp[i+1]) || exp[i+1] == '(')
 	      {
@@ -1726,9 +1688,10 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 	}
 
 	LOG_DEBUG("\nFinal Process: "<<exp)
-
+	t data;
 	//process values in stacks, and return final solution
-	return processStack(finalOperands,finalOperators);
+		data = processStack(finalOperands,finalOperators);
+	return data;
 }
 template <class t>
 t processStack(stack<t> &operands,stack<char> &operators)
@@ -1781,6 +1744,14 @@ t processStack(stack<t> &operands,stack<char> &operators)
 		  savedOperands.pop();
 		  operands.push(and1);
 	  }
+	}
+	if(operands.size()>1)
+	{
+		throw std::string("Error, too many operands");
+	}
+	else if(operators.size()>0)
+	{
+		throw std::string("Error, too many operators");
 	}
 	//get result from processing expression
 	operands.top(result);
