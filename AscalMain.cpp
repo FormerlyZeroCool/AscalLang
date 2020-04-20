@@ -866,7 +866,7 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 					calculateExpression<double>(function+"("+std::to_string(xi)+")",params1,paramMemory1,localMemory1));
 			sumArea[j] += outPuts.get(i,j)*dx;
 			if(!*boolsettings["o"] && *boolsettings["p"])
-				std::cout<<function<<"("<<std::to_string(xi)<<")"<<"="<<outPuts.get(j,i)<<",";
+				std::cout<<function<<"("<<std::to_string(xi)<<")"<<"="<<outPuts.get(i,j)<<",";
 
 
 		}
