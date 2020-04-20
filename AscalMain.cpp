@@ -40,13 +40,13 @@ std::string (*)(
 			std::map<std::string,Object>&,bool)> inputMapper;
 
 template <class t>
-static std::unordered_map<char,t (*)(t&,t&)> operations;
+static std::map<char,t (*)(t&,t&)> operations;
 //End Program Global Memory Declaration
 /////////////////////////////
 
 
 
-#define DEBUG 1
+#define DEBUG 0
 
 #if DEBUG==1
 #define LOG_DEBUG(x)  if(*boolsettings["d"]) {std::cout<<x<<std::endl;}
@@ -462,6 +462,7 @@ int main(int argc,char* argv[])
 	catch(std::string &exception)
 	{
 		std::cout<<exception<<std::endl;
+		std::cout<<"Failed to exec: "<<arg<<std::endl;
 	}
     }
   }
@@ -490,6 +491,7 @@ int main(int argc,char* argv[])
 		catch(std::string &exception)
 		{
 			std::cout<<exception<<std::endl;
+			std::cout<<"Failed to exec: "<<expr<<std::endl;
 		}
 
 	  }
@@ -1739,13 +1741,16 @@ t processStack(stack<t> &operands,stack<char> &operators)
 		  operands.push(and1);
 	  }
 	}
-	if(operands.size()>1)
+	if(operands.size()>1 || operators.size()>0)
 	{
-		throw std::string("Error, too many operands");
-	}
-	else if(operators.size()>0)
-	{
-		throw std::string("Error, too many operators");
+		if(operands.size()>1)
+		{
+			throw std::string("Error, too many operands.\nExiting Calculation.");
+		}
+		else if(operators.size()>0)
+		{
+			throw std::string("Error, too many operators.\nExiting Calculation.");
+		}
 	}
 	//get result from processing expression
 	operands.top(result);
