@@ -29,7 +29,7 @@ static std::unordered_map<std::string,Object> memory;
 std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
 //Interpreter Settings HashMap for toggle flags, like show time, or operations
-static std::unordered_map<std::string,setting<bool> > boolsettings;
+static std::map<std::string,setting<bool> > boolsettings;
 //Interpreter hash map for system keywords
 //template <class t>
 static std::unordered_map
@@ -374,8 +374,9 @@ void initParamMapper()
 	inputMapper["o"] = showOpBoolSetting;
 	inputMapper["p"] = printBoolSetting;
 	inputMapper["t"] = timeToRunBoolSetting;
-
+#if DEBUG == 1
 	inputMapper["d"] = debugBoolSetting;
+#endif
 }
 int main(int argc,char* argv[])
 {
@@ -867,8 +868,6 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 			sumArea[j] += outPuts.get(i,j)*dx;
 			if(!*boolsettings["o"] && *boolsettings["p"])
 				std::cout<<function<<"("<<std::to_string(xi)<<")"<<"="<<outPuts.get(i,j)<<",";
-
-
 		}
 	}
 
@@ -1413,8 +1412,6 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 {
 				 i++;
 			 }
-			 //if(exp[i] == ';' || exp[i] == '\n')
-			//	 *boolsettings["p"] = false;
 			 if((exp[i] == 0 || exp[i+1] == 0) && cmpstr(result,MAX))
 			 {
 				 //std::cout<<"HEllow from calcuelt"<<std::endl;
@@ -1974,14 +1971,8 @@ t combinations(t &and1,t &and2)
 	t result = 1;
 	for(int i = 0;i<and2 && and1 - i > 1;i++)
 	{
-		result *= and1 - i;
+		result = (result*(and1 - i))/(and2-i);
 	}
-	int and2Fact = 1;
-	for(int i = 2;i <= and2;i++)
-	{
-		and2Fact *= i;
-	}
-	result /= and2Fact;
 	return result;
 }
 template <class t>
