@@ -502,7 +502,8 @@ std::string loopBoolSetting(const std::string & expr,std::unordered_map<std::str
 std::string printBoolSetting(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
 {
-	updateBoolSetting(expr);
+	int index = 0;
+	updateBoolSetting(getVarName(expr,index).data);
 	return MAX;
 }
 std::string debugBoolSetting(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
@@ -1085,13 +1086,13 @@ std::string printCommand(const std::string &expr,std::unordered_map<std::string,
 void updateBoolSetting(const std::string &expr)
 {
 
+	lastExp.pop();
 	setting<bool> set = boolsettings[expr];
 	//inverts setting value via operator overloads of = and *
 	bool data = !*set;
 	std::cout<<set.getName()<<" Status: "<<data<<"\n";
 	setting<bool> newSetting(set.getName(),set.getCommand(),data);
-	boolsettings.erase(expr);
-	boolsettings[expr] = newSetting;
+	boolsettings[set.getCommand()] = newSetting;
 }
 //returns a string of all the data it has read in a single string delimited by ;
 //and a double which is the result of the last calc
@@ -1118,6 +1119,7 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 			lastExp.push(expr);
 
 		value = calcWithOptions(expr,localMemory,params,paramMemory);
+		if(firstWord.size() != 1 && firstWord[0] != 'p')
 		*boolsettings["p"] = print;
 	}
 	/*else if(inputMapper.count(firstWord) != 0)
