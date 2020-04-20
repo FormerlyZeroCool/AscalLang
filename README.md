@@ -180,9 +180,9 @@ Local Variables are automatically managed by the program stack, and will be clea
 <h3>The plot keyword:</h3>
 <p>
 The "plot" keyword in Ascal currently is a simple tool to graph your non-recursive functions in the command line<br>
-To use it type: plot [your_function_name];[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size]<br>
+To use it type: plot [your_function_name];[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size],[y_step_size]<br>
 `let f = x^2-4`<br>
-`plot f,-5<>5,-5<>15,0.1`<br>
+`plot f,-5<>5,-5<>15,0.1,0.1`<br>
  you should see the graph of f(x) = x^2-4 from -5 to 5 in the x, and -5 to 15 in the y axis.<br>
 </p>
 <br>
