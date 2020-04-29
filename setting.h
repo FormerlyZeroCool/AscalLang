@@ -28,8 +28,7 @@ public:
 	}
 	bool operator==(const setting<t> &o)
 	{
-		return this->dat == o.dat && o.command.compare(this->command) == 0 && o.name.compare(this->name) == 0
-				&& o.message.compare(this->message) == 0;
+		return o.command.compare(this->command) == 0 && o.name.compare(this->name) == 0;
 	}
 	bool operator=(t odat)
 	{
