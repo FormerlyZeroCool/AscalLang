@@ -404,7 +404,6 @@ int main(int argc,char* argv[])
   /*
    * Initializing values in system hashmaps
    * */
-	LOG_DEBUG("Hello, world of macro functions!");
   {
 	  //initializes operations hashmap that maps operators like + to the appropriate function
 	  initOperations<double>();
@@ -540,16 +539,14 @@ std::string importAction(const std::string & expr,std::unordered_map<std::string
 		while(expr[startIndex] == ' ')
 			startIndex++;
 		std::string filePath = expr.substr(startIndex,expr.find(';')-startIndex);
-		try{
-			inputFile.open(filePath);
-		}
-		catch(...)
+		inputFile.open(filePath);
+		if(!inputFile)
 		{
 			throw std::string("Malformed path: "+filePath);
 		}
+		getline(inputFile, line);
 		while(inputFile)
 		{
-			getline(inputFile, line);
 			std::unordered_map<std::string,Object> calledLocalMemory;
 	    	std::map<std::string,Object> calledParamMemory;
 	    	try{
@@ -560,8 +557,8 @@ std::string importAction(const std::string & expr,std::unordered_map<std::string
 	    		std::cout<<exception<<std::endl;
 	    		std::cout<<"Failed to exec: "<<expr<<std::endl;
 	    	}
+			getline(inputFile, line);
 		}
-
 		return MAX;
 }
 std::string showOpBoolSetting(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
@@ -1052,7 +1049,7 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	int index = expr.find("while")<1000?expr.find("while")+5:0;
 	while(expr[index] == ' ')
 		index++;
-	const int startIndex = index;
+
 	int startOfBoolExp = index;
 	int startOfCodeBlock = index;
 	SubStr codeBlock("",0,0);
@@ -1086,7 +1083,7 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 		printTime = *boolsettings["t"];
 		*boolsettings["t"] = false;
 	}
-	std::cout<<"bool expression Being Exec: "<<booleanExpression<<std::endl;
+	//std::cout<<"bool expression Being Exec: "<<booleanExpression<<std::endl;
 	boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
 	//std::cout<<" value: "<<boolExpValue<<std::endl;
 	if(boolExpValue != 0)
@@ -1124,7 +1121,7 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	index = codeBlock.end + startOfCodeBlock;
 	while(expr[index] == ';' || expr[index] == ' ' || expr[index] == '}')
 		index++;
-	std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
+	//std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
 	return "a"+expr.substr(index,expr.size());
 }
 std::string whenAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
