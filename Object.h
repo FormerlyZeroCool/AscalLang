@@ -10,16 +10,18 @@
 #include <iostream>
 #include "AscalParameters.h"
 class Object {
+private:
+	std::vector<std::string> instructions;
 public:
 	std::string id;
 	AscalParameters params;
-	std::vector<std::string> instructions;
 	//returns end index of params in string
 	int setParams(std::string param);
 	Object();
 	Object(std::string id,std::string expression,std::string param);
 	void addInstruction(std::string expression);
 	std::string instructionsToString();
+	std::string instructionsToFormattedString();
 	std::vector<std::string>& getInstructions();
 	bool operator==(Object o);
 	virtual ~Object();

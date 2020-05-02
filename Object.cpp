@@ -7,19 +7,56 @@
 
 #include "Object.h"
 
-std::string Object::instructionsToString()
+std::string Object::instructionsToFormattedString()
 {
 	std::vector<char> data;
 	data.reserve(128);
+
+	int indentationLevel = 1;
+	data.push_back('\n');
+	data.push_back('{');
+	data.push_back('\n');
 	for(int i = 0;i < instructions.size();i++)
 	{
 		for(char &c:instructions[i])
 		{
-			data.push_back(c);
+			if(c == '{'){
+				indentationLevel++;
+				data.push_back('\n');
+			}
+			else if(c == '}')
+				indentationLevel--;
+
+			if(c == ';')
+			{
+				data.push_back('\n');
+				for(int i = 0;i < indentationLevel;i++)
+				{
+					data.push_back(' ');
+					data.push_back(' ');
+				}
+			}
+			else
+				data.push_back(c);
 		}
 		data.push_back('\n');
 	}
+	data.push_back('}');
 	return std::string(data.begin(),data.end());
+}
+std::string Object::instructionsToString()
+{
+	std::vector<char> data;
+		data.reserve(128);
+		for(int i = 0;i < instructions.size();i++)
+		{
+			for(char &c:instructions[i])
+			{
+				data.push_back(c);
+			}
+			data.push_back('\n');
+		}
+		return std::string(data.begin(),data.end());
 }
 
 std::vector<std::string>& Object::getInstructions()
