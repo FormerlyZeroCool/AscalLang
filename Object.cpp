@@ -7,6 +7,15 @@
 
 #include "Object.h"
 
+void newLine(std::vector<char> &data,int indentationLevel)
+{
+	data.push_back('\n');
+	for(int i = 0;i < indentationLevel;i++)
+	{
+		data.push_back(' ');
+		data.push_back(' ');
+	}
+}
 std::string Object::instructionsToFormattedString()
 {
 	std::vector<char> data;
@@ -22,24 +31,21 @@ std::string Object::instructionsToFormattedString()
 		{
 			if(c == '{'){
 				indentationLevel++;
-				data.push_back('\n');
+				newLine(data,indentationLevel);
 			}
 			else if(c == '}')
 				indentationLevel--;
 
 			if(c == ';')
 			{
-				data.push_back('\n');
-				for(int i = 0;i < indentationLevel;i++)
-				{
-					data.push_back(' ');
-					data.push_back(' ');
-				}
+				newLine(data,indentationLevel);
 			}
 			else
 				data.push_back(c);
+			if(c == '{')
+				newLine(data,indentationLevel);
 		}
-		data.push_back('\n');
+		newLine(data,indentationLevel);
 	}
 	data.push_back('}');
 	return std::string(data.begin(),data.end());
