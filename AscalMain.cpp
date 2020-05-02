@@ -216,7 +216,7 @@ static stack<std::string> undoneExp;
 
 void printLoadedMemMessage(Object function)
 {
-	std::cout<<"Loaded Function: "<<function.id<<"\nexpression: "<<function.instructionsToString()<<std::endl<<std::endl;
+	std::cout<<"Loaded Function: "<<function.id<<"\nexpression: "<<function.instructionsToFormattedString()<<std::endl<<std::endl;
 }
 bool containsOperator(std::string s)
 {
@@ -346,7 +346,7 @@ void printAllFunctions()
 	std::cout<<"All Functions in Memory:"<<std::endl;
 	for(auto &[key,value] : memory)
 	{
-		std::cout<<std::endl<<"Function Name: "<<key<<std::endl<<"Function Expression: "<<value.instructionsToString()<<std::endl;
+		std::cout<<std::endl<<"Function Name: "<<key<<std::endl<<"Function Expression: "<<value.instructionsToFormattedString()<<std::endl;
 	}
 	std::cout<<std::endl<<"End of All Functions in Memory."<<std::endl;
 }
@@ -355,7 +355,7 @@ void printAllUDF()
 	std::cout<<"User Defined Functions:"<<std::endl;
 	for(Object & data:userDefinedFunctions)
 	{
-		std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<data.instructionsToString()<<std::endl;
+		std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<data.instructionsToFormattedString()<<std::endl;
 	}
 	std::cout<<std::endl<<"End of User Defined Functions."<<std::endl;
 }
@@ -364,7 +364,7 @@ void printAllSDF()
 	std::cout<<"System Defined Functions:"<<std::endl;
 	for(Object & data:systemDefinedFunctions)
 	{
-		std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<data.instructionsToString()<<std::endl;
+		std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<data.instructionsToFormattedString()<<std::endl;
 	}
 	std::cout<<std::endl<<"End of System Defined Functions."<<std::endl;
 }
@@ -476,14 +476,13 @@ int main(int argc,char* argv[])
     	std::unordered_map<std::string,Object> localMemory;
     	std::map<std::string,Object> paramMemory;
     	arg = argv[i];
-        if(arg.size() > 6)
+        if(arg.size() > 4)
         {
-        	if(arg[arg.size()-6] == '.' && toLower(arg[arg.size()-5]) == 'a' &&
-        			toLower(arg[arg.size()-4]) == 's' && toLower(arg[arg.size()-3]) == 'c' &&
-					toLower(arg[arg.size()-2]) == 'a' && toLower(arg[arg.size()-1]) == 'l')
+        	if(arg[arg.size()-4] == '.' && toLower(arg[arg.size()-3]) == 'a' &&
+					toLower(arg[arg.size()-2]) == 's' && toLower(arg[arg.size()-1]) == 'l')
         	{
         		std::cout<<"Loading file: "<<arg<<std::endl;
-        		arg = "";
+        		arg = "import "+arg;
         	}
         }
     	try{
@@ -491,8 +490,8 @@ int main(int argc,char* argv[])
 	}
 	catch(std::string &exception)
 	{
-		std::cout<<exception<<std::endl;
-		std::cout<<"Failed to exec: "<<arg<<std::endl;
+		std::cerr<<exception<<std::endl;
+		std::cerr<<"Failed to exec: "<<arg<<std::endl;
 	}
     }
   }
@@ -520,8 +519,8 @@ int main(int argc,char* argv[])
 		}
 		catch(std::string &exception)
 		{
-			std::cout<<exception<<std::endl;
-			std::cout<<"Failed to exec: "<<expr<<std::endl;
+			std::cerr<<exception<<std::endl;
+			std::cerr<<"Failed to exec: "<<expr<<std::endl;
 		}
 
 	  }
@@ -567,8 +566,8 @@ std::string importAction(const std::string & expr,std::unordered_map<std::string
 	    	}
 	    	catch(std::string &exception)
 	    	{
-	    		std::cout<<exception<<std::endl;
-	    		std::cout<<"Failed to exec: "<<expr<<std::endl;
+	    		std::cerr<<exception<<std::endl;
+	    		std::cerr<<"Failed to exec: "<<expr<<std::endl;
 	    	}
 			getline(inputFile, line);
 		}
@@ -807,7 +806,7 @@ std::string locNewVar(const std::string &exp,std::unordered_map<std::string,Obje
 	Object newLocalVar(localName.data,subexp.data,"");
 	if(*boolsettings["p"])
 	{
-		std::cout<<std::endl<<"Local var name: "<<localName.data<< " exp: "<<newLocalVar.instructionsToString()<<std::endl;
+		std::cout<<std::endl<<"Local var name: "<<localName.data<< " exp: "<<newLocalVar.instructionsToFormattedString()<<std::endl;
 	}
 	localMemory[newLocalVar.id] = newLocalVar;
 	return MAX;
@@ -1024,7 +1023,7 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 			yMin<<" to "<<yMax<<" with a step size in the x of:"<<xStepSize<<", and in the y: "<<yStepSize<<"\n";
 	for(int i =0; i<functions.size();i++)
 	{
-		std::cout<<"Function: "<<functions[i]<<", plotted using symbol: "<<symbols[i%10]<<", function defined as: "<<memory[functions[i]].instructionsToString();
+		std::cout<<"Function: "<<functions[i]<<", plotted using symbol: "<<symbols[i%10]<<", function defined as: "<<memory[functions[i]].instructionsToFormattedString();
 		std::cout<<"Area Under Curve calculated with reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
 	}
 
@@ -1259,7 +1258,7 @@ std::string printCalculation(const std::string &expr,std::unordered_map<std::str
 }
 void printVar(const std::string &expr,bool saveLast)
 {
-	std::cout<<memory[getVarName(expr,10).data].instructionsToString()<<"\n";
+	std::cout<<memory[getVarName(expr,10).data].instructionsToFormattedString()<<"\n";
 }
 std::string printCommand(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool saveLast)
