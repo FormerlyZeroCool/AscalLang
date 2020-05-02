@@ -24,7 +24,7 @@
 #include "Object.h"
 #include "Vect2D.h"
 
-
+std::streambuf* stream_buffer_cin = std::cin.rdbuf();
 /////////////////////////////
 //Program Global Memory Declaration
 static std::unordered_map<std::string,Object> memory;
@@ -338,6 +338,8 @@ void loadInitialFunctions()
 	loadFn(e);
 	Object inf("nf",MAX+"2","");
 	loadFn(inf);
+	Object null("null",MAX,"");
+	loadFn(null);
 }
 void printAllFunctions()
 {
@@ -542,14 +544,25 @@ std::string importAction(const std::string & expr,std::unordered_map<std::string
 		inputFile.open(filePath);
 		if(!inputFile)
 		{
+			inputFile.open(filePath+".asl");
+		}
+		if(!inputFile)
+		{
 			throw std::string("Malformed path: "+filePath);
 		}
 		getline(inputFile, line);
+		std::cin.rdbuf(inputFile.rdbuf());
+		bool print = *boolsettings["p"];
+		*boolsettings["p"] = false;
+		bool timeCalc = *boolsettings["t"];
+		*boolsettings["t"] = false;
 		while(inputFile)
 		{
 			std::unordered_map<std::string,Object> calledLocalMemory;
 	    	std::map<std::string,Object> calledParamMemory;
+
 	    	try{
+
 	    		interpretParam(line,calledLocalMemory,calledParamMemory,false);
 	    	}
 	    	catch(std::string &exception)
@@ -559,8 +572,18 @@ std::string importAction(const std::string & expr,std::unordered_map<std::string
 	    	}
 			getline(inputFile, line);
 		}
+		std::cin.rdbuf(stream_buffer_cin);
+
+		*boolsettings["p"] = print;
+		*boolsettings["t"] = timeCalc;
 		return MAX;
 }
+/*
+std::string derivativeAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
+{
+
+}*/
 std::string showOpBoolSetting(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
 {
@@ -1076,20 +1099,25 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	double boolExpValue;
 	//std::cout<<"BoolExpression: "<<booleanExpression;
 	bool print = *boolsettings["p"];
-	bool printTime = true;
+	bool printTime = *boolsettings["t"];
 	//*boolsettings["p"] = false;
 	if(!print)
 	{
-		printTime = *boolsettings["t"];
 		*boolsettings["t"] = false;
 	}
 	//std::cout<<"bool expression Being Exec: "<<booleanExpression<<std::endl;
+	try{
 	boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
+	}
+	catch(std::string &exception)
+	{
+		throw std::string(exception + "\nIn While boolean exp: " + booleanExpression);
+	}
 	//std::cout<<" value: "<<boolExpValue<<std::endl;
+	codeBlock = getExpr(expr,index);
 	if(boolExpValue != 0)
 	{
 		//Build List of expressions from code block associated with the while
-		codeBlock = getExpr(expr,index);
 		std::vector<std::string> expressions;
 		{
 			int trailer = 0;
@@ -1109,15 +1137,27 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 			for(std::string &exp:expressions)
 			{
 				//std::cout<<"expression Being Exec: "<<exp<<" Len: "<<exp.length()<<std::endl;
+				try{
 				calculateExpression<double>(exp,params,paramMemory,localMemory);
+				}
+				catch(std::string &exception)
+				{
+					throw std::string(exception + "\nIn While body subexp: " + exp);
+				}
 			}
 			//std::cout<<"BoolExpression: "<<booleanExpression;
+		try{
 			boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
+		}
+		catch(std::string &exception)
+		{
+			throw std::string(exception + "\nIn While boolean exp: " + booleanExpression);
+		}
 			//std::cout<<" value: "<<boolExpValue<<std::endl;
 		}
-		*boolsettings["t"] = printTime;
-		*boolsettings["p"] = print;
 	}
+	*boolsettings["t"] = printTime;
+	*boolsettings["p"] = print;
 	index = codeBlock.end + startOfCodeBlock;
 	while(expr[index] == ';' || expr[index] == ' ' || expr[index] == '}')
 		index++;
@@ -1420,7 +1460,7 @@ SubStr getExpr(const std::string &data,int index)
 			index = index+count+1;
 		}
 		count = 0;
-	}while(openingCount > 0);
+	}while(openingCount > 0 && std::cin);
 	result = result.substr(0,result.size()-1);
 	return SubStr(result,index,result.length());
 }
@@ -1466,7 +1506,8 @@ std::string replace(std::string &original,std::string &replace,std::string &repl
 	return original;
 }
 
-std::string printMemory(std::map<std::string,Object> &memory,std::string delimiter,bool justKey = true)
+std::string printMemory(std::map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
+		std::string secondDelimiter = "\n")
 {
 	std::string s;
 	if(justKey)
@@ -1474,10 +1515,11 @@ std::string printMemory(std::map<std::string,Object> &memory,std::string delimit
 			s+=key+delimiter;
 	else
 		for(auto &[key,value]:memory)
-			s+=key+delimiter+value.instructionsToString()+"\n";
+			s+=key+delimiter+value.instructionsToString()+secondDelimiter;
 	return s;
 }
-std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true)
+std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
+		std::string secondDelimiter = "\n")
 {
 	std::string s;
 	if(justKey)
@@ -1485,7 +1527,7 @@ std::string printMemory(std::unordered_map<std::string,Object> &memory,std::stri
 			s+=key+delimiter;
 	else
 		for(auto &[key,value]:memory)
-			s+=key+delimiter+value.instructionsToString()+"\n";
+			s+=key+delimiter+value.instructionsToString()+secondDelimiter;
 	return s;
 }
 template <class t>
@@ -1541,8 +1583,8 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 	 initialOperators.top(peeker);
 	 if(isalpha(currentChar) && !isOperator(currentChar) && currentChar != 'X')
 	 {
-		 LOG_DEBUG("Local Memory: "<<printMemory(localMemory," "))
-		 LOG_DEBUG("Param Memory: "<<printMemory(paramMemory," "))
+		 LOG_DEBUG("Local Memory: "<<printMemory(localMemory,"=",false," "))
+		 LOG_DEBUG("Param Memory: "<<printMemory(paramMemory,"=",false," "))
 
 		 bool printValue = *boolsettings["p"];
 		 SubStr varName(getVarName(exp,i));
@@ -1950,7 +1992,7 @@ t processStack(stack<t> &operands,stack<char> &operators)
 			printStack(operands,operators);
 			throw std::string("Error, too many operands. ");
 		}
-		else if(operators.size()>0 && operands.size()<=1)
+		else if(operators.size()>0 && operands.size()==1)
 		{
 			printStack(operands,operators);
 			throw std::string("Error, too many operators.");
@@ -1958,7 +2000,7 @@ t processStack(stack<t> &operands,stack<char> &operators)
 		else
 		{
 			printStack(operands,operators);
-			throw std::string("Error, too many operators, and too many operands.");
+			throw std::string("Error, too few operators, and too few operands.");
 		}
 
 	}
