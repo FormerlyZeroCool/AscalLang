@@ -154,10 +154,12 @@ Final Answer:<br>
 -1
 <br>
 <h3>How to use variables/functions:</h3>
-let [variableName] = [expression] to save an expression with the given variable name, to the global scope.<br>
-const [variableName] = [expression] will save the result of the calculating expression with the given variable name to the global scope.<br>
-loc [variableName] = [expression] to save an expression with the given variable name to the local scope.<br>
-cloc [variableName] = [expression] to save the result of calculating the provided expression with the given variable name to the local scope.<br>
+
+
+`let [variableName] = [expression]` to save an expression with the given variable name, to the global scope.<br>
+`const [variableName] = [expression]` will save the result of the calculating expression with the given variable name to the global scope.<br>
+`loc [variableName] = [expression]` to save an expression with the given variable name to the local scope.<br>
+`cloc [variableName] = [expression]` to save the result of calculating the provided expression with the given variable name to the local scope.<br>
 Think locally scoped version of const
 <br>
 loc, and cloc are useful with batched commands like 
@@ -195,7 +197,9 @@ because it replaces x with c^2, and c with the parameter supplied.
 The when then end keywords are the first way in Ascal to conditionally execute your code, allowing for recursion.<br>
 This functionality is still in testing, but it appears stable in this release<br>
 Example Ascal Code for a recursive summation series function:<br>
-let f = when x>1 then f(x-1)+x when x<1 + x=1 then 1 end;<br>
+
+
+`let f = when x>1 then f(x-1)+x when x<1 + x=1 then 1 end;`<br>
 If the parser sees the keyword when it will evaluate the expression between the when, and the proceeding then. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
 *Note if you end up with a stack overflow you will currenty get a segmentation fault, and the Ascal Interpreter will crash
                                         </p>
@@ -252,7 +256,9 @@ Local Variables are automatically managed by the program stack, and will be clea
 <h3>The plot keyword:</h3>
 <p>
 The "plot" keyword in Ascal currently is a simple tool to graph your non-recursive functions in the command line<br>
-To use it type: plot [your_function_name];[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size],[y_step_size]<br>
+To use it type: 
+ 
+ `plot [your_function_name];[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size],[y_step_size]<br>`
  
  
 `let f = x^2-4`<br>
@@ -280,13 +286,19 @@ Operator precedence is defined below, in a case where two adjacent operations ha
   <br>
   <br>
   '$' the left operand of '$' defines the fractional part of a power we are raising the second operand to so something like:<br>
-  rightOperand^(1/leftOperand)<br>
-  Although the exponentiation operator cannot handle fractional powers<br>
+  
+  
+  `rightOperand^(1/leftOperand)`<br>
+  Although the exponentiation operator cannot handle fractional powers with this operator you should be able to express all rational powers<br>
   <br>
-  'P' is the permutation operator from statistics or factorial(leftOperand)/factorial(leftOperand-rightOperand)<br>
+  'P' is the permutation operator from statistics or 
+  
+  `factorial(leftOperand)/factorial(leftOperand-rightOperand)`<br>
   <br>
   <br>
-  'C' is the permutation operator from statistics or factorial(leftOperand)/(factorial(leftOperand-rightOperand)*factorial(rightOperand))<br>
+  'C' is the permutation operator from statistics or 
+  
+  `factorial(leftOperand)/(factorial(leftOperand-rightOperand)*factorial(rightOperand))`<br>
   <br>
   '+' , '-' after that the next priority level is for addition, and subtraction<br>
   <br>
@@ -340,7 +352,5 @@ let printprimes = (w,x){
     set w = w+1
   }
   null
-}```
+}
 
-</p>
-<br>
