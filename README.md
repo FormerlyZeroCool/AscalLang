@@ -11,7 +11,9 @@ Note: functions have been tested to provide at least 160 levels of nesting, and 
 The not function returns 1 if a 0 is supplied, and zero with all other values, the true functions returns 1 if any value other than 0 is supplied
 <br>
 <h5>Your input testing the value supplied in this case 0</h5>
->>`not(0)`
+>>
+
+`not(0)`
 <p>
 <h5>Result of test:</h5> <br>Final Answer: 
 </p>
@@ -19,7 +21,9 @@ The not function returns 1 if a 0 is supplied, and zero with all other values, t
 <br>
 
 <h5>Your input testing the value supplied in this case 1</h5>
->>`not(1)`
+>>
+
+`not(1)`
 <p>
 <h5>Result of test:</h5> <br>Final Answer: 
 </p>
@@ -27,7 +31,9 @@ The not function returns 1 if a 0 is supplied, and zero with all other values, t
 <br>
 
 <h5>Your input testing the value supplied in this case 1</h5>
->>`true(1)`
+>>
+
+`true(1)`
 <br>
 <p>
 <h5>Result of test:</h5><br>Final Answer: 
@@ -36,7 +42,9 @@ The not function returns 1 if a 0 is supplied, and zero with all other values, t
 
 <br>
 <h5>Your input testing the value supplied in this case 0</h5>
->>`true(0)`
+>>
+
+`true(0)`
 <p>
 <h5>Result of test:</h5><br>Final Answer:
 </p> 
@@ -54,34 +62,45 @@ r to show "redo"<br>
 <br>
 <p>
 <h4>Example of how o parameter works</h4>
->>```let f = x^2+x```
+>>
+
+`let f = x^2+x`
 <br>
-Loaded Function: `f`
+Loaded Function: 
+
+`f`
 <br>
-expression: `x^2+x`
+expression: 
+
+`x^2+x`
 <br>
 <br>
 Final Answer:<br> 
 0<br>
->>`o`
+>>
+
+`o`
 <br>
 Show Operations Status: 1<br>
 <br>
->>`f(2)`
-<br>
-`2^2 = 4`
-<br>
-`4+2 = 6`
-<br>
+>>
+
+`f(2)`<br>
+`2^2 = 4`<br>
+`4+2 = 6`<br>
 Final Answer: 
 <br>
 6
 <br>
->>`o`
+>>
+
+`o`
 <br>
 Show Operations Status: 0
 <br>
->>`f(2)`
+>>
+
+`f(2)`
 <br>
 Final Answer: 
 <br>
@@ -90,57 +109,80 @@ Final Answer:
 <br>
 <br>
 <h4>Example of how t parameter works</h4>
- >>`t`
+ >>
+ 
+ `t`
 <br>
 Print time taken to run calculation Status: 1<br>
->>`2+2`
+>>
+
+`2+2`
 <br>
 finished computation at Thu Apr  2 15:00:01 2020<br>
 elapsed time: 0.00134s<br>
 Final Answer: <br>
 4<br>
->>`t`<br>
+>>
+
+`t`<br>
 Print time taken to run calculation Status: 0<br>
->>`2+2`<br>
+>>
+
+`2+2`<br>
 Final Answer: <br>
 4<br>
 <br>
 <h4>Examples of r and u parameters short for redo and undo</h4>
->>`cos(pi)`<br>
-Final Answer: <br>
--1<br>
-<br>
->>`u`<br>
+>>
+
 `cos(pi)`<br>
 Final Answer: <br>
 -1<br>
 <br>
->>`r`<br>
+>>
+
+`u`<br>
+`cos(pi)`<br>
+Final Answer: <br>
+-1<br>
+<br>
+>>
+
+`r`<br>
 `cos(pi)`<br>
 Final Answer:<br> 
 -1
 <br>
 <h3>How to use variables/functions:</h3>
 let [variableName] = [expression] to save an expression with the given variable name, to the global scope.<br>
-const [variableName] = [expression] will save the result of the expression with the given variable name to the global scope.<br>
+const [variableName] = [expression] will save the result of the calculating expression with the given variable name to the global scope.<br>
 loc [variableName] = [expression] to save an expression with the given variable name to the local scope.<br>
 cloc [variableName] = [expression] to save the result of calculating the provided expression with the given variable name to the local scope.<br>
 Think locally scoped version of const
 <br>
-loc, and cloc are useful with batched commands like `loc x = value^2; x`(4)
-or `loc y = 5;loc x = 5;y+x`<br>
+loc, and cloc are useful with batched commands like 
+
+`loc x = value^2; x`(4)
+or 
+
+`loc y = 5;loc x = 5;y+x`<br>
 which results in 10
 <br>
 loc, and cloc can also be used inside of multi-line functions implemented like:<br>
-let x = {<br>
-loc y = z^2<br>
-y(c^2)<br>
-}<br>
+
+
+`let x = {
+loc y = z^2
+y(c^2)
+}`
+
+<br>
 which defines the global function x for later reference, the expression x will be defined with is:loc y = z^2;y(c^2);<br>
 when we run the function x it will define y in its local scope, so when in the next statement is executed y will be defined, and c will be taken from the parameter supplied to the function x
 <br>
 <br>
 Example:<br>
+
 `let x = c^2`<br>
 `x(4)`<br>
 and the program will print the result of 4^2<br>
@@ -157,6 +199,25 @@ let f = when x>1 then f(x-1)+x when x<1 + x=1 then 1 end;<br>
 If the parser sees the keyword when it will evaluate the expression between the when, and the proceeding then. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
 *Note if you end up with a stack overflow you will currenty get a segmentation fault, and the Ascal Interpreter will crash
                                         </p>
+<h3>The While keyword</h3>
+<p>
+ the While keyword is used for continously executing some instruction while a condition is met<br>
+ it is extremely useful for implementing iterative logic, like summation series you don't wan't to or can't simplify to a constant function<br>
+ It is composed of two parts, a boolean expression, and a code block which can be defined as follows:<br><br>
+ 
+`    while not(counter > max)*prime{` this line has the boolean expression proceeding the while keyword, and the opening bracket{ denoting the start of the code block, and end of the boolean expression.<br>
+
+`      when x%counter = 0 then set prime = 0 else 0 end;`<br>
+`      set counter = counter+1;`<br>
+`    };`<br>
+
+</p>
+<h3>exists keyword:</h3>
+<p>
+The exists keyword when supplied the name of a variable returns 1 if the variable exists anywhere in memory, and 0 if it does not. <br>ex:<br>
+ 
+ `exists sin`
+</p>
 <h3>Print Commmands:</h3>
 By default when running any expression the Ascal Interpreter will print out the result of any expressions calculations, but keep reading to learn how to print information about variables saved in memory.<br>
 <br>
@@ -165,6 +226,17 @@ print [variableName] to print everything in memory related to the specified vari
 print sdf to print only system defined functions.<br>
 print udf to print only user defined functions<br>
 <br>
+<h3>The import keyword:</h3>
+<p>
+The import keyword can be used to load functions from files you've already written, there are two ways to use this keyword.<br>
+The reccomended usage is to ensure the file is saved with the .asl file extension, and is in a plain text encoding<br>
+If you do that you can use the syntax <br>
+ 
+ `import path1.path2.<your_file_name>`<br>
+otherwise you must specify the file format, note that the file must still be in a plain text encoding<br>
+ 
+ `import path1.path2.<your_file_name>.<your_extension>`<br>
+</p>
 <h3>Memory Managment:</h3>
 <h4>For Global Variables:</h4>
 You can delete a variable by typing delete [variableName]<br>
@@ -181,9 +253,11 @@ Local Variables are automatically managed by the program stack, and will be clea
 <p>
 The "plot" keyword in Ascal currently is a simple tool to graph your non-recursive functions in the command line<br>
 To use it type: plot [your_function_name];[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size],[y_step_size]<br>
+ 
+ 
 `let f = x^2-4`<br>
-`plot f,-5<>5,-5<>15,0.1,0.1`<br>
- you should see the graph of f(x) = x^2-4 from -5 to 5 in the x, and -5 to 15 in the y axis.<br>
+`plot f,-5<>5,-5<>15,0.2,0.1`<br>
+ you should see the graph of f(x) = x^2-4 from -5 to 5 in the x, and -5 to 15 in the y axis, with measurements taken at increments of 0.2 in the x, and 0.1 the y<br>
 </p>
 <br>
 <h3>Operators Documentation:</h3>
@@ -220,27 +294,7 @@ Operator precedence is defined below, in a case where two adjacent operations ha
   <br><br>
   <p>
  <h4>Try Running this code</h4>
-`t`<br>
-`let x = 2^16`<br>
-```const sqr =    (1-((1 - x))/2)```<br>
-```const sqr1 = (sqr-((sqr^2 - x))/(2*sqr))```<br>
-```const sqr2 = (sqr1-((sqr1^2 - x))/(2*sqr1))```<br>
-```const sqr3 = (sqr2-((sqr2^2 - x))/(2*sqr2))```<br>
-```const sqr4 = (sqr3-((sqr3^2 - x))/(2*sqr3))```<br>
-```const sqr5 = (sqr4-((sqr4^2 - x))/(2*sqr4))```<br>
-```const sqr6 =  (sqr5-((sqr5^2 - x))/(2*sqr5))```<br>
-```const sqr7 =  (sqr6-((sqr6^2 - x))/(2*sqr6))```<br>
-```const sqr8 =  (sqr7-((sqr7^2 - x))/(2*sqr7))```<br>
-```const sqr9 =  (sqr8-((sqr8^2 - x))/(2*sqr8))```<br>
-```const sqr10 = (sqr9-((sqr9^2 - x))/(2*sqr9))```<br>
-```const sqr11 = (sqr10-((sqr10^2 - x))/(2*sqr10))```<br>
-```const sqr12 = (sqr11-((sqr11^2 - x))/(2*sqr11))```<br>
-```const sqr13 = (sqr12-((sqr12^2 - x))/(2*sqr12))```<br>
-```const sqr14 = (sqr13-((sqr13^2 - x))/(2*sqr13))```<br>
-```const sqr15 = (sqr14-((sqr14^2 - x))/(2*sqr14))```<br>
-```print const sqr16 = (sqr15-((sqr15^2 - x))/(2*sqr15))```<br>
-
-```delete x```<br>
+ 
 
 `let sqr =x*0+ (1-((1 - x))/2)`<br>
 `let sqr1 = x*0+ (sqr(x)-((sqr(x)^2 - x))/(2*sqr(x)))`<br>
@@ -258,9 +312,35 @@ Operator precedence is defined below, in a case where two adjacent operations ha
 `ack(3,2)`
 
 <h5>Code to write an exponentiation function that only uses addition, and subtraction</h5>
+
+
 `let mult = when a>0 then b+mult(a-1,b) when not(a>0) then 0 end`<br>
 `let optmult = when a>b then mult(b,a) when not(a>b) then mult(a,b) end`<br>
 `let pow = when a*b*0 + b>1 then  optmult(a,pow(a,b-1)) when not(b>1) then a end`<br>
 `pow(2,5)`
  </p>
+ <h5>Code to check if a number is prime, and print a list of primes</h5>
+ <p>
+
+
+```let isprime = (x){
+  loc counter = 3
+  cloc max = sqrt(x)
+  cloc prime = when ((x-1)%2 = 0)then 1 else 0 end
+  while not(counter > max)*prime{
+    when x%counter = 0 then set prime = 0 else 0 end
+    set counter = counter+1
+  }
+  prime
+}
+
+let printprimes = (w,x){
+  while (w < x){
+    when isprime(w) then print w else 0 end
+    set w = w+1
+  }
+  null
+}```
+
+</p>
 <br>
