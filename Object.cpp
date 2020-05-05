@@ -23,21 +23,22 @@ std::string Object::instructionsToFormattedString()
 
 	int indentationLevel = 1;
 	data.push_back('\n');
-	data.push_back('{');
-	data.push_back('\n');
 	for(int i = 0;i < instructions.size();i++)
 	{
 		for(char &c:instructions[i])
 		{
 			if(c == '{'){
 				indentationLevel++;
-				newLine(data,indentationLevel);
 			}
 			else if(c == '}')
+			{
 				indentationLevel--;
+				newLine(data,indentationLevel);
+			}
 
 			if(c == ';')
 			{
+				data.push_back(c);
 				newLine(data,indentationLevel);
 			}
 			else
@@ -47,7 +48,6 @@ std::string Object::instructionsToFormattedString()
 		}
 		newLine(data,indentationLevel);
 	}
-	data.push_back('}');
 	return std::string(data.begin(),data.end());
 }
 std::string Object::instructionsToString()

@@ -24,6 +24,11 @@
 #include "Object.h"
 #include "Vect2D.h"
 
+struct SubStr{
+	std::string data;
+	int start,end;
+	SubStr(std::string data,int start,int end):data(data),start(start),end(end){}
+};
 std::streambuf* stream_buffer_cin = std::cin.rdbuf();
 /////////////////////////////
 //Program Global Memory Declaration
@@ -50,6 +55,13 @@ static std::map<char,t (*)(t&,t&)> operations;
 #define DEBUG 1
 #define THROWERRORS 1
 
+
+#if defined(WIN32) || defined(_WIN32)
+#define PATH_SEPARATOR '\\'
+#else
+#define PATH_SEPARATOR '/'
+#endif
+
 #if DEBUG==1
 #define LOG_DEBUG(x)  if(*boolsettings["d"]) {std::cout<<x<<std::endl;}
 #else
@@ -68,6 +80,14 @@ void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 void updateBoolSetting(const std::string &expr);
 
+std::string existsAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast);
+std::string ifAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast);
+std::string printStringAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s);
+std::string inputAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s);
 std::string importAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s);
 std::string setAction(const std::string& expr,std::unordered_map<std::string,Object>& localMemory,
@@ -129,14 +149,9 @@ bool hasChar(const std::string &dat,const char &c);
 
 ////////////////////////////
 //Start Parsing For Loading Ascal System Memory
-struct SubStr{
-	std::string data;
-	int start,end;
-	SubStr(std::string data,int start,int end):data(data),start(start),end(end){}
-};
 SubStr getVarName(const std::string &s,int index);
 int getClosingIndex(char opening,const std::string &data);
-SubStr getExpr(const std::string &data,int startingIndex);
+SubStr getExpr(const std::string &data,int startingIndex,char opening = '{',char closing = '}',char lineBreak = ';');
 SubStr getNewVarName(const std::string &data);
 //End Parsing For Loading Ascal System Memory
 ////////////////////////////
@@ -320,6 +335,12 @@ void loadInitialFunctions()
 	loadFn(toDeg);
 	Object toRad("toRad","deg*pi/180","");
 	loadFn(toRad);
+	Object println("println","(x){let counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null","");
+	loadFn(println);
+	Object floor("floor","x-x%1","");
+	loadFn(floor);
+	Object ceiling("ceiling","when x%1=0 then x else x+1-x%1 end","");
+	loadFn(ceiling);
 
 	//Stats Functions
 	Object binProbDist("binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
@@ -371,6 +392,10 @@ void printAllSDF()
 
 void initParamMapper()
 {
+	inputMapper["exists"] = existsAction;
+	inputMapper["if"] = ifAction;
+	inputMapper["printStr"] = printStringAction;
+	inputMapper["input"] = inputAction;
 	inputMapper["import"] = importAction;
 	inputMapper["while"] = whileAction;
 	inputMapper["when"] = whenAction;
@@ -463,6 +488,7 @@ int main(int argc,char* argv[])
   //Variable to save user defined expressions to be run
   std::string expr;
   //Beginning of section interpreting program parameters from command line
+  try{
   if(argc > 1)
   {
 	//setting for main program loop makes use of overloaded operator = on setting class
@@ -490,6 +516,7 @@ int main(int argc,char* argv[])
 	}
 	catch(std::string &exception)
 	{
+		std::cerr<<"Stack trace:"<<std::endl;
 		std::cerr<<exception<<std::endl;
 		std::cerr<<"Failed to exec: "<<arg<<std::endl;
 	}
@@ -519,6 +546,7 @@ int main(int argc,char* argv[])
 		}
 		catch(std::string &exception)
 		{
+			std::cerr<<"Stack trace:"<<std::endl;
 			std::cerr<<exception<<std::endl;
 			std::cerr<<"Failed to exec: "<<expr<<std::endl;
 		}
@@ -529,7 +557,108 @@ int main(int argc,char* argv[])
   {
 	  std::cout<<std::endl<<"Ascal exited"<<std::endl;
   }
+  }
+  catch(int exitCode){
+	  std::cerr<<"exit code: "<<exitCode<<std::endl;
+  }
   return 0;
+}
+
+std::string printStringAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
+{
+		//int startingIndex = expr.find("input");
+		const int startOfPrint = expr.find("\"")+1;
+		const int endOfPrint = expr.find("\"",startOfPrint);
+
+		std::string result;
+		if(endOfPrint != -1)
+		{
+			result = expr.substr(startOfPrint,endOfPrint-startOfPrint);
+			int index = 0;
+			SubStr subexp("",0,0);
+			while(result[index] && result[index] != '\"')
+			{
+			//std::cout<<"input In While: "<<std::endl;
+				if(result[index] == '(')
+				{
+					//std::cout<<"input In if: "<<std::endl;
+					SubStr subexp = getExpr(result,index,'(',')',';');
+					std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
+					std::string first = result.substr(0,index);
+					std::string last = result.substr(index+subexp.end,expr.size());
+
+				//std::cout<<"inputAction first: "<<first<<" value: "<<value<<"\nLast: "<<last<<std::endl;
+
+					result = first+value+last;
+					index = first.size()+value.size()-1;
+				//std::cout<<"inputActie"<<result.substr(index,result.length());
+				}
+				else if(result[index] == 'e' && result.size()-index>3 &&
+						result[index+1] == 'n' && result[index+2] == 'd' && result[index+3] == 'l')
+				{
+					result = result.substr(0,index)+'\n'+result.substr(index+4,result.size());
+				}
+				index++;
+			}
+			index++;
+		}
+		else
+		{
+			result = "";
+		}
+		std::cout<<result;
+		return MAX;
+}
+std::string inputAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
+{
+		//int startingIndex = expr.find("input");
+		const int startOfPrint = expr.find("\"")+1;
+		int endOfPrint = expr.find("\"",startOfPrint);
+
+		std::string result;
+		if(endOfPrint != -1)
+		{
+			result = expr.substr(startOfPrint,endOfPrint-startOfPrint);
+			int index = 0;
+			SubStr subexp("",0,0);
+			while(result[index] && result[index] != '\"')
+			{
+			//std::cout<<"input In While: "<<std::endl;
+				if(result[index] == '(')
+				{
+					//std::cout<<"input In if: "<<std::endl;
+					SubStr subexp = getExpr(result,index,'(',')',';');
+					std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
+					std::string first = result.substr(0,index);
+					std::string last = result.substr(index+subexp.end,expr.size());
+
+				//std::cout<<"inputAction first: "<<first<<" value: "<<value<<"\nLast: "<<last<<std::endl;
+
+					result = first+value+last;
+					index = first.size()+value.size()-1;
+				//std::cout<<"inputActie"<<result.substr(index,result.length());
+				}
+				else if(result[index] == 'e' && result.size()-index>3 &&
+						result[index+1] == 'n' && result[index+2] == 'd' && result[index+3] == 'l')
+				{
+					result = result.substr(0,index)+'\n'+result.substr(index+4,result.size());
+				}
+				index++;
+			}
+			index++;
+		}
+		else
+		{
+			result = "number: ";
+			endOfPrint = 6;
+		}
+		std::cout<<result;
+		std::string input;
+		getline(std::cin,input);
+	return "a"+input+expr.substr(endOfPrint+1,expr.size());
+
 }
 std::string importAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
@@ -544,6 +673,25 @@ std::string importAction(const std::string & expr,std::unordered_map<std::string
 		if(!inputFile)
 		{
 			inputFile.open(filePath+".asl");
+		}
+		if(!inputFile)
+		{
+			int count = 0;
+			std::vector<char> data;
+			for(char &c:filePath)
+			{
+
+				if(c == '.' && (count < filePath.size() - 4 || toLower(filePath[filePath.size()-3]) != 'a' ||
+						toLower(filePath[filePath.size()-2]) != 's' || toLower(filePath[filePath.size()-1]) != 'l'))
+					c = (PATH_SEPARATOR);
+				count++;
+			}
+			inputFile.open(filePath);
+			if(!inputFile)
+			{
+				inputFile.open(filePath+".asl");
+			}
+
 		}
 		if(!inputFile)
 		{
@@ -620,7 +768,7 @@ std::string quitAction(const std::string & expr,std::unordered_map<std::string,O
 {
 	if(*boolsettings["p"])
 		std::cout<<"Quitting Ascal, have a nice day!"<<std::endl;
-	*boolsettings["l"] = false;
+	throw 0;
 	return MAX;
 }
 std::string redoAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
@@ -1029,6 +1177,22 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 
 	return MAX;
 }
+std::string existsAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
+{
+	int index = expr.find("exists")+6;
+	while(expr[index] == ' ')
+		index++;
+	SubStr varName = getVarName(expr,index);
+	while(expr[index] && expr[index] !=';')
+		index++;
+
+	if(localMemory.count(varName.data) || paramMemory.count(varName.data) || memory.count(varName.data))
+	{
+		return "a1;"+expr.substr(index,expr.size());
+	}
+	return "a0;"+expr.substr(index,expr.size());
+}
 std::string setAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
 {
@@ -1062,6 +1226,95 @@ std::string setAction(const std::string &expr,std::unordered_map<std::string,Obj
 std::string ifAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
 {
+	//std::cout<<"expression in while: "<<expr<<std::endl;
+	int index = expr.find("if")<1000?expr.find("if")+2:0;
+	while(expr[index] == ' ')
+		index++;
+
+	int startOfBoolExp = index;
+	int startOfCodeBlock = index;
+	SubStr codeBlock("",0,0);
+
+	while(expr[startOfCodeBlock] && expr[startOfCodeBlock] != '{')
+	{
+		startOfCodeBlock++;
+	}
+	std::cout<<"start of boolExp: "<<startOfBoolExp<<" end of bool exp: "<<startOfCodeBlock-1<<" len: "<<expr.size()<<std::endl;
+
+	index = startOfCodeBlock;
+	const std::string booleanExpression = expr.substr(startOfBoolExp,index-startOfBoolExp);
+	double boolExpValue;
+	std::cout<<"BoolExpression: "<<booleanExpression;
+	bool printTime = *boolsettings["t"];
+	if(!*boolsettings["p"])
+	{
+		*boolsettings["t"] = false;
+	}
+	try{
+	boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
+	}
+	catch(std::string &exception)
+	{
+		*boolsettings["t"] = printTime;
+		throw std::string(exception + "\nIn if boolean exp: " + booleanExpression);
+	}
+	std::cout<<" value: "<<boolExpValue<<std::endl;
+	codeBlock = getExpr(expr,startOfCodeBlock);
+	if(boolExpValue != 0)
+	{
+		std::cout<<"code block extracted: "<<codeBlock.data<<std::endl;
+		//Build List of expressions from code block associated with the while
+		std::vector<std::string> expressions;
+		{
+			int trailer = 0;
+			for(int i = 0;i<codeBlock.data.size();i++)
+			{
+				if(codeBlock.data[i] == ';' && trailer != i)
+				{
+					expressions.push_back(codeBlock.data.substr(trailer,i-trailer));
+					trailer = i;
+				}
+			}
+			if(expressions.size() == 0)
+			{
+				expressions.push_back(codeBlock.data);
+			}
+		}
+		for(std::string &exp:expressions)
+		{
+			try{
+				calculateExpression<double>(exp,params,paramMemory,localMemory);
+			}
+			catch(std::string &exception)
+			{
+				*boolsettings["t"] = printTime;
+				throw std::string(exception + "\nIn if body subexp: ");
+			}
+		}
+
+	}
+	else
+	{
+		bool foundElse = false;
+		//index = startOfCodeBlock+codeBlock.end;
+		//If entire if else block is in the expr variable
+		std::cout<<"guess at end of code block: "<<startOfCodeBlock+codeBlock.end<<std::endl;
+		if(startOfCodeBlock+codeBlock.end < expr.size())
+		{
+			int indexOfElse = expr.find(expr,index);
+			std::cout<<"everything After index: "<<expr.substr(index,expr.size())<<"index of Else: "<<indexOfElse<<std::endl;
+		}
+		else
+		{
+			//getline(std::cin,)
+		}
+
+	}
+	*boolsettings["t"] = printTime;
+	index = codeBlock.end + startOfCodeBlock;
+	//while(expr[index] == ';' || expr[index] == ' ' || expr[index] == '}')
+	//	index++;
+	//std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
 	return MAX;
 }
 std::string whileAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
@@ -1076,31 +1329,19 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	int startOfCodeBlock = index;
 	SubStr codeBlock("",0,0);
 
-	//std::cout<<"start of boolExp: "<<startIndex<<" end of bool exp: "<<startOfCodeBlock<<std::endl;
 	while(expr[startOfCodeBlock] && expr[startOfCodeBlock] != '{')
 	{
 		startOfCodeBlock++;
 	}
-	//get indexes of start and end of the boolean expression for extraction
-	while(index < startOfCodeBlock && expr[index] == ' ')
-	{
-		startOfBoolExp++;
-		index++;
-	}
-	//std::cout<<"while: "<<expr.substr(index,expr.size())<<std::endl;
-	//std::cout<<"while after skipping whitespace : "<<expr.substr(index,expr.size())<<std::endl;
-	while(index < startOfCodeBlock)
-	{
-		index++;
-	}
+
+	index = startOfCodeBlock;
+
 	//std::cout<<"while after finding end of exp: "<<expr.substr(index,expr.size())<<" start of Exp Index: "<<startOfBoolExp<<" end Of boolExp Index: "<<index<<std::endl;
 	const std::string booleanExpression = expr.substr(startOfBoolExp,index-startOfBoolExp);
 	double boolExpValue;
-	//std::cout<<"BoolExpression: "<<booleanExpression;
-	bool print = *boolsettings["p"];
 	bool printTime = *boolsettings["t"];
 	//*boolsettings["p"] = false;
-	if(!print)
+	if(!*boolsettings["p"])
 	{
 		*boolsettings["t"] = false;
 	}
@@ -1110,10 +1351,11 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	}
 	catch(std::string &exception)
 	{
-		throw std::string(exception + "\nIn While boolean exp: " + booleanExpression);
+		*boolsettings["t"] = printTime;
+		throw std::string(exception +"\nIn While Boolean Expression");
 	}
-	//std::cout<<" value: "<<boolExpValue<<std::endl;
 	codeBlock = getExpr(expr,index);
+	//codeBlock.data.substr(0, codeBlock.data.size());
 	if(boolExpValue != 0)
 	{
 		//Build List of expressions from code block associated with the while
@@ -1122,11 +1364,15 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 			int trailer = 0;
 			for(int i = 0;i<codeBlock.data.size();i++)
 			{
-				if(codeBlock.data[i] == ';')
+				if(codeBlock.data[i] == ';' && trailer != i)
 				{
 					expressions.push_back(codeBlock.data.substr(trailer,i-trailer));
 					trailer = i;
 				}
+			}
+			if(expressions.size() == 0)
+			{
+				expressions.push_back(codeBlock.data);
 			}
 		}
 			//exprList now is essentially a list of strings that are the expressions
@@ -1141,7 +1387,8 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 				}
 				catch(std::string &exception)
 				{
-					throw std::string(exception + "\nIn While body subexp: " + exp);
+					*boolsettings["t"] = printTime;
+					throw std::string(exception + "\nIn While body subexp: ");
 				}
 			}
 			//std::cout<<"BoolExpression: "<<booleanExpression;
@@ -1150,14 +1397,14 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 		}
 		catch(std::string &exception)
 		{
-			throw std::string(exception + "\nIn While boolean exp: " + booleanExpression);
+			*boolsettings["t"] = printTime;
+			throw std::string(exception  + "\nIn While Boolean Expression");
 		}
 			//std::cout<<" value: "<<boolExpValue<<std::endl;
 		}
 	}
 	*boolsettings["t"] = printTime;
-	*boolsettings["p"] = print;
-	index = codeBlock.end + startOfCodeBlock;
+	index = codeBlock.end + startOfCodeBlock-2;
 	while(expr[index] == ';' || expr[index] == ' ' || expr[index] == '}')
 		index++;
 	//std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
@@ -1203,10 +1450,16 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 		//std::cout<<"\n";
 		std::string booleanExpression(exp.begin(),exp.end());
 		exp.clear();
-		bool showOp = *boolsettings["o"];
-		*boolsettings["o"] = false;
+		//bool showOp = *boolsettings["o"];
+		//*boolsettings["o"] = false;
+		try{
 		boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
-		*boolsettings["o"] = showOp;
+		}
+		catch(std::string &exception)
+		{
+			throw std::string("In When Action Calculating BooleanExpression: "+booleanExpression+"\n"+exception);
+		}
+		//*boolsettings["o"] = showOp;
 	//false case simply set the index to the next instance of when+4
 	//and repeat until true, or at end of case when
 		if(boolExpValue == 0)
@@ -1252,9 +1505,9 @@ std::string printCalculation(const std::string &expr,std::unordered_map<std::str
 	std::string subexpr = getExpr(expr.substr(expr.find("print")+5,expr.length()),0).data;
 	bool print = *boolsettings["p"];
 	*boolsettings["p"] = true;
-	std::string value = std::to_string(calcWithOptions(subexpr,localMemory,params,paramMemory));
+	calcWithOptions(subexpr,localMemory,params,paramMemory);
 	*boolsettings["p"] = print;
-	return value;
+	return MAX;
 }
 void printVar(const std::string &expr,bool saveLast)
 {
@@ -1401,53 +1654,59 @@ bool hasChar(const std::string &dat,const char &c)
 	}
 	return contains;
 }
-int getClosingIndex(char opening,const std::string &data)
-{
-	return 0;
-}
-SubStr getExpr(const std::string &data,int index)
+SubStr getExpr(const std::string &data,int index,char opening,char closing,char lineBreak)
 {
 	int count = 0;
 	int openingCount = 0;
-	std::string result;
+	int maxOpeningCount = 0;
+	std::vector<char> result;
+	if(data.length()<256)
+		result.reserve(256);
+	else
+		result.reserve(data.length());
 	std::string line = data;
+
 	do{
-		while(line[index] && !isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]) && line[index] != '}')
+		while(line[index] && !isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]) && line[index] != closing)
 		{
-			if(line[index] == '{')
+			if(line[index] == opening)
 			{
 				openingCount++;
+				maxOpeningCount++;
 			}
-			else if(line[index] == '}')
+			else if(line[index] == closing)
 			{
 				openingCount--;
 			}
 			index++;
 		}
-		while(line[index + count] && (line[index + count] != ';' && line[index + count] != '\n')
-				&& !(line[index+count] == '}' && openingCount == 1))
+		while(line[index + count] && (line[index + count] != lineBreak && line[index + count] != '\n')
+				&& !(line[index+count] == closing && openingCount == 1))
 		{
-			if(line[index+count] == '{')
+			if(line[index+count] == opening)
 			{
 				openingCount++;
+				maxOpeningCount++;
 			}
-			else if(line[index+count] == '}')
+			else if(line[index+count] == closing)
 			{
 				openingCount--;
 			}
 			count++;
 		}
-		if(line[index+count] == '}')
+		if(line[index+count] == closing)
 		{
 			openingCount--;
 		}
 		if(count > 0)
 		{
-			if(line[line.size()-1]!='{' && line[line.size()-1] != ';')
-				result += line.substr(index>line.length()?line.length():index,count+1)+';';
-			else
-				result += line.substr(index>line.length()?line.length():index,count+1);
-			//std::cout<<"CurrentLine: "<<line<<" Extracted statement: "<<result<<" Remaining unclosed openings: "<<openingCount<<std::endl;
+			for(int i = index<line.size()?index:line.size();line[i] && i <= index+count;i++)
+			{
+				result.push_back(line[i]);
+			}
+			if(line[line.size()-1]!=opening && line[line.size()-1] != lineBreak)
+				result.push_back(lineBreak);
+
 		}
 		if(openingCount > 0 && line.length() <= index+count)
 		{
@@ -1460,8 +1719,12 @@ SubStr getExpr(const std::string &data,int index)
 		}
 		count = 0;
 	}while(openingCount > 0 && std::cin);
-	result = result.substr(0,result.size()-1);
-	return SubStr(result,index,result.length());
+
+	//result.pop_back();
+	if(maxOpeningCount > 0)
+		result.push_back(closing);
+
+	return SubStr(std::string(result.begin(),result.end()),index,result.size());
 }
 
 SubStr getNewVarName(const std::string &data)
@@ -1563,35 +1826,56 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 	//get debug setting from boolsettings hashmap,
 	//then using * operator to get setting data
 	//which is an overloaded operator in the settings class
-	//variable that is always a copy
-	  char peeker;
-	  //variables to hold the operands
-	  t and1,and2;
-	  //c is a variable to store each of the characters in the expression
-	  //in the for loop
-	  char currentChar;
-	  stack<t> initialOperands;
-	  stack<char> initialOperators;
-	  LOG_DEBUG("Calculating expression: "<<exp<<std::endl)
 
+	int level = 0;
+	//variable that is always a copy
+	char peeker;
+	//variables to hold the operands
+	t and1,and2;
+	//c is a variable to store each of the characters in the expression
+	//in the for loop
+	char currentChar;
+	stack<t> initialOperands;
+	stack<char> initialOperators;
+	LOG_DEBUG("Calculating expression: "<<exp<<std::endl)
+
+	bool printValue = *boolsettings["p"];
+	try{
 	//This loop handles parsing the numbers, and adding the data from the expression
 	//to the stacks
 	for(int i = 0;i <= exp.length();i++)
 	{
 	 currentChar = exp[i];
 	 initialOperators.top(peeker);
-	 if(isalpha(currentChar) && !isOperator(currentChar) && currentChar != 'X')
+	 //anything used outside of the first { gets dropped from program stack, for param definition
+	 if(currentChar == '{' || currentChar == '}')
+	 {
+		 if(currentChar == '{')
+		 {
+			 if(level == 0)
+			 {
+				 while(!initialOperands.isEmpty())
+					 initialOperands.pop();
+				 while(!initialOperators.isEmpty())
+					 initialOperators.pop();
+			 }
+			 level++;
+		 }
+		 else if(currentChar == '}')
+			 level--;
+	 }
+	 else if(isalpha(currentChar) && !isOperator(currentChar) && currentChar != 'X')
 	 {
 		 LOG_DEBUG("Local Memory: "<<printMemory(localMemory,"=",false," "))
 		 LOG_DEBUG("Param Memory: "<<printMemory(paramMemory,"=",false," "))
 
-		 bool printValue = *boolsettings["p"];
 		 SubStr varName(getVarName(exp,i));
 		 Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
 		 Object localData = localMemory.count(varName.data)!=0?localMemory[varName.data]:Object();
 
 		 std::string endOfExp;
 		 //Keyword handling only one keyword at the beginning of each statement allowed,
+
 		 //including statements defined in variables
 		 if(inputMapper.count(varName.data) != 0)
 		 {
@@ -1618,10 +1902,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 exp = result.substr(1,exp.length());
 				 //std::cout<<"Expression after statement altering keyword: "<<exp<<std::endl;
 				 //std::cout<<"expression returned from when action: "<<exp<<std::endl;
-				 while(!initialOperands.isEmpty())
-					 initialOperands.pop();
-				 while(!initialOperators.isEmpty())
-					 initialOperators.pop();
+
 
 				 i = -1;
 				 //currentChar = exp[i];
@@ -1804,9 +2085,9 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 {
 				#if THROWERRORS == 1
 				 if(cmpstr(varName.data,"inf"))
-					 throw std::string("Arithmetic Overflow\nIn Expression: "+exp);
+					 throw std::string("End of stack trace.\nArithmetic Overflow");
 				 else
-					 throw std::string("Invalid reference: "+varName.data+"\nIn Expression: "+exp);
+					 throw std::string("End of stack trace.\nInvalid reference: "+varName.data);
 				#endif
 			 }
 		 }
@@ -1905,13 +2186,13 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 	LOG_DEBUG("\nFinal Process: "<<exp)
 	t data;
 	//process values in stacks, and return final solution
-	try{
 		data = processStack(finalOperands,finalOperators);
+	return data;
 	}catch(std::string &error)
 	{
-		throw std::string("In Expression: "+exp+" "+error);
+		 *boolsettings["p"] = printValue;
+		throw std::string("   "+exp+"\n"+error);
 	}
-	return data;
 }
 template <class t>
 void printStack(stack<t> &operands,stack<char> &operators)
@@ -1985,23 +2266,14 @@ t processStack(stack<t> &operands,stack<char> &operators)
 #if THROWERRORS == 1
 	if(operands.size()>1 || operators.size()>0)
 	{
-
 		if(operands.size()>1 && operators.size()==0)
 		{
-			printStack(operands,operators);
-			throw std::string("Error, too many operands. ");
-		}
-		else if(operators.size()>0 && operands.size()==1)
-		{
-			printStack(operands,operators);
-			throw std::string("Error, too many operators.");
+			throw std::string("End of stack trace.\nError, too many operands.");
 		}
 		else
 		{
-			printStack(operands,operators);
-			throw std::string("Error, too few operators, and too few operands.");
+			throw std::string("End of stack trace.\nError, too many operators.");
 		}
-
 	}
 #endif
 	//get result from processing expression
