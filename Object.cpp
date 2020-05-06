@@ -19,10 +19,11 @@ void newLine(std::vector<char> &data,int indentationLevel)
 std::string Object::instructionsToFormattedString()
 {
 	std::vector<char> data;
-	data.reserve(128);
+	data.reserve(256);
 
 	int indentationLevel = 1;
-	data.push_back('\n');
+	newLine(data,indentationLevel);
+	indentationLevel++;
 	for(int i = 0;i < instructions.size();i++)
 	{
 		for(char &c:instructions[i])

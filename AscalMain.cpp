@@ -1537,7 +1537,7 @@ std::string printCalculation(const std::string &expr,std::unordered_map<std::str
 }
 void printVar(const std::string &expr,bool saveLast)
 {
-	std::cout<<memory[getVarName(expr,10).data].instructionsToFormattedString()<<"\n";
+	std::cout<<getVarName(expr,10).data<<" = "<<memory[getVarName(expr,10).data].instructionsToFormattedString()<<"\n";
 }
 std::string printCommand(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool saveLast)
