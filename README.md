@@ -229,7 +229,22 @@ print all is a command that will print all the information saved in memory perta
 print [variableName] to print everything in memory related to the specified variable.<br>
 print sdf to print only system defined functions.<br>
 print udf to print only user defined functions<br>
+printStr can be used to print a string, you can also add function called into the string by placing them in parenthesis like so:<br>
+
+
+`printStr "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))"`
 <br>
+<h3>The input keyword:</h3>
+<p>
+The input keyword is used to get numeric input from the user, and can simply be inserted into any expression instead of a variable to prompt the user to type a number<br>
+You may also supply your own prompt using a format similar to the printStr syntax, like so:<br>
+ 
+`2+input "type a number 2 to like (pi) for exampleendl"` the endl keyword inside the quotation marks will insert a line break, so upon execution the prompt will say<br>
+
+`type a number 2 to like (pi) for example`<br>
+the user will start typing here, on the next line.<br>
+When the user types in their input the expression will be evaluated like normal as if the user's input was a hardcoded value.
+</p>
 <h3>The import keyword:</h3>
 <p>
 The import keyword can be used to load functions from files you've already written, there are two ways to use this keyword.<br>
