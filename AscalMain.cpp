@@ -80,6 +80,8 @@ void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 void updateBoolSetting(const std::string &expr);
 
+std::string runAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s);
 std::string existsAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast);
 std::string ifAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
@@ -218,6 +220,7 @@ double getNextDouble(const std::string &data,int &index);
 /////////////////////////////
 //UI handling functions
 /////////////////////////////
+void loadFile(const std::string & expr,int startIndex);
 double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &localMemory,std::map<std::string,Object>& paramMemory,bool);
 double calcWithOptions(std::string,std::unordered_map<std::string,Object> &localMemory,AscalParameters &params, std::map<std::string,Object> &paramMemory);
 //End UI handling functions
@@ -392,6 +395,7 @@ void printAllSDF()
 
 void initParamMapper()
 {
+	inputMapper["run"] = runAction;
 	inputMapper["exists"] = existsAction;
 	inputMapper["if"] = ifAction;
 	inputMapper["printStr"] = printStringAction;
@@ -508,7 +512,8 @@ int main(int argc,char* argv[])
 					toLower(arg[arg.size()-2]) == 's' && toLower(arg[arg.size()-1]) == 'l')
         	{
         		std::cout<<"Loading file: "<<arg<<std::endl;
-        		arg = "import "+arg;
+        		loadFile(arg,0);
+        		continue;
         	}
         }
     	try{
@@ -516,7 +521,7 @@ int main(int argc,char* argv[])
 	}
 	catch(std::string &exception)
 	{
-		std::cerr<<"Stack trace:"<<std::endl;
+		std::cerr<<"Function call stack trace:"<<std::endl;
 		std::cerr<<exception<<std::endl;
 		std::cerr<<"Failed to exec: "<<arg<<std::endl;
 	}
@@ -546,7 +551,7 @@ int main(int argc,char* argv[])
 		}
 		catch(std::string &exception)
 		{
-			std::cerr<<"Stack trace:"<<std::endl;
+			std::cerr<<"Function call stack trace:"<<std::endl;
 			std::cerr<<exception<<std::endl;
 			std::cerr<<"Failed to exec: "<<expr<<std::endl;
 		}
@@ -586,7 +591,7 @@ std::string printStringAction(const std::string & expr,std::unordered_map<std::s
 					SubStr subexp = getExpr(result,index,'(',')',';');
 					std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
 					std::string first = result.substr(0,index);
-					std::string last = result.substr(index+subexp.end,expr.size());
+					std::string last = result.substr(index+subexp.end-2,expr.size());
 
 				//std::cout<<"inputAction first: "<<first<<" value: "<<value<<"\nLast: "<<last<<std::endl;
 
@@ -632,7 +637,7 @@ std::string inputAction(const std::string & expr,std::unordered_map<std::string,
 					SubStr subexp = getExpr(result,index,'(',')',';');
 					std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
 					std::string first = result.substr(0,index);
-					std::string last = result.substr(index+subexp.end,expr.size());
+					std::string last = result.substr(index+subexp.end-2,expr.size());
 
 				//std::cout<<"inputAction first: "<<first<<" value: "<<value<<"\nLast: "<<last<<std::endl;
 
@@ -660,70 +665,91 @@ std::string inputAction(const std::string & expr,std::unordered_map<std::string,
 	return "a"+input+expr.substr(endOfPrint+1,expr.size());
 
 }
-std::string importAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
-		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
+void loadFile(const std::string & expr,int startIndex)
 {
-		std::string line;
-		std::ifstream inputFile;
-		int startIndex = 7;
-		while(expr[startIndex] == ' ')
-			startIndex++;
-		std::string filePath = expr.substr(startIndex,expr.find(';')-startIndex);
+
+	std::string line;
+	std::ifstream inputFile;
+	while(expr[startIndex] == ' ')
+		startIndex++;
+	std::string filePath = expr.substr(startIndex,expr.find(';')-startIndex);
+	inputFile.open(filePath);
+	if(!inputFile)
+	{
+		inputFile.open(filePath+".asl");
+	}
+	if(!inputFile)
+	{
+		int count = 0;
+		std::vector<char> data;
+		for(char &c:filePath)
+		{
+
+			if(c == '.' && (count < filePath.size() - 4 || toLower(filePath[filePath.size()-3]) != 'a' ||
+					toLower(filePath[filePath.size()-2]) != 's' || toLower(filePath[filePath.size()-1]) != 'l'))
+				c = (PATH_SEPARATOR);
+			count++;
+		}
 		inputFile.open(filePath);
 		if(!inputFile)
 		{
 			inputFile.open(filePath+".asl");
 		}
-		if(!inputFile)
-		{
-			int count = 0;
-			std::vector<char> data;
-			for(char &c:filePath)
-			{
 
-				if(c == '.' && (count < filePath.size() - 4 || toLower(filePath[filePath.size()-3]) != 'a' ||
-						toLower(filePath[filePath.size()-2]) != 's' || toLower(filePath[filePath.size()-1]) != 'l'))
-					c = (PATH_SEPARATOR);
-				count++;
-			}
-			inputFile.open(filePath);
-			if(!inputFile)
-			{
-				inputFile.open(filePath+".asl");
-			}
+	}
+	if(!inputFile)
+	{
+		throw std::string("Malformed path: "+filePath);
+	}
+	getline(inputFile, line);
+	std::cin.rdbuf(inputFile.rdbuf());
+	while(inputFile)
+	{
+		std::unordered_map<std::string,Object> calledLocalMemory;
+    	std::map<std::string,Object> calledParamMemory;
 
-		}
-		if(!inputFile)
-		{
-			throw std::string("Malformed path: "+filePath);
-		}
+    	try{
+
+    		interpretParam(line,calledLocalMemory,calledParamMemory,false);
+    	}
+    	catch(std::string &exception)
+    	{
+    		std::cerr<<exception<<std::endl;
+    		std::cerr<<"Failed to exec: "<<expr<<std::endl;
+    	}
 		getline(inputFile, line);
-		std::cin.rdbuf(inputFile.rdbuf());
-		bool print = *boolsettings["p"];
-		*boolsettings["p"] = false;
-		bool timeCalc = *boolsettings["t"];
-		*boolsettings["t"] = false;
-		while(inputFile)
-		{
-			std::unordered_map<std::string,Object> calledLocalMemory;
-	    	std::map<std::string,Object> calledParamMemory;
-
-	    	try{
-
-	    		interpretParam(line,calledLocalMemory,calledParamMemory,false);
-	    	}
-	    	catch(std::string &exception)
-	    	{
-	    		std::cerr<<exception<<std::endl;
-	    		std::cerr<<"Failed to exec: "<<expr<<std::endl;
-	    	}
-			getline(inputFile, line);
-		}
-		std::cin.rdbuf(stream_buffer_cin);
-
+	}
+	std::cin.rdbuf(stream_buffer_cin);
+}
+std::string importAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
+{
+	bool print = *boolsettings["p"];
+	*boolsettings["p"] = false;
+	bool timeCalc = *boolsettings["t"];
+	*boolsettings["t"] = false;
+	try{
+		loadFile(expr,7);
+	}catch(std::string &exception)
+	{
 		*boolsettings["p"] = print;
 		*boolsettings["t"] = timeCalc;
-		return MAX;
+		throw std::string("while importing file\n"+exception);
+	}
+	*boolsettings["p"] = print;
+	*boolsettings["t"] = timeCalc;
+	return MAX;
+}
+std::string runAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
+{
+	try{
+		loadFile(expr,4);
+	}catch(std::string &exception)
+	{
+		throw std::string("while running file\n"+exception);
+	}
+	return MAX;
 }
 /*
 std::string derivativeAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
@@ -1546,7 +1572,7 @@ void updateBoolSetting(const std::string &expr)
 {
 
 	lastExp.pop();
-	setting<bool> set = boolsettings[expr];
+	setting<bool> set = boolsettings[getVarName(expr,0).data];
 	//inverts setting value via operator overloads of = and *
 	bool data = !*set;
 	setting<bool> newSetting(set.getName(),set.getCommand(),data);
@@ -1730,10 +1756,6 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
 SubStr getNewVarName(const std::string &data)
 {
 	int index = data.find("let")<500 || data.find("const")<500?data.find("t ")+1:0;
-	while(!isalpha(data[index]) || data[index] == ' ')
-	{
-		index++;
-	}
 	return getVarName(data,index);
 }
 
@@ -1741,7 +1763,7 @@ SubStr getVarName(const std::string &s,int index)
 {
 	int begin = index;
 	int count = 0;
-	while(s[index] && s[index] == ' ')
+	while(s[index] && !isalpha(s[index]))
 	{
 		begin++;
 		index++;
@@ -2085,9 +2107,9 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 {
 				#if THROWERRORS == 1
 				 if(cmpstr(varName.data,"inf"))
-					 throw std::string("End of stack trace.\nArithmetic Overflow");
+					 throw std::string("End of function call stack trace.\nArithmetic Overflow");
 				 else
-					 throw std::string("End of stack trace.\nInvalid reference: "+varName.data);
+					 throw std::string("End of function call stack trace.\nInvalid reference: "+varName.data);
 				#endif
 			 }
 		 }
@@ -2268,11 +2290,11 @@ t processStack(stack<t> &operands,stack<char> &operators)
 	{
 		if(operands.size()>1 && operators.size()==0)
 		{
-			throw std::string("End of stack trace.\nError, too many operands.");
+			throw std::string("End of function call stack trace.\nError, too many operands.");
 		}
 		else
 		{
-			throw std::string("End of stack trace.\nError, too many operators.");
+			throw std::string("End of function call stack trace.\nError, too many operators.");
 		}
 	}
 #endif
