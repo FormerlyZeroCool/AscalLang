@@ -63,7 +63,7 @@ std::string Object::instructionsToString()
 			}
 			data.push_back('\n');
 		}
-		return std::string(data.begin(),data.end());
+		return std::string(data.begin(),data.end()-1);
 }
 
 std::vector<std::string>& Object::getInstructions()

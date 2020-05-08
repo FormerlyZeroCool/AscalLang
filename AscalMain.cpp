@@ -67,19 +67,27 @@ static std::map<char,t (*)(t&,t&)> operations;
 #else
 #define LOG_DEBUG(x)
 #endif
+bool comingfromElse = false;
+bool ifFlag = false;
+bool ifResultFlag = true;
 //Parallel reimann sums
 //thread count = number of partitions/20 + 1
 //dynamic array as long as thread count passed to each thread, along with thread index number to save result of calculation
 //when all threads are finished running sum up result in array, maybe use simd if
 
+std::string to_string(double input);
 const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 //////////////////////////////////////////////////////////
 //Start Ascal System Defined  Keyword functionality Executed by lookup in inputMapper unordered_map
 
+template <class t>
+t doubleModulus(t &and1,t &and2);
 void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 void updateBoolSetting(const std::string &expr);
 
+std::string elseAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast);
 std::string runAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s);
 std::string existsAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
@@ -398,6 +406,7 @@ void initParamMapper()
 	inputMapper["run"] = runAction;
 	inputMapper["exists"] = existsAction;
 	inputMapper["if"] = ifAction;
+	inputMapper["else"] = elseAction;
 	inputMapper["printStr"] = printStringAction;
 	inputMapper["input"] = inputAction;
 	inputMapper["import"] = importAction;
@@ -568,7 +577,52 @@ int main(int argc,char* argv[])
   }
   return 0;
 }
+double floor(double input)
+{
+	double one = 1;
+	return input - doubleModulus(input,one);
+}
+#include "unsortedlist.h"
+std::string to_string(double input)
+{
 
+	std::vector<char> output;
+	if(input > 0)
+	{
+		double one = 1;
+		double fractionalPart = doubleModulus(input,one);
+		double integerPart = input - (fractionalPart);
+		double ten = 10;
+		while(integerPart >= 1)
+		{
+			//std::cout<<"Char Pushed: "<<48+floor(doubleModulus(integerPart,ten))<<std::endl;
+			output.insert(output.begin(),48+floor(doubleModulus(integerPart,ten)));
+			integerPart /= ten;
+		}
+		if(integerPart == 0)
+		{
+			output.push_back('0');
+		}
+		output.push_back('.');
+		if(fractionalPart == 0)
+		{
+			output.push_back('0');
+		}
+		int precisionCounter = 0;
+		while(fractionalPart > 0 && precisionCounter < ten)
+		{
+			fractionalPart *= ten;
+			int newData = floor(fractionalPart);
+			output.push_back(48+newData);
+			fractionalPart -= newData;
+			precisionCounter++;
+		}
+
+	}
+	else
+		output.push_back(48);
+	return std::string(output.begin(),output.end());
+}
 std::string printStringAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
 {
@@ -589,9 +643,9 @@ std::string printStringAction(const std::string & expr,std::unordered_map<std::s
 				{
 					//std::cout<<"input In if: "<<std::endl;
 					SubStr subexp = getExpr(result,index,'(',')',';');
-					std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
+					std::string value = to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
 					std::string first = result.substr(0,index);
-					std::string last = result.substr(index+subexp.end-2,expr.size());
+					std::string last = result.substr(index+subexp.end-3,expr.size());
 
 				//std::cout<<"inputAction first: "<<first<<" value: "<<value<<"\nLast: "<<last<<std::endl;
 
@@ -635,7 +689,7 @@ std::string inputAction(const std::string & expr,std::unordered_map<std::string,
 				{
 					//std::cout<<"input In if: "<<std::endl;
 					SubStr subexp = getExpr(result,index,'(',')',';');
-					std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
+					std::string value = to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
 					std::string first = result.substr(0,index);
 					std::string last = result.substr(index+subexp.end-2,expr.size());
 
@@ -808,7 +862,7 @@ std::string redoAction(const std::string & expr,std::unordered_map<std::string,O
 		lastExp.push(last);
 		std::cout<<last<<std::endl;
     	std::unordered_map<std::string,Object> localMemory;
-		value = std::to_string(interpretParam(last,localMemory,paramMemory,false));
+		value = to_string(interpretParam(last,localMemory,paramMemory,false));
 		*boolsettings["p"] = false;
 	}
 	else
@@ -831,7 +885,7 @@ std::string undoAction(const std::string & expr,std::unordered_map<std::string,O
 	}
 	else
 		std::cout<<"No previous statements"<<std::endl;
-	return std::to_string(value);
+	return to_string(value);
 }
 std::string deleteObject(const std::string& expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool saveLast)
@@ -958,7 +1012,7 @@ std::string constNewVar(const std::string &expr,std::unordered_map<std::string,O
 	SubStr exPart = getExpr(expr,expr.find('=')+1);
 	SubStr newVarPart = getNewVarName(expr);
 	bool print = *boolsettings["p"];
-	std::string value = std::to_string(calcWithOptions(exPart.data,localMemory,params,paramMemory));
+	std::string value = to_string(calcWithOptions(exPart.data,localMemory,params,paramMemory));
 	*boolsettings["p"] = print;
 	Object var(newVarPart.data,value,"");
 
@@ -990,7 +1044,7 @@ std::string clocNewVar(const std::string &exp,std::unordered_map<std::string,Obj
 {
 	SubStr localName = getVarName(exp,exp.find("loc")+4);
 	SubStr subexp = getExpr(exp,exp.find('=')+1);
-	std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
+	std::string value = to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
 	Object newLocalVar(localName.data,value,"");
 	if(*boolsettings["p"])
 	{
@@ -1121,10 +1175,10 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 			std::map<std::string,Object> paramMemory1;
 			AscalParameters params1;
 			outPuts.push_back(
-					calculateExpression<double>(function+"("+std::to_string(xi)+")",params1,paramMemory1,localMemory1));
+					calculateExpression<double>(function+"("+to_string(xi)+")",params1,paramMemory1,localMemory1));
 			sumArea[j] += outPuts.get(i,j)*dx;
 			if(!*boolsettings["o"] && *boolsettings["p"])
-				std::cout<<function<<"("<<std::to_string(xi)<<")"<<"="<<outPuts.get(i,j)<<",";
+				std::cout<<function<<"("<<to_string(xi)<<")"<<"="<<outPuts.get(i,j)<<",";
 		}
 	}
 
@@ -1143,7 +1197,7 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 		if(abs(xi) < abs(xClosestToZero))
 			xClosestToZero = xi;
 		if(i%5 == 0)
-			std::cout<<std::to_string(xi).substr(0,4);
+			std::cout<<to_string(xi).substr(0,4);
 		else if((i-1)%5 == 0 || (i-2)%5 == 0|| (i-3)%5 == 0){}
 		else
 			std::cout<<" ";
@@ -1227,7 +1281,7 @@ std::string setAction(const std::string &expr,std::unordered_map<std::string,Obj
 	while(expr[startIndex] == ' ')
 		startIndex++;
 	SubStr subexp = getExpr(expr,startIndex);
-	std::string value = std::to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
+	std::string value = to_string(calculateExpression<double>(subexp.data,params,paramMemory,localMemory));
 	if(localMemory.count(varName.data))
 	{
 		localMemory[varName.data] = Object(varName.data,value,"");
@@ -1248,12 +1302,48 @@ std::string setAction(const std::string &expr,std::unordered_map<std::string,Obj
 	}
 	return MAX;
 }
-
-std::string ifAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
-		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
+std::vector<std::string> parseExpList(const SubStr &codeBlock)
 {
+	std::vector<std::string> expressions;
+
+	int i = 0;
+	i = i + (codeBlock.data[0] == '{');
+
+	while(i<codeBlock.data.size())
+	{
+		SubStr exp = getExpr(codeBlock.data,i);
+		expressions.push_back(exp.data);
+		//std::cout<<"Extracted data: "<<exp.data<<std::endl;
+		//std::cout<<"original data parsed: "<<codeBlock.data.substr(i,codeBlock.data.size())<<std::endl;
+		i += exp.end == 0?1:exp.end-1;
+	}
+	if(expressions.size() == 0)
+	{
+		expressions.push_back(codeBlock.data);
+	}
+
+	return expressions;
+}
+void execExpList( std::vector<std::string> &expressions,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory)
+{
+	for(std::string &exp:expressions)
+				{
+					try{
+						std::cout<<"Execedin exec explist: "<<exp<<std::endl;
+						calculateExpression<double>(exp,params,paramMemory,localMemory);
+					}
+					catch(std::string &exception)
+					{
+						throw std::string(exception + "\nIn exp: "+exp);
+					}
+				}
+}
+int ifHandler(int index,const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory)
+{
+
 	//std::cout<<"expression in while: "<<expr<<std::endl;
-	int index = expr.find("if")<1000?expr.find("if")+2:0;
 	while(expr[index] == ' ')
 		index++;
 
@@ -1289,59 +1379,257 @@ std::string ifAction(const std::string &expr,std::unordered_map<std::string,Obje
 	if(boolExpValue != 0)
 	{
 		std::cout<<"code block extracted: "<<codeBlock.data<<std::endl;
-		//Build List of expressions from code block associated with the while
-		std::vector<std::string> expressions;
-		{
-			int trailer = 0;
-			for(int i = 0;i<codeBlock.data.size();i++)
-			{
-				if(codeBlock.data[i] == ';' && trailer != i)
-				{
-					expressions.push_back(codeBlock.data.substr(trailer,i-trailer));
-					trailer = i;
-				}
-			}
-			if(expressions.size() == 0)
-			{
-				expressions.push_back(codeBlock.data);
-			}
+		std::vector<std::string> expressions = parseExpList(codeBlock);
+		try{
+			execExpList(expressions,localMemory,params,paramMemory);
 		}
-		for(std::string &exp:expressions)
+		catch(std::string &exception)
 		{
-			try{
-				calculateExpression<double>(exp,params,paramMemory,localMemory);
-			}
-			catch(std::string &exception)
-			{
-				*boolsettings["t"] = printTime;
-				throw std::string(exception + "\nIn if body subexp: ");
-			}
+			*boolsettings["t"] = printTime;
+			throw std::string(exception + "\nIn if body subexp: ");
 		}
 
 	}
 	else
 	{
 		bool foundElse = false;
+
 		//index = startOfCodeBlock+codeBlock.end;
 		//If entire if else block is in the expr variable
 		std::cout<<"guess at end of code block: "<<startOfCodeBlock+codeBlock.end<<std::endl;
 		if(startOfCodeBlock+codeBlock.end < expr.size())
 		{
-			int indexOfElse = expr.find(expr,index);
-			std::cout<<"everything After index: "<<expr.substr(index,expr.size())<<"index of Else: "<<indexOfElse<<std::endl;
+			//find else block
+			//if else if check expression execute if
+			int indexOfElse = expr.find("else",startOfCodeBlock+codeBlock.end);
+			bool isElseAssociated = true;
+			index = startOfCodeBlock+codeBlock.end+3;
+			while(isElseAssociated && index < indexOfElse && expr[index])
+			{
+				if(expr[index] != ' ' || expr[index] != '\n'|| expr[index] != ';')
+				{
+					isElseAssociated = false;
+				}
+				index++;
+			}
+			std::cout<<"everything After index: "<<expr.substr(indexOfElse,expr.size());
+			if(isElseAssociated)
+			{
+				bool ifproceeding = false;
+				index = indexOfElse+4;
+				while(expr[index] && expr[index] != '{')
+				{
+					if(expr[index] == 'i' && expr[index+1] == 'f')
+					{
+						ifproceeding = true;
+					}
+					index++;
+				}
+				//get else code block
+				SubStr elseBlock = getExpr(expr,index);
+				std::cout<<"\nElse Block: "<<elseBlock.data<<std::endl;
+				if(ifproceeding)
+				{
+					int ifIndex = 0;
+				}
+				else
+				{
+					std::vector<std::string> expressions = parseExpList(elseBlock);
+					try{
+						execExpList(expressions,localMemory,params,paramMemory);
+					}
+					catch(std::string &exception)
+					{
+						*boolsettings["t"] = printTime;
+						throw std::string(exception + "\nIn if body subexp: ");
+					}
+				}
+			}
 		}
 		else
 		{
-			//getline(std::cin,)
+			std::string nextLine;
+			getline(std::cin,nextLine);
+			if(cmpstr(nextLine,"else{"))
+			{
+				codeBlock = getExpr("{",0);
+
+				std::vector<std::string> expressions = parseExpList(codeBlock);
+				try{
+					execExpList(expressions,localMemory,params,paramMemory);
+				}
+				catch(std::string &exception)
+				{
+					*boolsettings["t"] = printTime;
+					throw std::string(exception + "\nIn if body subexp: ");
+				}
+
+			}
+			else if(cmpstr(nextLine.substr(0,7),"else if"))
+			{
+				ifHandler(0,nextLine.substr(8,nextLine.size()),localMemory,params,paramMemory);
+				index = expr.size();
+			}
 		}
 
 	}
 	*boolsettings["t"] = printTime;
-	index = codeBlock.end + startOfCodeBlock;
+	return index;
+}
+
+std::string elseAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
+{
+	int index = expr.find("else") + 4;
+	bool printTime = *boolsettings["t"];
+	*boolsettings["t"] = false;
+	while(expr[index] == ' ')
+		index++;
+	//std::cout<<"\nin Else ifFlag: "<<ifFlag<<" result flag for if: "<<ifResultFlag<<std::endl;
+	//std::cout<<"comingfromElse in Else: "<<comingfromElse<<std::endl;
+	SubStr codeBlock = getExpr(expr,index);
+	//std::cout<<"else Originial Str: "<<expr.substr(index,expr.length())<<std::endl;
+	//std::cout<<"else Code Block: "<<codeBlock.data<<std::endl;
+	if(ifFlag && !ifResultFlag)
+	{
+		//if there is an if after the else this must be set
+		if(expr[index] == 'i' && expr[index+1] == 'f')
+		{
+			comingfromElse = true;
+			//std::cout<<" yigi: "<<expr.substr(index,expr.length())<<std::endl;
+		}
+		else
+		{
+			comingfromElse = false;
+			if(index + codeBlock.end < expr.size())
+				index += codeBlock.end;
+			else
+				index = expr.size();
+
+			if(*boolsettings["o"])
+			{
+				std::cout<<"Executing Else Case:\n";
+			}
+			try{
+				//std::cout<<"Code Block in Else: "<<expr<<std::endl;
+				//std::cout<<"Extracted Data: "<<codeBlock.data<<std::endl;
+				calculateExpression<double>(codeBlock.data,params,paramMemory,localMemory);
+			}
+			catch(std::string &exception)
+			{
+				*boolsettings["t"] = printTime;
+				throw std::string(exception + "\nIn else body subexp: ");
+			}
+
+		}
+	}
+	else
+	{
+		//std::cout<<"Index: "<<index<<" end of cb: "<<codeBlock.end-1 <<" len: "<< expr.size()<<std::endl;
+		if(index + codeBlock.end - 1 < expr.size())
+			index += codeBlock.end-1;
+	}
+	ifFlag = false;
+	*boolsettings["t"] = printTime;
+	return "a"+expr.substr(index,expr.size());
+}
+std::string ifAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
+		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
+{
+
+	//std::cout<<"exp in if: "<<expr<<std::endl;
+	int index = expr.find("if")!=-1?expr.find("if")+2:0;
+	while(expr[index] == ' ')
+	{
+			index++;
+	}
+
+		int startOfBoolExp = index;
+		int startOfCodeBlock = index;
+		SubStr codeBlock("",0,0);
+
+		while(expr[startOfCodeBlock] && expr[startOfCodeBlock] != '{')
+		{
+			startOfCodeBlock++;
+		}
+		index = startOfCodeBlock;
+		const std::string booleanExpression = expr.substr(startOfBoolExp,index-startOfBoolExp);
+		double boolExpValue;
+		//std::cout<<"BoolExpression: "<<booleanExpression;
+		bool printTime = *boolsettings["t"];
+		if(!*boolsettings["p"])
+		{
+			*boolsettings["t"] = false;
+		}
+		if(*boolsettings["o"])
+		{
+			std::cout<<"Executing Boolean Expression:\n";
+		}
+		try{
+		boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
+		}
+		catch(std::string &exception)
+		{
+			*boolsettings["t"] = printTime;
+			throw std::string(exception + "\nIn if boolean exp: " + booleanExpression);
+		}
+		codeBlock = getExpr(expr,startOfCodeBlock);
+		//std::cout<<"CodeBlock in if: "<<codeBlock.data<<std::endl;
+		index = startOfCodeBlock + codeBlock.end - 1;
+		if(index > expr.size())
+			index = expr.size();
+		if(boolExpValue != 0)
+		{
+			if(!comingfromElse || !ifResultFlag)
+			{
+				ifFlag = true;
+				ifResultFlag = true;
+			}
+			else
+			{
+				ifFlag = false;
+				ifResultFlag = true;
+			}
+			//std::cout<<"code block extracted: "<<codeBlock.data<<std::endl;
+
+			if(*boolsettings["o"])
+			{
+				std::cout<<"Executing Code Block:\n";
+			}
+			std::vector<std::string> expressions = parseExpList(codeBlock);
+			try{
+				for(std::string &exp:expressions)
+					calculateExpression<double>(exp,params,paramMemory,localMemory);
+			}
+			catch(std::string &exception)
+			{
+				*boolsettings["t"] = printTime;
+				throw std::string(exception + "\nIn if body subexp: ");
+			}
+
+		}
+		else
+		{
+			if(!comingfromElse || !ifResultFlag)
+			{
+				ifFlag = true;
+				ifResultFlag = false;
+			}
+			else
+			{
+				ifFlag = false;
+				ifResultFlag = false;
+			}
+		}
 	//while(expr[index] == ';' || expr[index] == ' ' || expr[index] == '}')
 	//	index++;
 	//std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
-	return MAX;
+
+		///std::cout<<"\nin if ifFlag: "<<ifFlag<<" result flag for if: "<<ifResultFlag<<std::endl;
+		//std::cout<<"comingfromElse in if: "<<comingfromElse<<std::endl;
+		comingfromElse = false;
+		*boolsettings["t"] = printTime;
+		return "a"+expr.substr(index-2,expr.size());
 }
 std::string whileAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
@@ -1373,6 +1661,10 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	}
 	//std::cout<<"bool expression Being Exec: "<<booleanExpression<<std::endl;
 	try{
+		if(*boolsettings["o"])
+		{
+			std::cout<<"Executing While Boolean Expression:\n";
+		}
 	boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
 	}
 	catch(std::string &exception)
@@ -1385,8 +1677,9 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	if(boolExpValue != 0)
 	{
 		//Build List of expressions from code block associated with the while
-		std::vector<std::string> expressions;
-		{
+
+		std::vector<std::string> expressions = parseExpList(codeBlock);
+		/*{
 			int trailer = 0;
 			for(int i = 0;i<codeBlock.data.size();i++)
 			{
@@ -1400,11 +1693,14 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 			{
 				expressions.push_back(codeBlock.data);
 			}
-		}
+		}*/
 			//exprList now is essentially a list of strings that are the expressions
 		while(boolExpValue != 0)
 		{
-
+			if(*boolsettings["o"])
+			{
+				std::cout<<"Executing While loop code block:\n";
+			}
 			for(std::string &exp:expressions)
 			{
 				//std::cout<<"expression Being Exec: "<<exp<<" Len: "<<exp.length()<<std::endl;
@@ -1418,6 +1714,10 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 				}
 			}
 			//std::cout<<"BoolExpression: "<<booleanExpression;
+			if(*boolsettings["o"])
+			{
+				std::cout<<"Executing While Boolean Expression:\n";
+			}
 		try{
 			boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
 		}
@@ -1434,7 +1734,34 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	while(expr[index] == ';' || expr[index] == ' ' || expr[index] == '}')
 		index++;
 	//std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
-	return "a"+expr.substr(index,expr.size());
+	return "a"+expr.substr(index-2,expr.size());
+}
+
+std::string printMemory(std::map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
+		std::string secondDelimiter = "\n")
+{
+	std::string s;
+	if(justKey)
+		for(auto &[key,value]:memory)
+			s+=key+delimiter;
+	else
+		for(auto &[key,value]:memory)
+			s+=key+delimiter+value.instructionsToString()+secondDelimiter;
+	return s.substr(0,s.size()-secondDelimiter.size());
+}
+std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
+		std::string secondDelimiter = "\n")
+{
+	std::string s;
+	if(justKey)
+		for(auto &[key,value]:memory)
+			s+=key+delimiter;
+	else
+		for(auto &[key,value]:memory){
+			std::string instr = value.instructionsToString();
+			s+=key+delimiter+instr+secondDelimiter;
+		}
+	return s.substr(0,s.size()-secondDelimiter.size());
 }
 std::string whenAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
@@ -1451,6 +1778,7 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 	std::string startOfExp = expr.substr(0,startIndex);
 	std::string endOfExp = expr.substr(endIndex+3,expr.length());
 	std::string value;
+	std::string extractedBranch;
 	int index = startIndex + 4;
 	std::vector<char> exp;
 	//should always start after when is finished to build boolean expression
@@ -1478,6 +1806,11 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 		exp.clear();
 		//bool showOp = *boolsettings["o"];
 		//*boolsettings["o"] = false;
+
+		if(*boolsettings["o"])
+		{
+			std::cout<<"Executing Boolean Expression:\n";
+		}
 		try{
 		boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
 		}
@@ -1495,6 +1828,7 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 			if(whenIndex == -1)
 			{
 				value = getExpr(expr.substr(elseIndex+4,endIndex-(elseIndex+4)),0).data;
+				extractedBranch = value;
 				index = endIndex;
 				value = startOfExp+value+endOfExp;
 				//std::cout<<"In Else Case rtn val: "<<value<<"\n";
@@ -1509,20 +1843,17 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 			thenIndex = thenIndex==-1?endIndex+1:thenIndex;
 
 			value = getExpr(expr.substr(index,std::min(std::min(endIndex,thenIndex),elseIndex)-index),0).data;
-			if(*boolsettings["o"])
-			{
-				std::cout<<"In choice: "<<expr<<" taking path: "<<value;
-				std::cout<<" Params: ";
-				for(auto &p:params)
-				{
-					std::cout<<p<<" ";
-				}
-				std::cout<<"\n";
-			}
+			extractedBranch = value;
+
 			value = startOfExp+value+endOfExp;
 		}
 		lastThen = thenIndex;
 	} while(expr[index] && boolExpValue == 0 && index < endIndex);
+	if(*boolsettings["o"])
+	{
+		std::cout<<"Executing Branch: "<<extractedBranch<<" Params: "<<printMemory(paramMemory," = ",false,"|");
+		std::cout<<"\n";
+	}
 	return "a"+value;
 }
 std::string printCalculation(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
@@ -1660,6 +1991,7 @@ double calcWithOptions(std::string expr,std::unordered_map<std::string,Object> &
 			std::cout << "finished computation at " << std::ctime(&end_time)
 			          << "elapsed time: " << elapsed_seconds.count() << "s\n";
 		}
+		//std::cout<<"\nresult: "<<to_string(result)<<"\nMax: "<<Max<<std::endl>;
 		if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
 		{
 			std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
@@ -1693,45 +2025,34 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
 	std::string line = data;
 
 	do{
-		while(line[index] && !isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]) && line[index] != closing)
+		while(line[index] && !isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]) &&
+				line[index] != closing && line[index] != opening)
 		{
-			if(line[index] == opening)
-			{
-				openingCount++;
-				maxOpeningCount++;
-			}
-			else if(line[index] == closing)
-			{
-				openingCount--;
-			}
+			openingCount = openingCount + (line[index] == opening) - (line[index] == closing);
+			maxOpeningCount = maxOpeningCount + (line[index] == opening);
 			index++;
 		}
 		while(line[index + count] && (line[index + count] != lineBreak && line[index + count] != '\n')
 				&& !(line[index+count] == closing && openingCount == 1))
 		{
-			if(line[index+count] == opening)
-			{
-				openingCount++;
-				maxOpeningCount++;
-			}
-			else if(line[index+count] == closing)
-			{
-				openingCount--;
-			}
+			openingCount = openingCount + (line[index+count] == opening) - (line[index+count] == closing);
+			maxOpeningCount = maxOpeningCount + (line[index+count] == opening);
 			count++;
 		}
-		if(line[index+count] == closing)
-		{
-			openingCount--;
-		}
+		openingCount -= (line[index+count] == closing);
+
 		if(count > 0)
 		{
+
 			for(int i = index<line.size()?index:line.size();line[i] && i <= index+count;i++)
 			{
+				//std::cout<<line[i];
 				result.push_back(line[i]);
 			}
-			if(line[line.size()-1]!=opening && line[line.size()-1] != lineBreak)
+			//std::cout<<std::endl;
+			if(line[line.size()-1]!=opening && result[result.size()-1] != lineBreak)
 				result.push_back(lineBreak);
+
 
 		}
 		if(openingCount > 0 && line.length() <= index+count)
@@ -1749,6 +2070,7 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
 	//result.pop_back();
 	if(maxOpeningCount > 0)
 		result.push_back(closing);
+	result.push_back(0);
 
 	return SubStr(std::string(result.begin(),result.end()),index,result.size());
 }
@@ -1790,30 +2112,6 @@ std::string replace(std::string &original,std::string &replace,std::string &repl
 	return original;
 }
 
-std::string printMemory(std::map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
-		std::string secondDelimiter = "\n")
-{
-	std::string s;
-	if(justKey)
-		for(auto &[key,value]:memory)
-			s+=key+delimiter;
-	else
-		for(auto &[key,value]:memory)
-			s+=key+delimiter+value.instructionsToString()+secondDelimiter;
-	return s;
-}
-std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
-		std::string secondDelimiter = "\n")
-{
-	std::string s;
-	if(justKey)
-		for(auto &[key,value]:memory)
-			s+=key+delimiter;
-	else
-		for(auto &[key,value]:memory)
-			s+=key+delimiter+value.instructionsToString()+secondDelimiter;
-	return s;
-}
 template <class t>
 t calculateExpression(std::string exp,AscalParameters &params,std::map<std::string,Object> &paramMemory,std::unordered_map<std::string,Object> &localMemory)
 {
@@ -1870,21 +2168,15 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 	 currentChar = exp[i];
 	 initialOperators.top(peeker);
 	 //anything used outside of the first { gets dropped from program stack, for param definition
-	 if(currentChar == '{' || currentChar == '}')
+	 level = level + (currentChar == '{') - (currentChar == '}');
+
+
+	 if(currentChar == '{' && level == 1)
 	 {
-		 if(currentChar == '{')
-		 {
-			 if(level == 0)
-			 {
-				 while(!initialOperands.isEmpty())
-					 initialOperands.pop();
-				 while(!initialOperators.isEmpty())
-					 initialOperators.pop();
-			 }
-			 level++;
-		 }
-		 else if(currentChar == '}')
-			 level--;
+		while(!initialOperands.isEmpty())
+			initialOperands.pop();
+		while(!initialOperators.isEmpty())
+			initialOperators.pop();
 	 }
 	 else if(isalpha(currentChar) && !isOperator(currentChar) && currentChar != 'X')
 	 {
@@ -1956,7 +2248,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 LOG_DEBUG("Resolving Parameter: "<<data.params[i]<<" To: ")
 
 				 data.params[i] =
-						 std::to_string(calculateExpression<double>(data.params[i],params,paramMemory,localMemory));
+						 to_string(calculateExpression<double>(data.params[i],params,paramMemory,localMemory));
 				 LOG_DEBUG(data.params[i])
 			 }
 			 std::vector<std::string> expressions = data.getInstructions();
@@ -1974,7 +2266,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 LOG_DEBUG("Global Var parsing exp: "<<exp<<" Resolving: "<<varName.data<<" to: "<<expressions[j+1]<<std::endl)
 
 			 double varValue = calculateExpression<double>(expressions[j+1],data.params,calledFunctionParamMemory,calledFunctionLocalMemory);
-			 std::string value = std::to_string(varValue);
+			 std::string value = to_string(varValue);
 			 exp = exp.substr(0,varName.start) + value + endOfExp;
 			 i = varName.start;
 			 currentChar = exp[i];
@@ -2004,7 +2296,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 
 					 //if after calc exp data.params[i] has changed, and the original
 					 LOG_DEBUG("Resolving Local Data Parameter: "<<localData.params[i]<<" To: ")
-					 localData.params[i] = std::to_string(calculateExpression<double>(localData.params[i],params,paramMemory,localMemory));
+					 localData.params[i] = to_string(calculateExpression<double>(localData.params[i],params,paramMemory,localMemory));
 					 LOG_DEBUG(std::cout<<localData.params[i])
 				 }
 				 int j;
@@ -2015,7 +2307,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 if(expressions.size() == 1)
 					 j = -1;
 				 double varValue = calculateExpression<double>(expressions[j+1],localData.params,paramMemory,localMemory);
-				 std::string value = std::to_string(varValue);
+				 std::string value = to_string(varValue);
 				 //endOfExp = exp.substr(varName.end+1,exp.length());
 				 exp = exp.substr(0,varName.start) + value + endOfExp;
 				 i = varName.start;
@@ -2043,7 +2335,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 					 //if after calc exp data.params[i] has changed, and the original
 				 					LOG_DEBUG("Resolving Local Data Parameter: "<<paramData.params[i]<<" To: ")
 
-				 					paramData.params[i] = std::to_string(
+				 					paramData.params[i] = to_string(
 				 							calculateExpression<double>(paramData.params[i],params,paramMemory,localMemory));
 				 					LOG_DEBUG(std::cout<<paramData.params[i])
 				 				 }
@@ -2055,7 +2347,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 				 if(expressions.size() == 1)
 				 					 j = -1;
 				 				 double varValue = calculateExpression<double>(expressions[j+1],paramData.params,paramMemory,localMemory);
-				 				 std::string value = std::to_string(varValue);
+				 				 std::string value = to_string(varValue);
 				 				 //endOfExp = exp.substr(varName.end+1,exp.length());
 				 				 exp = exp.substr(0,varName.start) + value + endOfExp;
 				 				 i = varName.start;
@@ -2085,7 +2377,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 if(expressions.size() == 1)
 					 j = -1;
 				 double varValue = calculateExpression<double>(expressions[j+1],localVar.params,calledFunctionParamMemory,calledFunctionLocalMemory);
-				 std::string value = std::to_string(varValue);
+				 std::string value = to_string(varValue);
 
 				 endOfExp = exp.substr(varName.end+1,exp.length());
 
