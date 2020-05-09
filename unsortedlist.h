@@ -5,7 +5,7 @@
  *      Author: andrew
  */
 
-
+#pragma once
 #include <iostream>
 template <class t>
 struct node

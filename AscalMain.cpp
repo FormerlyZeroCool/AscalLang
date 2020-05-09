@@ -582,16 +582,15 @@ double floor(double input)
 	double one = 1;
 	return input - doubleModulus(input,one);
 }
-#include "unsortedlist.h"
+/*#include <math.h>
 std::string to_string(double input)
 {
 
 	std::vector<char> output;
 	if(input > 0)
 	{
-		double one = 1;
-		double fractionalPart = doubleModulus(input,one);
-		double integerPart = input - (fractionalPart);
+		double integerPart;
+		double fractionalPart = modf(input,&integerPart);
 		double ten = 10;
 		while(integerPart >= 1)
 		{
@@ -622,6 +621,19 @@ std::string to_string(double input)
 	else
 		output.push_back(48);
 	return std::string(output.begin(),output.end());
+//	return std::to_string(input);
+}*/
+std::string to_string(double input)
+{
+	int offsetFromEnd = 0;
+	std::string data = std::to_string(input);
+	while(data[data.length()-offsetFromEnd-1] == '0')
+		offsetFromEnd++;
+
+	if(data[data.length()-offsetFromEnd-1] == '.')
+		offsetFromEnd++;
+
+	return data.substr(0,data.length()-offsetFromEnd);
 }
 std::string printStringAction(const std::string & expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params, std::map<std::string,Object> &paramMemory,bool s)
@@ -1197,7 +1209,7 @@ std::string plotAction(const std::string &expr,std::unordered_map<std::string,Ob
 		if(abs(xi) < abs(xClosestToZero))
 			xClosestToZero = xi;
 		if(i%5 == 0)
-			std::cout<<to_string(xi).substr(0,4);
+			std::cout<<std::to_string(xi).substr(0,4);
 		else if((i-1)%5 == 0 || (i-2)%5 == 0|| (i-3)%5 == 0){}
 		else
 			std::cout<<" ";
@@ -1328,155 +1340,17 @@ void execExpList( std::vector<std::string> &expressions,std::unordered_map<std::
 		AscalParameters &params,std::map<std::string,Object> &paramMemory)
 {
 	for(std::string &exp:expressions)
-				{
-					try{
-						std::cout<<"Execedin exec explist: "<<exp<<std::endl;
-						calculateExpression<double>(exp,params,paramMemory,localMemory);
-					}
-					catch(std::string &exception)
-					{
-						throw std::string(exception + "\nIn exp: "+exp);
-					}
-				}
-}
-int ifHandler(int index,const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
-		AscalParameters &params,std::map<std::string,Object> &paramMemory)
-{
-
-	//std::cout<<"expression in while: "<<expr<<std::endl;
-	while(expr[index] == ' ')
-		index++;
-
-	int startOfBoolExp = index;
-	int startOfCodeBlock = index;
-	SubStr codeBlock("",0,0);
-
-	while(expr[startOfCodeBlock] && expr[startOfCodeBlock] != '{')
 	{
-		startOfCodeBlock++;
-	}
-	std::cout<<"start of boolExp: "<<startOfBoolExp<<" end of bool exp: "<<startOfCodeBlock-1<<" len: "<<expr.size()<<std::endl;
-
-	index = startOfCodeBlock;
-	const std::string booleanExpression = expr.substr(startOfBoolExp,index-startOfBoolExp);
-	double boolExpValue;
-	std::cout<<"BoolExpression: "<<booleanExpression;
-	bool printTime = *boolsettings["t"];
-	if(!*boolsettings["p"])
-	{
-		*boolsettings["t"] = false;
-	}
-	try{
-	boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
-	}
-	catch(std::string &exception)
-	{
-		*boolsettings["t"] = printTime;
-		throw std::string(exception + "\nIn if boolean exp: " + booleanExpression);
-	}
-	std::cout<<" value: "<<boolExpValue<<std::endl;
-	codeBlock = getExpr(expr,startOfCodeBlock);
-	if(boolExpValue != 0)
-	{
-		std::cout<<"code block extracted: "<<codeBlock.data<<std::endl;
-		std::vector<std::string> expressions = parseExpList(codeBlock);
 		try{
-			execExpList(expressions,localMemory,params,paramMemory);
-		}
-		catch(std::string &exception)
-		{
-			*boolsettings["t"] = printTime;
-			throw std::string(exception + "\nIn if body subexp: ");
-		}
-
+			//std::cout<<"Execedin exec explist: "<<exp<<std::endl;
+			calculateExpression<double>(exp,params,paramMemory,localMemory);
+			}
+			catch(std::string &exception)
+			{
+				throw std::string(exception + "\nIn exp: "+exp);
+			}
 	}
-	else
-	{
-		bool foundElse = false;
-
-		//index = startOfCodeBlock+codeBlock.end;
-		//If entire if else block is in the expr variable
-		std::cout<<"guess at end of code block: "<<startOfCodeBlock+codeBlock.end<<std::endl;
-		if(startOfCodeBlock+codeBlock.end < expr.size())
-		{
-			//find else block
-			//if else if check expression execute if
-			int indexOfElse = expr.find("else",startOfCodeBlock+codeBlock.end);
-			bool isElseAssociated = true;
-			index = startOfCodeBlock+codeBlock.end+3;
-			while(isElseAssociated && index < indexOfElse && expr[index])
-			{
-				if(expr[index] != ' ' || expr[index] != '\n'|| expr[index] != ';')
-				{
-					isElseAssociated = false;
-				}
-				index++;
-			}
-			std::cout<<"everything After index: "<<expr.substr(indexOfElse,expr.size());
-			if(isElseAssociated)
-			{
-				bool ifproceeding = false;
-				index = indexOfElse+4;
-				while(expr[index] && expr[index] != '{')
-				{
-					if(expr[index] == 'i' && expr[index+1] == 'f')
-					{
-						ifproceeding = true;
-					}
-					index++;
-				}
-				//get else code block
-				SubStr elseBlock = getExpr(expr,index);
-				std::cout<<"\nElse Block: "<<elseBlock.data<<std::endl;
-				if(ifproceeding)
-				{
-					int ifIndex = 0;
-				}
-				else
-				{
-					std::vector<std::string> expressions = parseExpList(elseBlock);
-					try{
-						execExpList(expressions,localMemory,params,paramMemory);
-					}
-					catch(std::string &exception)
-					{
-						*boolsettings["t"] = printTime;
-						throw std::string(exception + "\nIn if body subexp: ");
-					}
-				}
-			}
-		}
-		else
-		{
-			std::string nextLine;
-			getline(std::cin,nextLine);
-			if(cmpstr(nextLine,"else{"))
-			{
-				codeBlock = getExpr("{",0);
-
-				std::vector<std::string> expressions = parseExpList(codeBlock);
-				try{
-					execExpList(expressions,localMemory,params,paramMemory);
-				}
-				catch(std::string &exception)
-				{
-					*boolsettings["t"] = printTime;
-					throw std::string(exception + "\nIn if body subexp: ");
-				}
-
-			}
-			else if(cmpstr(nextLine.substr(0,7),"else if"))
-			{
-				ifHandler(0,nextLine.substr(8,nextLine.size()),localMemory,params,paramMemory);
-				index = expr.size();
-			}
-		}
-
-	}
-	*boolsettings["t"] = printTime;
-	return index;
 }
-
 std::string elseAction(const std::string &expr,std::unordered_map<std::string,Object>& localMemory,
 		AscalParameters &params,std::map<std::string,Object> &paramMemory,bool saveLast)
 {
@@ -1495,6 +1369,10 @@ std::string elseAction(const std::string &expr,std::unordered_map<std::string,Ob
 		//if there is an if after the else this must be set
 		if(expr[index] == 'i' && expr[index+1] == 'f')
 		{
+			if(*boolsettings["o"])
+			{
+				std::cout<<"Executing else case:\n";
+			}
 			comingfromElse = true;
 			//std::cout<<" yigi: "<<expr.substr(index,expr.length())<<std::endl;
 		}
@@ -1508,7 +1386,7 @@ std::string elseAction(const std::string &expr,std::unordered_map<std::string,Ob
 
 			if(*boolsettings["o"])
 			{
-				std::cout<<"Executing Else Case:\n";
+				std::cout<<"Executing else case:\n";
 			}
 			try{
 				//std::cout<<"Code Block in Else: "<<expr<<std::endl;
@@ -1525,6 +1403,10 @@ std::string elseAction(const std::string &expr,std::unordered_map<std::string,Ob
 	}
 	else
 	{
+		if(*boolsettings["o"])
+		{
+			std::cout<<"Skipping else case\n";
+		}
 		//std::cout<<"Index: "<<index<<" end of cb: "<<codeBlock.end-1 <<" len: "<< expr.size()<<std::endl;
 		if(index + codeBlock.end - 1 < expr.size())
 			index += codeBlock.end-1;
@@ -1554,6 +1436,10 @@ std::string ifAction(const std::string &expr,std::unordered_map<std::string,Obje
 		}
 		index = startOfCodeBlock;
 		const std::string booleanExpression = expr.substr(startOfBoolExp,index-startOfBoolExp);
+		if(booleanExpression.size() == 0)
+		{
+			throw std::string("Error no boolean expression provided in if.\n");
+		}
 		double boolExpValue;
 		//std::cout<<"BoolExpression: "<<booleanExpression;
 		bool printTime = *boolsettings["t"];
@@ -1563,7 +1449,7 @@ std::string ifAction(const std::string &expr,std::unordered_map<std::string,Obje
 		}
 		if(*boolsettings["o"])
 		{
-			std::cout<<"Executing Boolean Expression:\n";
+			std::cout<<"Executing boolean expression in if:\n";
 		}
 		try{
 		boolExpValue = calculateExpression<double>(booleanExpression,params,paramMemory,localMemory);
@@ -1594,7 +1480,7 @@ std::string ifAction(const std::string &expr,std::unordered_map<std::string,Obje
 
 			if(*boolsettings["o"])
 			{
-				std::cout<<"Executing Code Block:\n";
+				std::cout<<"Executing code block in if:\n";
 			}
 			std::vector<std::string> expressions = parseExpList(codeBlock);
 			try{
@@ -1610,6 +1496,11 @@ std::string ifAction(const std::string &expr,std::unordered_map<std::string,Obje
 		}
 		else
 		{
+
+			if(*boolsettings["o"])
+			{
+				std::cout<<"Skipping if code block\n";
+			}
 			if(!comingfromElse || !ifResultFlag)
 			{
 				ifFlag = true;
@@ -1651,7 +1542,12 @@ std::string whileAction(const std::string &expr,std::unordered_map<std::string,O
 	index = startOfCodeBlock;
 
 	//std::cout<<"while after finding end of exp: "<<expr.substr(index,expr.size())<<" start of Exp Index: "<<startOfBoolExp<<" end Of boolExp Index: "<<index<<std::endl;
+
 	const std::string booleanExpression = expr.substr(startOfBoolExp,index-startOfBoolExp);
+	if(booleanExpression.size() == 0)
+	{
+		throw std::string("Error no boolean expression provided in while.\n");
+	}
 	double boolExpValue;
 	bool printTime = *boolsettings["t"];
 	//*boolsettings["p"] = false;
@@ -1803,6 +1699,10 @@ std::string whenAction(const std::string &expr,std::unordered_map<std::string,Ob
 		}
 		//std::cout<<"\n";
 		std::string booleanExpression(exp.begin(),exp.end());
+		if(booleanExpression.size() == 0)
+		{
+			throw std::string("Error no boolean expression provided in when.\n");
+		}
 		exp.clear();
 		//bool showOp = *boolsettings["o"];
 		//*boolsettings["o"] = false;
@@ -2204,6 +2104,8 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 if((exp[i] == 0 || exp[i+1] == 0) && cmpstr(result,MAX))
 			 {
 				 exp = MAX;
+				 if(initialOperands.size() != 0)
+					 throw std::string("End of function call stack trace.\n\nError called keyword: '"+varName.data+"'\nwithout statement separator ';' before previous expression.");
 			 }
 			 else if(isalpha(result[0]))
 			 {
@@ -2505,7 +2407,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 	}catch(std::string &error)
 	{
 		 *boolsettings["p"] = printValue;
-		throw std::string("   "+exp+"\n"+error);
+		throw std::string("   ~:"+exp+"\n"+error);
 	}
 }
 template <class t>
@@ -2744,8 +2646,10 @@ t doubleModulus(t &and1,t &and2)
 	t result;
   	if(and2 != 0)
   	{
-  		long quotient = and1/and2;
-  		result = and1 - and2*quotient;
+  		double quotient = and1/and2;
+  		double flooredQuotient;
+  		modf(quotient,&flooredQuotient);
+  		result = and1 - and2*flooredQuotient;
 
   		if(and1*and2 < 0 && result >0)
   		{
@@ -2758,7 +2662,7 @@ t doubleModulus(t &and1,t &and2)
   	}
   	else
   	{
-  		int ind;
+  		int ind = 0;
   		result = getNextDoubleS(MAX,ind);
   	}
   	return result;
