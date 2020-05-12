@@ -7,7 +7,7 @@ There are also now plans to encapsulate Ascal within a class for use as a progra
 Ascal tries to be as succinct as possible while expressing the mathematical functions, and aims to use a mathematical syntax, it does this to make the UX as easy as possible for people in STEM to get used to.<br>
 <br>
 <h3>A quick help guide to using the language, further documentation to come</h3>
-Note: functions have been tested to provide at least 160 levels of nesting, and although it does not currently exist support for loops, and other conditional execution modules like if and else; however, not, and true built in functions, along with the boolean operators = , <,> can be used for boolean logic, and we now have support for the when then end keywords allowing basic decision control structures  wo we also support recursion now! In my tests on Mac OSX High Sierra I can do about 6000 recursive stack frames with default stack size settings, unfortunately you just get the error segmentation fault if a stack overflow occurs.<br>
+Note: functions have been tested to provide at least 160 levels of nesting, and although it does not currently exist support for loops, and other conditional execution modules like if and else; however, not, and true built in functions, along with the boolean operators = , <,> can be used for boolean logic, and we now have support for the when then end keywords allowing basic decision control structures  wo we also support recursion now!<br>
 The not function returns 1 if a 0 is supplied, and zero with all other values, the true functions returns 1 if any value other than 0 is supplied
 <br>
 <h5>Your input testing the value supplied in this case 0</h5>
