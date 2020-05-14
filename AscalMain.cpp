@@ -1936,7 +1936,7 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 		std::map<std::string,Object>& paramMemory,bool saveLast)
 {
 	double value = 0;
-	int expStart = 0;
+	char expStart = 0;
 	while(expr[expStart] == ' ')
 		expStart++;
 	SubStr firstWord = getVarName(expr,0);
@@ -1959,7 +1959,7 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 	else if(expStart == expr.size()){}
 	else
 	{//printHelpMessage(expr);
-		throw std::string("Illegal Start of Expression: \""+expr+"\"");
+		throw std::string("Illegal Start of Expression: \""+expr+"\" in column: "+to_string(expStart));
 	}
 	return value;
 }
@@ -2483,9 +2483,9 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 {
 				#if THROWERRORS == 1
 				 if(cmpstr(varName.data,"inf"))
-					 throw std::string("End of function call stack trace.\nArithmetic Overflow");
+					 throw std::string("End of function call stack trace.\nArithmetic Overflow in column: "+to_string(i));
 				 else
-					 throw std::string("End of function call stack trace.\nInvalid reference: "+varName.data);
+					 throw std::string("End of function call stack trace.\nInvalid reference: "+varName.data+" in column: "+to_string(i));
 				#endif
 			 }
 		 }
