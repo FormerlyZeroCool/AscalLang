@@ -1941,9 +1941,10 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 		expStart++;
 	SubStr firstWord = getVarName(expr,0);
 	if(expr.length() == 0) {}
-	else if(memory.count(firstWord.data) != 0 ||
+	else if(
 			(expr[expStart] >= 48 && expr[expStart] < 58) ||
 			isOperator(expr[expStart]) || expr[expStart] == '{' || expr[expStart] == '}' ||
+			memory.count(firstWord.data) != 0 ||
 			cmpstr(firstWord.data,"loc") || localMemory.count(firstWord.data) != 0 || inputMapper.count(firstWord.data) != 0 )
 	{
 		AscalParameters params;
