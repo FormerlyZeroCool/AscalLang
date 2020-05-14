@@ -245,7 +245,7 @@ static stack<std::string> lastExp;
 static stack<std::string> undoneExp;
 /////////////////////////////
 
-int lineCount = 0;
+int lineCount = 1;
 void get_line(std::istream &in,std::string&data)
 {
 	lineCount++;
