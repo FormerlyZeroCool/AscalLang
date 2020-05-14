@@ -1942,7 +1942,8 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 	SubStr firstWord = getVarName(expr,0);
 	if(expr.length() == 0) {}
 	else if(memory.count(firstWord.data) != 0 ||
-			(expr[expStart] >= 48 && expr[expStart] < 58) || isOperator(expr[expStart]) ||
+			(expr[expStart] >= 48 && expr[expStart] < 58) ||
+			isOperator(expr[expStart]) || expr[expStart] == '{' || expr[expStart] == '}' ||
 			cmpstr(firstWord.data,"loc") || localMemory.count(firstWord.data) != 0 || inputMapper.count(firstWord.data) != 0 )
 	{
 		AscalParameters params;
@@ -2915,7 +2916,7 @@ t calc(char op,t and1,t and2)
 
 bool isOperator(char s)
 {
-  return  isNonParentheticalOperator(s) || s == '(' || s == ')' || s == '{' || s == '}';
+  return  isNonParentheticalOperator(s) || s == '(' || s == ')';
 }
 bool isNonParentheticalOperator(char s)
 {
