@@ -245,6 +245,13 @@ static stack<std::string> lastExp;
 static stack<std::string> undoneExp;
 /////////////////////////////
 
+int lineCount = 0;
+void get_line(std::istream &in,std::string&data)
+{
+	lineCount++;
+	getline(in,data);
+}
+
 void printLoadedMemMessage(Object function)
 {
 	std::cout<<"Loaded Function: "<<function.id<<"\nexpression: "<<function.instructionsToFormattedString()<<std::endl<<std::endl;
@@ -535,7 +542,7 @@ int main(int argc,char* argv[])
 	}
 	catch(std::string &exception)
 	{
-		std::cerr<<"Function call stack trace:"<<std::endl;
+		std::cerr<<"\nFunction call stack trace:"<<std::endl;
 		std::cerr<<exception<<std::endl;
 		std::cerr<<"Failed to exec: "<<arg<<std::endl;
 	}
@@ -556,7 +563,7 @@ int main(int argc,char* argv[])
 	  {
 		  //Interpreter prompt to let user know program is expecting a command/expression
 		  std::cout<<std::endl<<">>";
-		  getline(std::cin, expr);
+		  get_line(std::cin, expr);
 
 	    	std::unordered_map<std::string,Object> localMemory;
 	    	std::map<std::string,Object> paramMemory;
@@ -565,7 +572,7 @@ int main(int argc,char* argv[])
 		}
 		catch(std::string &exception)
 		{
-			std::cerr<<"Function call stack trace:"<<std::endl;
+			std::cerr<<"\nFunction call stack trace:"<<std::endl;
 			std::cerr<<exception<<std::endl;
 			std::cerr<<"Failed to exec: "<<expr<<std::endl;
 		}
@@ -734,7 +741,7 @@ std::string inputAction(const std::string & expr,std::unordered_map<std::string,
 		}
 		std::cout<<result;
 		std::string input;
-		getline(std::cin,input);
+		get_line(std::cin,input);
 	return "a"+input+expr.substr(endOfPrint+1,expr.size());
 
 }
@@ -774,9 +781,9 @@ void loadFile(const std::string & expr,int startIndex)
 	{
 		throw std::string("Malformed path: "+filePath);
 	}
-	getline(inputFile, line);
+	get_line(inputFile, line);
 	std::cin.rdbuf(inputFile.rdbuf());
-	int lineCount = 0;
+	int locLineCount = lineCount;
 	while(inputFile)
 	{
 		std::unordered_map<std::string,Object> calledLocalMemory;
@@ -789,10 +796,9 @@ void loadFile(const std::string & expr,int startIndex)
     	catch(std::string &exception)
     	{
     		std::cerr<<exception<<std::endl;
-    		std::cerr<<"On Line: "<<lineCount<<"\nFailed to exec: "<<expr<<std::endl;
+    		std::cerr<<"On Line: "<<(lineCount - locLineCount)<<std::endl;
     	}
-    	lineCount++;
-		getline(inputFile, line);
+		get_line(inputFile, line);
 	}
 	std::cin.rdbuf(stream_buffer_cin);
 }
@@ -1930,10 +1936,14 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 		std::map<std::string,Object>& paramMemory,bool saveLast)
 {
 	double value = 0;
-	std::string firstWord = getVarName(expr,0).data;
+	int expStart = 0;
+	while(expr[expStart] == ' ')
+		expStart++;
+	SubStr firstWord = getVarName(expr,0);
 	if(expr.length() == 0) {}
-	else if(memory.count(firstWord) != 0 || (expr[0] >= 48 && expr[0] < 58) || isOperator(expr[0]) ||
-			cmpstr(firstWord,"loc") || localMemory.count(firstWord) != 0 || inputMapper.count(firstWord) != 0 )
+	else if(memory.count(firstWord.data) != 0 ||
+			(expr[expStart] >= 48 && expr[expStart] < 58) || isOperator(expr[expStart]) ||
+			cmpstr(firstWord.data,"loc") || localMemory.count(firstWord.data) != 0 || inputMapper.count(firstWord.data) != 0 )
 	{
 		AscalParameters params;
 		bool print = *boolsettings["p"];
@@ -1942,13 +1952,13 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 			lastExp.push(expr);
 
 		value = calcWithOptions(expr,localMemory,params,paramMemory);
-		if(firstWord.size() != 1 && firstWord[0] != 'p')
+		if(firstWord.data.size() != 1 && firstWord.data[0] != 'p')
 		*boolsettings["p"] = print;
 	}
+	else if(expStart == expr.size()){}
 	else
-	{
-		//printHelpMessage(expr);
-		throw std::string("Illegal Start of Expression: "+expr);
+	{//printHelpMessage(expr);
+		throw std::string("Illegal Start of Expression: \""+expr+"\"");
 	}
 	return value;
 }
@@ -2065,7 +2075,7 @@ std::vector<std::string> getExprVec(const std::string &data,int index,char openi
 		}
 		if(openingCount > 0 && line.length() <= index+count)
 		{
-			getline(std::cin, line);
+			get_line(std::cin, line);
 			index = 0;
 		}
 		else
@@ -2127,7 +2137,7 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
 		}
 		if(openingCount > 0 && line.length() <= index+count)
 		{
-			getline(std::cin, line);
+			get_line(std::cin, line);
 			index = 0;
 		}
 		else
@@ -2905,7 +2915,7 @@ t calc(char op,t and1,t and2)
 
 bool isOperator(char s)
 {
-  return  isNonParentheticalOperator(s) || s == '(' || s == ')';
+  return  isNonParentheticalOperator(s) || s == '(' || s == ')' || s == '{' || s == '}';
 }
 bool isNonParentheticalOperator(char s)
 {
