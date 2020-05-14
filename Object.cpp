@@ -22,8 +22,8 @@ std::string Object::instructionsToFormattedString()
 	data.reserve(256);
 
 	int indentationLevel = 1;
-	newLine(data,indentationLevel);
-	indentationLevel++;
+	//newLine(data,indentationLevel);
+	//indentationLevel++;
 	for(int i = 0;i < instructions.size();i++)
 	{
 		for(char &c:instructions[i])
