@@ -1936,17 +1936,8 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 		std::map<std::string,Object>& paramMemory,bool saveLast)
 {
 	double value = 0;
-	char expStart = 0;
-	while(expr[expStart] == ' ')
-		expStart++;
 	SubStr firstWord = getVarName(expr,0);
-	if(expr.length() == 0) {}
-	else if(
-			(expr[expStart] >= 48 && expr[expStart] < 58) ||
-			isOperator(expr[expStart]) || expr[expStart] == '{' || expr[expStart] == '}' ||
-			memory.count(firstWord.data) != 0 ||
-			cmpstr(firstWord.data,"loc") || localMemory.count(firstWord.data) != 0 || inputMapper.count(firstWord.data) != 0 )
-	{
+
 		AscalParameters params;
 		bool print = *boolsettings["p"];
 
@@ -1956,12 +1947,7 @@ double interpretParam(std::string &expr,std::unordered_map<std::string,Object> &
 		value = calcWithOptions(expr,localMemory,params,paramMemory);
 		if(firstWord.data.size() != 1 && firstWord.data[0] != 'p')
 		*boolsettings["p"] = print;
-	}
-	else if(expStart == expr.size()){}
-	else
-	{//printHelpMessage(expr);
-		throw std::string("Illegal Start of Expression: \""+expr+"\" in column: "+to_string(expStart));
-	}
+
 	return value;
 }
 
@@ -2324,7 +2310,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 *boolsettings["p"]  = false;
 				 int endOfParams = localData.setParams(exp[varName.end+1] == '('?exp.substr(varName.end+1):"");
 				 int startOfEnd = localData.params.size()==0?varName.end+1:varName.end+endOfParams;
-				 endOfExp = exp.substr(startOfEnd,exp.length());
+				 //endOfExp = exp.substr(startOfEnd,exp.length());
 				 std::vector<std::string> expressions = localData.getInstructions();
 
 				 LOG_DEBUG("In expression: "<<exp<<" ")
@@ -2346,9 +2332,12 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 					 j = -1;
 				 double varValue = calculateExpression<double>(expressions[j+1],localData.params,paramMemory,localMemory);
 				 std::string value = to_string(varValue);
+	 			 initialOperands.push(varValue);
+	 			 i = startOfEnd-1;
+	 			 currentChar = exp[i];
 				 //endOfExp = exp.substr(varName.end+1,exp.length());
-				 exp = exp.substr(0,varName.start) + value + endOfExp;
-				 i = varName.start;
+				 //exp = exp.substr(0,varName.start) + value + endOfExp;
+				 //i = varName.start;
 
 				 LOG_DEBUG("Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp<<
 				 	 "\nHello this is loading exp: "<<exp)
@@ -2362,7 +2351,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 Object paramData = paramMemory[varName.data];
 				 int endOfParams = paramData.setParams(exp[varName.end+1] == '('?exp.substr(varName.end+1):"");
 				 				 int startOfEnd = paramData.params.size()==0?varName.end+1:varName.end+endOfParams;
-				 				 endOfExp = exp.substr(startOfEnd,exp.length());
+				 				 //endOfExp = exp.substr(startOfEnd,exp.length());
 				 				 std::vector<std::string> expressions = paramData.getInstructions();
 
 				 				LOG_DEBUG("In expression: "<<exp<<" ")
@@ -2385,13 +2374,17 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 				 				 if(expressions.size() == 1)
 				 					 j = -1;
 				 				 double varValue = calculateExpression<double>(expressions[j+1],paramData.params,paramMemory,localMemory);
-				 				 std::string value = to_string(varValue);
+				 				 //std::string value = to_string(varValue);
 				 				 //endOfExp = exp.substr(varName.end+1,exp.length());
-				 				 exp = exp.substr(0,varName.start) + value + endOfExp;
-				 				 i = varName.start;
+				 				 //exp = exp.substr(0,varName.start) + value + endOfExp;
+
+					 			 initialOperands.push(varValue);
+					 			 i = startOfEnd-1;
+					 			 currentChar = exp[i];
+				 				 //i = varName.start;
 
 				 				LOG_DEBUG("Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<
-				 						value<<" Third: "<<endOfExp<<"\nHello this is loading exp: "<<exp)
+				 						varValue<<" Third: "<<endOfExp<<"\nHello this is loading exp: "<<exp)
 
 				 				 currentChar = exp[i];
 				 				 *boolsettings["p"] = printValue;
@@ -2401,7 +2394,7 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 			 *boolsettings["p"]  = false;
 			 			 int endOfParams = data.setParams(exp[varName.end+1] == '('?exp.substr(varName.end+1):"");
 			 			 int startOfEnd = data.params.size()==0?varName.end+1:varName.end+endOfParams;
-			 			 endOfExp = exp.substr(startOfEnd,exp.length());
+			 			// endOfExp = exp.substr(startOfEnd,exp.length());
 
 
 			 			 LOG_DEBUG("In expression: "<<exp<<" ")
@@ -2431,11 +2424,14 @@ t calculateExpression(std::string exp,AscalParameters &params,std::map<std::stri
 			 			 LOG_DEBUG("Global Var parsing exp: "<<exp<<" Resolving: "<<varName.data<<" to: "<<expressions[j+1]<<std::endl)
 
 			 			 double varValue = calculateExpression<double>(expressions[j+1],data.params,calledFunctionParamMemory,calledFunctionLocalMemory);
-			 			 std::string value = to_string(varValue);
-			 			 exp = exp.substr(0,varName.start) + value + endOfExp;
-			 			 i = varName.start;
+			 			 //std::string value = to_string(varValue);
+			 			 //exp = exp.substr(0,varName.start) + value + endOfExp;
+			 			 //i = varName.start;
+			 			 initialOperands.push(varValue);
+			 			 i = startOfEnd-1;
 			 			 currentChar = exp[i];
-			 			 LOG_DEBUG("Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<value<<" Third: "<<endOfExp<<
+			 			 //std::cout<<"\nRemainder of expression to be parsed after global var parsing"<<exp.substr(i,exp.length());
+			 			 LOG_DEBUG("Object: "<<varName.data<<" First Part: "<<exp.substr(0,varName.start)<<" Second: "<<varValue<<" Third: "<<endOfExp<<
 			 					 "\nHello this is loading exp: "<<exp)
 			 			 LOG_DEBUG("Current Char: "<<currentChar)
 
