@@ -277,11 +277,11 @@ Local Variables are automatically managed by the program stack, and will be clea
  `approxInt [your_function_name],[lower_bound]<>[upper_bound],[number_of_partitions]`<br>
  Example:<br>
  
- `approxInt g,0<>1,10000000`<br>
+ `approxInt g,0<>1,1000000`<br>
 `domain:0 to 1 with a step size in the x of: 1e-07`<br>
 `Function: g, function defined as: x^2;`<br>
   
- `Area Under Curve calculated with reimann sum using 10000000 partitions: 0.333333`
+ `Area Under Curve calculated with reimann sum using 1000000 partitions: 0.333333`
 </p>
 <br>
 <h3>The plot keyword:</h3>
