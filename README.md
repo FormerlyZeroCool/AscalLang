@@ -268,12 +268,28 @@ Or delete all saved variables by typing delete all<br>
 Local Variables are automatically managed by the program stack, and will be cleared at the end of a batch of statements or a function call 
 <br>
 <br>
+
+<h3>The approxInt keyword:</h3>
+<p>
+ The approxInt keyword is used to calculate a Reimann sum, it takes 4 parameters using the following syntax:<br>
+ 
+ 
+ `approxInt [your_function_name],[lower_bound]<>[upper_bound],[number_of_partitions]`<br>
+ Example:<br>
+ 
+ `approxInt g,0<>1,10000000`<br>
+`domain:0 to 1 with a step size in the x of: 1e-07`<br>
+`Function: g, function defined as: x^2;`<br>
+  
+ `Area Under Curve calculated with reimann sum using 10000000 partitions: 0.333333`
+</p>
+<br>
 <h3>The plot keyword:</h3>
 <p>
 The "plot" keyword in Ascal currently is a simple tool to graph your non-recursive functions in the command line<br>
 To use it type: 
  
- `plot [your_function_name];[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size],[y_step_size]<br>`
+ `plot [your_function's_name]|[your_second_function's_name]...,[lower_x_bound]<>[upper_x_bound],[lower_y_bound]<>[upper_y_bound],[x_step_size],[y_step_size]<br>`
  
  
 `let f = x^2-4`<br>
