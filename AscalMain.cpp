@@ -1312,17 +1312,21 @@ std::string approxIntAction(const std::string &expr,std::unordered_map<std::stri
 		}
 	}
 	functions.push_back(expr.substr(trailer,endOfFun - (trailer)));
-	index = endOfFun+1;
+	index = endOfFun + 1;
+	//getNextDouble updates index to be the character at the end of the double
 	const double xMin = getNextDoubleS(expr,index);
-	index+=2;
+	index += 2;
 	const double xMax = getNextDoubleS(expr,index);
-	index = endOfDomain+1;
+	index = endOfDomain + 1;
 	const int tableWidth = getNextDoubleS(expr,index);
+	index += 2;
+
 	const double xStepSize = (xMax-xMin)/(tableWidth>0?tableWidth:1);
 	double dx = (xMax-xMin)/tableWidth;
 	double xi;
 	double thisIndex = 0;
 	double lastIndex = 0;
+	std::cout<<"char at index: "<<expr[index]<<std::endl;
 	for(int j = 0;j<functions.size();j++)
 	{
 		std::string function = functions[j];
@@ -1332,36 +1336,39 @@ std::string approxIntAction(const std::string &expr,std::unordered_map<std::stri
 			std::unordered_map<std::string,Object> localMemory1;
 			std::map<std::string,Object> paramMemory1;
 			AscalParameters params1;
-			//outPuts.push_back(
-			//		calculateExpression<double>(function+"("+to_string(xi)+")",params1,paramMemory1,localMemory1));
-			thisIndex = dx*calculateExpression<double>(function+"("+to_string(xi)+")",params1,paramMemory1,localMemory1);//outPuts.get(i,j)*dx;
+			thisIndex = calculateExpression<double>(function+"("+to_string(xi)+")",params1,paramMemory1,localMemory1);//outPuts.get(i,j)*dx;
 
-			sumArea[j] += (thisIndex + lastIndex) / 2;
+			sumArea[j] +=
+					//Trapezoidal this is the defaulr
+					((expr[index] != 'r' && expr[index] != 'l') * ((thisIndex + lastIndex) * dx / 2)) +
+					//left Riemann sum
+					((expr[index] == 'l') * dx*lastIndex) +
+					//right Riemann sum
+					((expr[index] == 'r') * dx*thisIndex);
 
 			lastIndex = thisIndex;
 		}
 	}
+	std::string calculationType;
 
-
-	/*if(*boolsettings["o"])
+	if(expr[index] == 'r')
 	{
-		for(int j = 0;j<functions.size();j++)
-		{
-			std::string function = functions[j];
-			std::cout<<"\nProcessing: "<<function<<"\n";
-			for(int i = 0;i<tableWidth;i++)
-			{
-				xi = xMin+dx*(i);
-				std::cout<<function<<"("<<to_string(xi)<<")"<<"="<<outPuts.get(i,j)<<",";
-			}
-		}
-	}*/
+		calculationType = "right handed";
+	}
+	else if(expr[index] == 'l')
+	{
+		calculationType = "left handed";
+	}
+	else
+	{
+		calculationType = "trapezoidal";
+	}
 	std::cout<<"\n"<<expr<<"\n";
 	std::cout<<"domain:"<<xMin<<" to "<<xMax<<" with a step size in the x of: "<<xStepSize<<"\n";
 	for(int i =0; i<functions.size();i++)
 	{
 		std::cout<<"Function: "<<functions[i]<<", function defined as: "<<memory[functions[i]].instructionsToFormattedString();
-		std::cout<<"Area Under Curve calculated with reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
+		std::cout<<"Area Under Curve calculated with "<<calculationType<<" Reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
 	}
 
 	return MAX;
