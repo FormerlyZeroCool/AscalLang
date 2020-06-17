@@ -451,6 +451,7 @@ char toLower(char data)
 		data +=32;
 	return data;
 }
+#include "svo.h"
 int main(int argc,char* argv[])
 {
   /*
@@ -1320,24 +1321,29 @@ std::string approxIntAction(const std::string &expr,std::unordered_map<std::stri
 	const double xStepSize = (xMax-xMin)/(tableWidth>0?tableWidth:1);
 	double dx = (xMax-xMin)/tableWidth;
 	double xi;
-	Vect2D<double> outPuts(tableWidth,functions.size()-1);
+	double thisIndex = 0;
+	double lastIndex = 0;
 	for(int j = 0;j<functions.size();j++)
 	{
 		std::string function = functions[j];
 		for(int i = 0;i<tableWidth;i++)
 		{
-			xi = xMin+dx*(i);
+			xi = xMin+dx*(i+1);
 			std::unordered_map<std::string,Object> localMemory1;
 			std::map<std::string,Object> paramMemory1;
 			AscalParameters params1;
-			outPuts.push_back(
-					calculateExpression<double>(function+"("+to_string(xi)+")",params1,paramMemory1,localMemory1));
-			sumArea[j] += outPuts.get(i,j)*dx;
+			//outPuts.push_back(
+			//		calculateExpression<double>(function+"("+to_string(xi)+")",params1,paramMemory1,localMemory1));
+			thisIndex = dx*calculateExpression<double>(function+"("+to_string(xi)+")",params1,paramMemory1,localMemory1);//outPuts.get(i,j)*dx;
+
+			sumArea[j] += (thisIndex + lastIndex) / 2;
+
+			lastIndex = thisIndex;
 		}
 	}
 
 
-	if(*boolsettings["o"])
+	/*if(*boolsettings["o"])
 	{
 		for(int j = 0;j<functions.size();j++)
 		{
@@ -1349,7 +1355,7 @@ std::string approxIntAction(const std::string &expr,std::unordered_map<std::stri
 				std::cout<<function<<"("<<to_string(xi)<<")"<<"="<<outPuts.get(i,j)<<",";
 			}
 		}
-	}
+	}*/
 	std::cout<<"\n"<<expr<<"\n";
 	std::cout<<"domain:"<<xMin<<" to "<<xMax<<" with a step size in the x of: "<<xStepSize<<"\n";
 	for(int i =0; i<functions.size();i++)
