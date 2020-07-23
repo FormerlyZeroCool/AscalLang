@@ -27,6 +27,12 @@ AscalParameters& AscalParameters::operator++()
 	++useCount;
 	return *this;
 }
+
+AscalParameters& AscalParameters::operator+=(int val)
+{
+	useCount += val;
+	return *this;
+}
 int AscalParameters::getUseCount()
 {
 	return useCount;

@@ -1,4 +1,4 @@
-
+#pragma once
 #include <iostream>
 #include <vector>
 template <typename t>
@@ -22,6 +22,7 @@ class linkedStack
     linkedStack(t data);
     void operator=(const linkedStack<t> &o);
     void top(t &data);
+    void top(t *data);
     void push(t data);
     void empty();
     void pop();
@@ -80,6 +81,11 @@ template <typename t>
         data = head->data;
     }
 template <typename t>
+    void linkedStack<t>::top(t *data){
+      if(head != nullptr)
+        data = &head->data;
+    }
+template <typename t>
     void linkedStack<t>::push(t data){
       len++;
       singlelinknode<t> *p = new singlelinknode<t>(data);
@@ -121,6 +127,7 @@ public:
 	void push(t data);
 	void pop();
 	void top(t&data);
+	void top(t*&data);
 	bool isEmpty();
 	int length();
 };
@@ -154,5 +161,14 @@ void stack<t>::top(t&data)
 	if(this->size() > 0)
 	{
 		data = (*this)[this->size()-1];
+	}
+}
+
+template <typename t>
+void stack<t>::top(t*&data)
+{
+	if(this->size() > 0)
+	{
+		data = &(*this)[this->size()-1];
 	}
 }

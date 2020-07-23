@@ -17,6 +17,7 @@ private:
 public:
 	AscalParameters();
 	AscalParameters& operator++();
+	AscalParameters& operator+=(int);
 	int getUseCount();
 	void resetParamUse();
 	std::string toString();

@@ -24,9 +24,8 @@ std::string Object::instructionsToFormattedString()
 	int indentationLevel = 1;
 	//newLine(data,indentationLevel);
 	//indentationLevel++;
-	for(int i = 0;i < instructions.size();i++)
-	{
-		for(char &c:instructions[i])
+
+		for(char &c:instructions)
 		{
 			if(c == '{'){
 				indentationLevel++;
@@ -48,12 +47,12 @@ std::string Object::instructionsToFormattedString()
 				newLine(data,indentationLevel);
 		}
 		newLine(data,indentationLevel);
-	}
+
 	return std::string(data.begin(),data.end());
 }
 std::string Object::instructionsToString()
 {
-	std::vector<char> data;
+	/*std::vector<char> data;
 		data.reserve(128);
 		for(int i = 0;i < instructions.size();i++)
 		{
@@ -64,16 +63,19 @@ std::string Object::instructionsToString()
 			data.push_back('\n');
 		}
 		return std::string(data.begin(),data.end()-1);
+		*/
+
+	return instructions;
 }
 
-std::vector<std::string>& Object::getInstructions()
+std::string& Object::getInstructions()
 {
 	return  instructions;
 }
 
 void Object::addInstruction(std::string expression)
 {
-	instructions.push_back(expression);
+	instructions = expression;
 }
 bool cmpVector(const std::vector<std::string>& a,const std::vector<std::string>& b)
 {
@@ -102,10 +104,10 @@ bool Object::operator==(Object o)
 
 int Object::setParams(std::string param)
 {
-	//std::cout<<"Expression:"<<expression<<" setParam in Object class input: "<<param<<std::endl;
-	params.resize(0);
+	//std::cout<<"Expression:"<<instructions<<" setParam in Object class input: "<<param<<std::endl;
+    params.resize(0);
 	int start = 0,end = 0;
-	while(param[start] && !isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start]> 47))
+	while(param[start] && !isalpha(param[start]) && param[start] != '-' && param[start] != '&' && !(param[start] < 58 && param[start]> 47))
 	{
 		//std::cout<<"setParam in Object class in first while: "<<param.substr(start,param.length())<<std::endl;
 		start++;
@@ -145,17 +147,17 @@ Object::Object(std::string id,std::string expression,std::string param):id(id)
 {
 	setParams(param);
 	int start = 0;
-
-	expression = expression + '\n';
+	instructions = expression;
 	//std::cout<<expression<<std::endl;
-	for(int i = 0;i < expression.length();i++)
+	/*for(int i = 0;i < expression.length();i++)
 	{
 		if(expression[i] == '\n')
 		{
 			instructions.push_back(expression.substr(start,i-start));
 			start = ++i;
 		}
-	}
+	}*/
+
 }
 Object::Object()
 {

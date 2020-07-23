@@ -11,7 +11,7 @@
 #include "AscalParameters.h"
 class Object {
 private:
-	std::vector<std::string> instructions;
+	std::string instructions;
 public:
 	std::string id;
 	AscalParameters params;
@@ -22,7 +22,7 @@ public:
 	void addInstruction(std::string expression);
 	std::string instructionsToString();
 	std::string instructionsToFormattedString();
-	std::vector<std::string>& getInstructions();
+	std::string& getInstructions();
 	bool operator==(Object o);
 	virtual ~Object();
 };
