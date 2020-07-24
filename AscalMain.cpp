@@ -81,8 +81,7 @@ const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 //////////////////////////////////////////////////////////
 //Start Ascal System Defined  Keyword functionality Executed by lookup in inputMapper unordered_map
 
-template <class t>
-t callOnFrame(AscalFrame<t>* executionFrame,AscalFrame<t>* copyFrame);
+double callOnFrame(AscalFrame<double>* executionFrame,AscalFrame<double>* copyFrame);
 template <class t>
 t doubleModulus(t &and1,t &and2);
 void printVar(const std::string &expr,bool saveLast);
@@ -1042,8 +1041,9 @@ std::string clocNewVar(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr localName = getVarName(frame->exp,frame->exp.find("loc")+4);
     SubStr subexp = getExpr(frame->exp,frame->exp.find('=')+1);
-    frame->exp = subexp.data;
-    std::string value = to_string(calculateExpression<double>(frame));
+    AscalFrame<double> copyFrame;
+    copyFrame.exp = subexp.data;
+    std::string value = to_string(callOnFrame(frame, &copyFrame));
     Object newLocalVar(localName.data,value,"");
     if(*boolsettings["p"])
     {
@@ -1612,17 +1612,16 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
         frame->index = 0;
         return "a"+frame->exp.substr(index-2,frame->exp.size());
 }
-template <class t>
-t callOnFrame(AscalFrame<t>* executionFrame,AscalFrame<t>* copyFrame)
+double callOnFrame(AscalFrame<double>* executionFrame,AscalFrame<double>* copyFrame)
 {
-    AscalFrame<t> executionFrameBackup = *executionFrame;
+    AscalFrame<double> executionFrameBackup = *executionFrame;
     executionFrame->exp = copyFrame->exp;
     executionFrame->initialOperators = copyFrame->initialOperators;
     executionFrame->initialOperands = copyFrame->initialOperands;
     executionFrame->index = copyFrame->index;
     executionFrame->returnPointer = nullptr;
     //executionFrame->stackIndex = copyFrame->stackIndex;
-    t data = calculateExpression<t>(executionFrame);
+    double data = calculateExpression<double>(executionFrame);
     executionFrame->exp = executionFrameBackup.exp;
     executionFrame->initialOperators = executionFrameBackup.initialOperators;
     executionFrame->initialOperands = executionFrameBackup.initialOperands;
@@ -1635,7 +1634,6 @@ t callOnFrame(AscalFrame<t>* executionFrame,AscalFrame<t>* copyFrame)
 std::string whileAction(AscalFrame<double>* frame,bool saveLast)
 {
     std::string expbkp = frame->exp;
-    frame->isDynamicAllocation = false;
     //std::cout<<"expression in while: "<<expr<<std::endl;
     int index = frame->exp.find("while")<1000?frame->exp.find("while")+5:0;
     while(frame->exp[index] == ' ')
@@ -1728,12 +1726,11 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
     }
     *boolsettings["t"] = printTime;
     index = codeBlock.end + startOfCodeBlock-2;
-    frame->exp = expbkp;
     frame->index = 0;
     while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
         index++;
     //std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
-    return "a"+frame->exp.substr(index-2,frame->exp.size());
+    return "a"+expbkp.substr(index-2,frame->exp.size());
 }
 
 std::string printMemory(std::map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
@@ -1833,7 +1830,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
         {
             index = frame->exp.find("when",index) + 5;
             whenIndex = index - 5;
-            if(whenIndex == -1)
+            if(whenIndex == -1 && elseIndex != 1000000)
             {
                 value = getExpr(frame->exp.substr(elseIndex+4,endIndex-(elseIndex+4)),0).data;
                 extractedBranch = value;
@@ -2273,6 +2270,8 @@ t calculateExpression(AscalFrame<double>* frame)
         executionStack.top(currentFrame);
         LOG_DEBUG("In expression: "<<currentFrame->exp<<" ");
 
+
+
          LOG_DEBUG("Stack depth: "<<executionStack.length()<<"\nLocal Memory: "<<printMemory(*currentFrame->getLocalMemory(),"=",false," "))
          LOG_DEBUG("Param Memory: "<<printMemory(*currentFrame->getParamMemory(),"=",false," "))
         // std::cout<<" Printing Params passed to this function: ";
@@ -2558,6 +2557,8 @@ t calculateExpression(AscalFrame<double>* frame)
             {
                 executionStack.top(currentFrame);
                 std::cerr<<"   ~:"<<currentFrame->exp<<std::endl;
+                if(currentFrame->isDynamicAllocation)
+                    delete currentFrame;
                 executionStack.pop();
             }
         }
@@ -2618,6 +2619,24 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
 template <class t>
 t processStack(stack<t> &operands,stack<char> &operators)
 {
+
+    #if THROWERRORS == 1
+        if(operands.size() - operators.size() > 1)
+        {
+            std::cout<<"Operands ";
+            printStack(operands);
+            std::cout<<"Operators ";
+            printStack(operators);
+            if(operands.size()>1 && operators.size()==0)
+            {
+                throw std::string("End of function call stack trace.\nError, too many operands.");
+            }
+            else
+            {
+                throw std::string("End of function call stack trace.\nError, too many operators.");
+            }
+        }
+    #endif
       t result = 0, and1 = 0, and2 = 0;
       char firstOperator, nextOperator;
       //loop to process expression saved in stack
@@ -2669,23 +2688,6 @@ t processStack(stack<t> &operands,stack<char> &operators)
       }
     }
 
-#if THROWERRORS == 1
-    if(operands.size()>1 || operators.size()>0)
-    {
-        std::cout<<"Operands ";
-        printStack(operands);
-        std::cout<<"Operators ";
-        printStack(operators);
-        if(operands.size()>1 && operators.size()==0)
-        {
-            throw std::string("End of function call stack trace.\nError, too many operands.");
-        }
-        else
-        {
-            throw std::string("End of function call stack trace.\nError, too many operators.");
-        }
-    }
-#endif
     //get result from processing expression
     operands.top(result);
       return result;
