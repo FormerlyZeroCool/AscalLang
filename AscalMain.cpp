@@ -25,6 +25,8 @@
 #include "Vect2D.h"
 #include "AscalFrame.h"
 
+int stackFrameCount = 1;
+
 struct SubStr{
     std::string data;
     int start,end;
@@ -657,7 +659,9 @@ std::string printStringAction(AscalFrame<double>* frame,bool s)
                 {
                     //std::cout<<"input In if: "<<std::endl;
                     SubStr subexp = getExpr(result,index,'(',')',';');
-                    std::string value = to_string(calculateExpression<double>(frame));
+                    AscalFrame<double> copy;
+                    copy.exp = subexp.data;
+                    std::string value = to_string(callOnFrame(frame, &copy));
                     std::string first = result.substr(0,index);
                     std::string last = result.substr(index+subexp.end-3,frame->exp.size());
 
@@ -2007,13 +2011,15 @@ double calcWithOptions(AscalFrame<double>* frame)
             std::time_t end_time = std::chrono::system_clock::to_time_t(end);
 
             std::cout << "finished computation at " << std::ctime(&end_time)
-                      << "elapsed time: " << elapsed_seconds.count() << "s\n";
+                      << "elapsed time: " << elapsed_seconds.count() << "s\n"<<
+					  "Stack Frames: "<<stackFrameCount<<'\n';
         }
         //std::cout<<"\nresult: "<<to_string(result)<<"\nMax: "<<Max<<std::endl>;
         if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
         {
             std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
         }
+        stackFrameCount = 1;
     }
     return result;
 
@@ -2578,6 +2584,7 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
     currentFrame->index = i;
     //create and set new frame expression
     FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
+    stackFrameCount++;
     newFrame->stackIndex = currentFrame->stackIndex+1;
     newFrame->exp = exp;
     //Create new frame, and set return pointer
@@ -2586,6 +2593,7 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
     executionStack.push(newFrame);
     for(int i = 0; i < params.size(); i++)
     {
+        stackFrameCount++;
         if(params[i][0] != '&')
         {
             //getVarName on this param
