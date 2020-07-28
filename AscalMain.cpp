@@ -25,13 +25,14 @@
 #include "Vect2D.h"
 #include "AscalFrame.h"
 
-int stackFrameCount = 1;
-
+static const std::string VERSION = "2.01";
 struct SubStr{
     std::string data;
     int start,end;
     SubStr(std::string data,int start,int end):data(data),start(start),end(end){}
 };
+int frameCount = 1;
+int varCount = 0;
 std::streambuf* stream_buffer_cin = std::cin.rdbuf();
 /////////////////////////////
 //Program Global Memory Declaration
@@ -83,7 +84,8 @@ const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 //////////////////////////////////////////////////////////
 //Start Ascal System Defined  Keyword functionality Executed by lookup in inputMapper unordered_map
 
-double callOnFrame(AscalFrame<double>* executionFrame,AscalFrame<double>* copyFrame);
+template <class t>
+t callOnFrame(AscalFrame<t>* executionFrame,AscalFrame<t>* copyFrame);
 template <class t>
 t doubleModulus(t &and1,t &and2);
 void printVar(const std::string &expr,bool saveLast);
@@ -158,16 +160,6 @@ template <class t>
 t calc(char op,t and1,t and2);
 template <class t>
 t processStack(stack<t> &operands,stack<char> &operators);
-template <class t>
-t pow(t a,t b)
-{
-    t result = 1;
-    for(int i = 0;i<b;i++)
-    {
-        result *= a;
-    }
-    return result;
-}
 template <class t>
 t root(t b,t p)
 {
@@ -388,9 +380,16 @@ void printAllSDF()
     }
     std::cout<<std::endl<<"End of System Defined Functions."<<std::endl;
 }
-
+std::string printVersion(AscalFrame<double>* frame,bool s)
+{
+    std::cout<<VERSION<<std::endl;
+    return MAX;
+}
 void initParamMapper()
 {
+    inputMapper["--version"] = printVersion;
+    inputMapper["--v"] = printVersion;
+    inputMapper["-v"] = printVersion;
     inputMapper["approxInt"] = approxIntAction;
     inputMapper["run"] = runAction;
     inputMapper["exists"] = existsAction;
@@ -778,7 +777,7 @@ void loadFile(const std::string & expr,int startIndex)
     while(inputFile)
     {
         FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
-
+        calledFunctionMemory->exp = line;
         try{
 
             interpretParam(calledFunctionMemory,false);
@@ -1493,7 +1492,6 @@ std::string elseAction(AscalFrame<double>* frame,bool saveLast)
             index += codeBlock.end-1;
     }
     ifFlag = false;
-    frame->isDynamicAllocation = isDynamicAllocation;
     frame->index = 0;
     *boolsettings["t"] = printTime;
     return "a"+frame->exp.substr(index,frame->exp.size());
@@ -1502,7 +1500,6 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
 {
 
     std::string expBkp = frame->exp;
-    bool isDynamicAllocation = frame->isDynamicAllocation;
     frame->isDynamicAllocation = false;
     //std::cout<<"exp in if: "<<expr<<std::endl;
     int index = frame->exp.find("if")!=-1?frame->exp.find("if")+2:0;
@@ -1563,20 +1560,14 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
                 ifFlag = false;
                 ifResultFlag = true;
             }
-            //std::cout<<"code block extracted: "<<codeBlock.data<<std::endl;
-
             if(*boolsettings["o"])
             {
                 std::cout<<"Executing code block in if:\n";
             }
-            std::vector<std::string> expressions = parseExpList(codeBlock);
             try{
-                for(std::string &exp:expressions)
-                {
-                    AscalFrame<double> copy;
-                    copy.exp = exp;
-                    callOnFrame(frame,&copy);
-                }
+                AscalFrame<double> copy;
+                copy.exp = codeBlock.data;
+                callOnFrame(frame,&copy);
             }
             catch(std::string &exception)
             {
@@ -1603,29 +1594,23 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
                 ifResultFlag = false;
             }
         }
-    //while(expr[index] == ';' || expr[index] == ' ' || expr[index] == '}')
-    //    index++;
-    //std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
-
-        ///std::cout<<"\nin if ifFlag: "<<ifFlag<<" result flag for if: "<<ifResultFlag<<std::endl;
-        //std::cout<<"comingfromElse in if: "<<comingfromElse<<std::endl;
         comingfromElse = false;
         *boolsettings["t"] = printTime;
         frame->exp = expBkp;
-        frame->isDynamicAllocation = isDynamicAllocation;
         frame->index = 0;
         return "a"+frame->exp.substr(index-2,frame->exp.size());
 }
-double callOnFrame(AscalFrame<double>* executionFrame,AscalFrame<double>* copyFrame)
+template <class t>
+t callOnFrame(AscalFrame<t>* executionFrame,AscalFrame<t>* copyFrame)
 {
-    AscalFrame<double> executionFrameBackup = *executionFrame;
+    AscalFrame<t> executionFrameBackup = *executionFrame;
     executionFrame->exp = copyFrame->exp;
     executionFrame->initialOperators = copyFrame->initialOperators;
     executionFrame->initialOperands = copyFrame->initialOperands;
     executionFrame->index = copyFrame->index;
     executionFrame->returnPointer = nullptr;
     //executionFrame->stackIndex = copyFrame->stackIndex;
-    double data = calculateExpression<double>(executionFrame);
+    t data = calculateExpression<t>(executionFrame);
     executionFrame->exp = executionFrameBackup.exp;
     executionFrame->initialOperators = executionFrameBackup.initialOperators;
     executionFrame->initialOperands = executionFrameBackup.initialOperands;
@@ -1689,27 +1674,23 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
     {
         //Build List of expressions from code block associated with the while
 
-        std::vector<std::string> expressions = parseExpList(codeBlock);
         while(boolExpValue != 0)
         {
             if(*boolsettings["o"])
             {
                 std::cout<<"Executing While loop code block:\n";
             }
-            for(std::string &exp:expressions)
-            {
-                //std::cout<<"expression Being Exec: "<<exp<<" Len: "<<exp.length()<<std::endl;
-                try{
-                    AscalFrame<double> copy;
-                    copy.exp = exp;
-                    callOnFrame(frame,&copy);
-                }
-                catch(std::string &exception)
-                {
-                    *boolsettings["t"] = printTime;
-                    throw std::string(exception + "\nIn While body subexp: ");
-                }
+            try{
+                AscalFrame<double> copy;
+                copy.exp = codeBlock.data;
+                callOnFrame(frame,&copy);
             }
+            catch(std::string &exception)
+            {
+                *boolsettings["t"] = printTime;
+                throw std::string(exception + "\nIn While body subexp: ");
+            }
+
             //std::cout<<"BoolExpression: "<<booleanExpression;
             if(*boolsettings["o"])
             {
@@ -2012,15 +1993,17 @@ double calcWithOptions(AscalFrame<double>* frame)
 
             std::cout << "finished computation at " << std::ctime(&end_time)
                       << "elapsed time: " << elapsed_seconds.count() << "s\n"<<
-					  "Stack Frames: "<<stackFrameCount<<'\n';
+                      "Stack frames used: "<<frameCount<<'\n'<<
+                      "Variables accessed: "<<varCount<<'\n';
         }
         //std::cout<<"\nresult: "<<to_string(result)<<"\nMax: "<<Max<<std::endl>;
         if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
         {
             std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
         }
-        stackFrameCount = 1;
     }
+    frameCount = 1;
+    varCount = 0;
     return result;
 
 }
@@ -2275,8 +2258,6 @@ t calculateExpression(AscalFrame<double>* frame)
         new_frame_execution:
         executionStack.top(currentFrame);
         LOG_DEBUG("In expression: "<<currentFrame->exp<<" ");
-
-
 
          LOG_DEBUG("Stack depth: "<<executionStack.length()<<"\nLocal Memory: "<<printMemory(*currentFrame->getLocalMemory(),"=",false," "))
          LOG_DEBUG("Param Memory: "<<printMemory(*currentFrame->getParamMemory(),"=",false," "))
@@ -2575,67 +2556,88 @@ t calculateExpression(AscalFrame<double>* frame)
     *boolsettings["p"]  = printValue;
     return data;
 }
+bool isDouble(std::string &exp)
+{
+    bool isADouble = true;
+    char periodCount = 0;
+    for(int i = exp[0] == '-'; isADouble && i < exp.length(); i++)
 
+    {
+        //to avoid branching I'm doing boolean arithmetic to determine if a string is a double
+        periodCount += (exp[i] == '.');
+        isADouble = (isNumeric(exp[i]) || (periodCount <= 1 && exp[i] == '.') ||
+                     (exp[i] == ';' && i+1 == exp.length()));
+    }
+    return isADouble;
+}
 template <typename t>
 void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters params,std::string &exp, int i)
 {
-    //std::cout<<"Pushing function: "<<exp<<std::endl;
     //save index
     currentFrame->index = i;
-    //create and set new frame expression
-    FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
-    stackFrameCount++;
-    newFrame->stackIndex = currentFrame->stackIndex+1;
-    newFrame->exp = exp;
-    //Create new frame, and set return pointer
-    newFrame->returnPointer = currentFrame;
-    //push new frame
-    executionStack.push(newFrame);
-    for(int i = 0; i < params.size(); i++)
+    if(isDouble(exp))
     {
-        stackFrameCount++;
-        if(params[i][0] != '&')
+        int i = 0;
+        currentFrame->initialOperands.push(getNextDoubleS(exp, i));
+        varCount++;
+        //std::cout<<"variable pushed to stack\n";
+    }
+    else
+    {
+        frameCount++;
+        //create and set new frame expression
+        FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
+        newFrame->stackIndex = currentFrame->stackIndex+1;
+        newFrame->exp = exp;
+        //Create new frame, and set return pointer
+        newFrame->returnPointer = currentFrame;
+        //push new frame
+        executionStack.push(newFrame);
+        for(int i = 0; i < params.size(); i++)
         {
-            //getVarName on this param
-            //std::cout<<"Pushing param for resolution: "<<params[i]<<" For: "<<exp<<std::endl;
-            //create and set new frame expression
-            ParamFrame<t>* pFrame = new ParamFrame<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
-            pFrame->exp = params[i];
-            pFrame->stackIndex = currentFrame->stackIndex+2+i;
-            /*pFrame->params = currentFrame->params;
-            //pFrame->params.resetParamUse();
-            pFrame->localMemory = currentFrame->localMemory;
-            pFrame->paramMemory = currentFrame->paramMemory;*/
-            //Create new frame, and set return pointer
-            pFrame->returnPointer = newFrame;
-            //push new frame
-            executionStack.push(pFrame);
-        }
-        else
-        {
-            ParamFrameFunctionPointer<t>* pFrame = new ParamFrameFunctionPointer<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
-            pFrame->functionName = params[i].substr(1);
-            pFrame->stackIndex = currentFrame->stackIndex+2+i;
-            //Create new frame, and set return pointer
-            pFrame->returnPointer = newFrame;
-            //push new frame
-            executionStack.push(pFrame);
+            if(params[i][0] != '&')
+            {
+                //getVarName on this param
+                //std::cout<<"Pushing param for resolution: "<<params[i]<<" For: "<<exp<<std::endl;
+                //create and set new frame expression
+                ParamFrame<t>* pFrame = new ParamFrame<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
+                pFrame->exp = params[i];
+                pFrame->stackIndex = currentFrame->stackIndex+2+i;
+                /*pFrame->params = currentFrame->params;
+                //pFrame->params.resetParamUse();
+                pFrame->localMemory = currentFrame->localMemory;
+                pFrame->paramMemory = currentFrame->paramMemory;*/
+                //Create new frame, and set return pointer
+                pFrame->returnPointer = newFrame;
+                //push new frame
+                executionStack.push(pFrame);
+            }
+            else
+            {
+                ParamFrameFunctionPointer<t>* pFrame = new ParamFrameFunctionPointer<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
+                pFrame->functionName = params[i].substr(1);
+                pFrame->stackIndex = currentFrame->stackIndex+2+i;
+                //Create new frame, and set return pointer
+                pFrame->returnPointer = newFrame;
+                //push new frame
+                executionStack.push(pFrame);
+            }
         }
     }
-
 }
 template <class t>
 t processStack(stack<t> &operands,stack<char> &operators)
 {
 
     #if THROWERRORS == 1
-        if(operands.size() - operators.size() > 1)
+        if((operands.size() - operators.size() > 1 &&operands.size() > 1 ) ||
+           operators.size() - operands.size() > -1)
         {
             std::cout<<"Operands ";
             printStack(operands);
             std::cout<<"Operators ";
             printStack(operators);
-            if(operands.size()>1 && operators.size()==0)
+            if(operands.size() - operators.size() > 1)
             {
                 throw std::string("End of function call stack trace.\nError, too many operands.");
             }
