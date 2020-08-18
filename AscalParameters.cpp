@@ -5,7 +5,7 @@
  *      Author: andrew
  */
 
-#include "AscalParameters.h"
+#include "AscalParameters.hpp"
 
 AscalParameters::AscalParameters() {
 	useCount = 0;
@@ -25,6 +25,12 @@ std::string AscalParameters::toString()
 AscalParameters& AscalParameters::operator++()
 {
 	++useCount;
+	return *this;
+}
+
+AscalParameters& AscalParameters::operator+=(int val)
+{
+	useCount += val;
 	return *this;
 }
 int AscalParameters::getUseCount()
