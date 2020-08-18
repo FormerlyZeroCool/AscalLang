@@ -8,7 +8,7 @@
 #ifndef OBJECT_H_
 #define OBJECT_H_
 #include <iostream>
-#include "AscalParameters.h"
+#include "AscalParameters.hpp"
 class Object {
 private:
 	std::string instructions;

@@ -9,14 +9,14 @@
 #define ASCALFRAME_H_
 #include <string>
 #include <map>
-#include "stack.h"
-#include "Object.h"
+#include "stack.hpp"
+#include "Object.hpp"
 
 template <typename t>
 class AscalFrame {
 public:
 	bool isDynamicAllocation = true;
-	bool printValue;
+    uint8_t level = 0;
 	uint32_t index = 0;
 	uint32_t stackIndex = 0;
 	AscalFrame* returnPointer = nullptr;
@@ -26,6 +26,21 @@ public:
     std::map<std::string,Object>* getParamMemory(){ return paramMemory; };
     std::map<std::string,Object>* getLocalMemory(){ return localMemory; };
     AscalParameters* getParams(){ return params; };
+    virtual
+    void setLocalMemory(std::map<std::string,Object>* memory)
+    {
+        localMemory = memory;
+    }
+    virtual
+    void setParamMemory(std::map<std::string,Object>* memory)
+    {
+        paramMemory = memory;
+    }
+    virtual
+    void setParams(AscalParameters* memory)
+    {
+        params = memory;
+    }
 	virtual
 	void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) {};
 	virtual
@@ -93,7 +108,7 @@ public:
             /*std::cout<<"From Ascal PFrame "<<fnBody<<" to params\n";
             std::cout<<"    returned from index: "<<this->stackIndex<<" exp: "<<this->exp<<"\n";
             std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
-       */ }
+        */}
     }
     ~ParamFrameFunctionPointer(){
         //std::cout<<"from ascalframe.h Param popped\n";
@@ -108,6 +123,9 @@ public:
         this->paramMemory = new std::map<std::string,Object>;
         this->localMemory = new std::map<std::string,Object>;
     }
+    void setLocalMemory(std::map<std::string,Object>* memory) override { throw std::string("Error assigning immutable localmemory memory in function frame (this is a bug in the Ascal runtime)"); }
+    void setParamMemory(std::map<std::string,Object>* memory) override { throw std::string("Error assigning immutable parammemory memory in function frame (this is a bug in the Ascal runtime)"); }
+    void setParams(AscalParameters* memory) override { throw std::string("Error assigning immutable ascalparams memory in function frame (this is a bug in the Ascal runtime)"); }
 	void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
 	{
 		if(this->returnPointer)

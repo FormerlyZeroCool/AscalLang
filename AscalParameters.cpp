@@ -5,7 +5,7 @@
  *      Author: andrew
  */
 
-#include "AscalParameters.h"
+#include "AscalParameters.hpp"
 
 AscalParameters::AscalParameters() {
 	useCount = 0;

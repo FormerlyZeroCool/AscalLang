@@ -28,6 +28,7 @@ class linkedStack
     void pop();
     bool isEmpty();
     int length();
+    int size();
 };
 template <typename t>
    void linkedStack<t>::empty(){
@@ -118,6 +119,11 @@ template <typename t>
   {
     return len;
   }
+template <typename t>
+int linkedStack<t>::size()
+{
+    return len;
+}
 
 template <typename t>
 class stack : public std::vector<t>{
