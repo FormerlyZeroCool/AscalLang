@@ -263,7 +263,7 @@ void loadUserDefinedFn(Object function)
 {
 
 
-    if(memory.count(function.id) == 0)
+    if(memory.count(function.id) > 0)
     {
         std::cout<<"Warning overwriting function: "<<function.id<<"\n";
     }
