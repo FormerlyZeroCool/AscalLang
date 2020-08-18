@@ -439,6 +439,7 @@ char invertCase(char data)
 {
     return 32 ^ data;
 }
+#include "svo.h"
 int main(int argc,char* argv[])
 {
   /*
@@ -2191,9 +2192,6 @@ void printStack(stack<t> &operands)
     }
     std::cout<<std::endl;
 }
-//int paramUse = 0;
-//std::cout<<"Printing Params for exp: "<<exp<<std::endl;
-//printVector(params);
 //loop through exp
 //
  //if current char is Alpha
@@ -2260,12 +2258,6 @@ t calculateExpression(AscalFrame<double>* frame)
 
          LOG_DEBUG("Stack depth: "<<executionStack.size()<<"\nLocal Memory: "<<printMemory(*currentFrame->getLocalMemory(),"=",false," "))
          LOG_DEBUG("Param Memory: "<<printMemory(*currentFrame->getParamMemory(),"=",false," "))
-        // std::cout<<" Printing Params passed to this function: ";
-        // for(std::string s:currentFrame->params)
-        //{
-         //    std::cout<<s<<", ";
-        //}
-         //std::cout<<std::endl;
         for(int i = currentFrame->index;i <= currentFrame->exp.length();i++)
         {
          currentFrame->index = i;
@@ -2288,18 +2280,14 @@ t calculateExpression(AscalFrame<double>* frame)
              SubStr varName(getVarName(currentFrame->exp,i));
              Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
              Object localData = currentFrame->getLocalMemory()->count(varName.data)!=0?(*currentFrame->getLocalMemory())[varName.data]:Object();
-
-             //std::string endOfExp;
+           
              //Keyword handling only one keyword at the beginning of each statement allowed,
-             //std::cout<<"Used: "<<currentFrame->params.getUseCount() <<" total: "<< currentFrame->params.size()<<std::endl;
              //including statements defined in variables
              if(inputMapper.count(varName.data) != 0)
              {
 
-                 //std::cout<<"Old Exp Before inputMapper: "<<exp<<std::endl;
                  AscalFrame<t>* frame = currentFrame;
                  bool isDynamicBackup = currentFrame->isDynamicAllocation;
-                 //int indexbkp = currentFrame->index;
                  std::string result;
                  try{
                  currentFrame->isDynamicAllocation = false;
@@ -2310,7 +2298,6 @@ t calculateExpression(AscalFrame<double>* frame)
                      throw s;
                  }
 
-                 //currentFrame->index = indexbkp;
                  currentFrame = frame;
                  
 
@@ -2334,8 +2321,6 @@ t calculateExpression(AscalFrame<double>* frame)
                      //just make sure first character in returned string is a throwaway alphabetical character
                      //it will not be parsed so ensure it is not meaningful code
                      currentFrame->exp = result.substr(1,currentFrame->exp.length());
-                     //std::cout<<"Expression after statement altering keyword: "<<exp<<std::endl;
-                     //std::cout<<"expression returned from when action: "<<exp<<std::endl;
 
 
                      while(!currentFrame->initialOperands.isEmpty())
@@ -2343,7 +2328,6 @@ t calculateExpression(AscalFrame<double>* frame)
                      while(!currentFrame->initialOperators.isEmpty())
                          currentFrame->initialOperators.pop();
                      i = -1;
-                     //currentChar = exp[i];
                      currentFrame->index = 0;
                      continue;
                  }
@@ -2351,7 +2335,6 @@ t calculateExpression(AscalFrame<double>* frame)
                  {
                      currentFrame->exp = currentFrame->exp.substr(i,currentFrame->exp.length());
                  }
-                 //std::cout<<"New Expression after inputMapper: "<<exp<<std::endl;
                  i = 0;
                  currentChar = currentFrame->exp[i];
                  currentFrame->index = i;
@@ -2360,14 +2343,10 @@ t calculateExpression(AscalFrame<double>* frame)
 
              else
              {
-
-                 //std::cout<<params.size()<<" param list len\n";
                  if(localData.id.length() != 0)
                  {
-                     //*boolsettings["p"]  = false;
                      int endOfParams = localData.setParams(currentFrame->exp[varName.end+1] == '('?currentFrame->exp.substr(varName.end+1):"");
                      int startOfEnd = localData.params.size()==0?varName.end+1:varName.end+endOfParams-1;
-
 
                      i = endOfParams;
                      createFrame(executionStack, currentFrame,
@@ -2376,13 +2355,10 @@ t calculateExpression(AscalFrame<double>* frame)
                  }
                  else if(data.id.length() != 0)
                  {
-                              //*boolsettings["p"]  = false;
                               int endOfParams =
                                       data.setParams(currentFrame->exp[varName.end+1] =='('?
                                                      currentFrame->exp.substr(varName.end+1):"");
                                       int startOfEnd = data.params.size()==0?varName.end+1:varName.end+endOfParams;
-
-                     //std::cout<<"global var calc: "<<currentFrame->exp.substr(startOfEnd,50)<<" varname: "<<varName.data<<" ";
 
                      //creates a new set of stack frames, one for the function/var and one for resolution,
                      //and calculation of each of it's parameters
@@ -2390,12 +2366,10 @@ t calculateExpression(AscalFrame<double>* frame)
                              createFrame(executionStack, currentFrame,
                                     data.params,data.getInstructions(),startOfEnd);
                              goto new_frame_execution;
-                              //*boolsettings["p"] = printValue;
 
                   }
                  else if(currentFrame->getParamMemory()->count(varName.data))
                  {
-                     //*boolsettings["p"]  = false;
                      Object paramData =
                              currentFrame->getParamMemory()->count(varName.data)?(*currentFrame->getParamMemory())[varName.data]
                                                                                                         :Object();
@@ -2406,30 +2380,23 @@ t calculateExpression(AscalFrame<double>* frame)
 
                                          i = endOfParams+1;
 
-                                      //std::cout<<"loaded params calc: "<<currentFrame->exp.substr(varName.end+1,50)<<std::endl;
                      //creates a new set of stack frames, one for the function/var and one for resolution,
                      //and calculation of each of it's parameters
                      //also returns function/var's value to this function's initialOperands stack
                      createFrame(executionStack, currentFrame,
                                  paramData.params,paramData.getInstructions(),startOfEnd);
                                      goto new_frame_execution;
-                                      //*boolsettings["p"] = printValue;
                  }
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
                  {
-                                      //*boolsettings["p"]  = false;
-                      //initialOperands.push(getNextDouble(currentFrame->params[currentFrame->params.getUseCount()-1],j));
-                                      Object localVar(varName.data,(*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()],"");
-                                      ++(*currentFrame->getParams());
-                                      (*currentFrame->getParamMemory())[localVar.id] = localVar;
-                                      int endOfParams = localVar.setParams(currentFrame->exp[varName.end+1] == '('
+                   Object localVar(varName.data,(*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()],"");
+                   ++(*currentFrame->getParams());
+                   (*currentFrame->getParamMemory())[localVar.id] = localVar;
+                   int endOfParams = localVar.setParams(currentFrame->exp[varName.end+1] == '('
                                               ?currentFrame->exp.substr(varName.end+1)
                                                       :"");
-                                      int startOfEnd = localVar.params.size()==0?varName.end+1:varName.end+endOfParams;
-                     /*int jzx = 0;
-                     currentFrame->initialOperands.push(getNextDouble(localVar.getInstructions(),jzx));
-                     i = varName.end;*/
-
+                   int startOfEnd = localVar.params.size()==0?varName.end+1:varName.end+endOfParams;
+               
                      createFrame(executionStack, currentFrame,
                             localVar.params,localVar.getInstructions(),startOfEnd);
                      goto new_frame_execution;
@@ -2502,12 +2469,6 @@ t calculateExpression(AscalFrame<double>* frame)
                 currentFrame->initialOperators.push(currentChar);
             }
 
-            //Section to parse operator's values from expression as a string to be inserted into
-            //initialOperators stack
-            else if(currentChar == 'X')
-            {
-                currentFrame->initialOperators.push('*');
-            }
             else if(isOperator(currentChar) && currentChar != ')')
             {
                 currentFrame->initialOperators.push(currentChar);
@@ -2600,7 +2561,6 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         int i = 0;
         currentFrame->initialOperands.push(getNextDoubleS(exp, i));
         varCount++;
-        //std::cout<<"variable pushed to stack\n";
     }
     else
     {
@@ -2618,15 +2578,10 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
             if(params[i][0] != '&')
             {
                 //getVarName on this param
-                //std::cout<<"Pushing param for resolution: "<<params[i]<<" For: "<<exp<<std::endl;
                 //create and set new frame expression
                 ParamFrame<t>* pFrame = new ParamFrame<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
                 pFrame->exp = params[i];
                 pFrame->stackIndex = currentFrame->stackIndex+2+i;
-                /*pFrame->params = currentFrame->params;
-                //pFrame->params.resetParamUse();
-                pFrame->localMemory = currentFrame->localMemory;
-                pFrame->paramMemory = currentFrame->paramMemory;*/
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //push new frame
