@@ -94,50 +94,44 @@ bool cmpVector(const std::vector<std::string>& a,const std::vector<std::string>&
 }
 bool Object::operator==(Object o)
 {
-	bool equal = true;
-	if(id.compare(o.id) != 0)
-		equal = false;
-	//if(equal && cmpVector(instructions,o.instructions))
-	//	equal = false;
+	bool equal = id.compare(o.id) == 0;
 	return equal;
 }
 
-int Object::setParams(std::string param)
+int Object::setParams(std::string &param)
 {
 	//std::cout<<"Expression:"<<instructions<<" setParam in Object class input: "<<param<<std::endl;
     params.resize(0);
 	int start = 0,end = 0;
-	while(param[start] && !isalpha(param[start]) && param[start] != '-' && param[start] != '&' && !(param[start] < 58 && param[start]> 47))
+	while(param[start] && param[start] != '(' && !isalpha(param[start]) && param[start] != '-' && param[start] != '&' && !(param[start] < 58 && param[start]> 47))
 	{
 		//std::cout<<"setParam in Object class in first while: "<<param.substr(start,param.length())<<std::endl;
-		start++;
-		end++;
+		++start;
+		++end;
 	}
-	//std::cout<<"setParam in Object class after first while: "<<param.substr(start,param.length())<<std::endl;
-	int pCount = 0;
+    start += param[start] != 0;
+    end += param[start] != 0;
+	int pCount = 1;
 	bool foundClosing = false;
 	while(!foundClosing && param[end])
 	{
-		if((param[end] == ',' || param[end] == ')') && end > start && pCount == 0)
+        pCount += (param[end] == '(') - (param[end] == ')');
+        if(pCount == 0)
+        {
+            foundClosing = true;
+        }
+		if((param[end] == ',' || foundClosing) && end > start && (pCount == 1 || (pCount == 0 && foundClosing)))
 		{
 			params.push_back(param.substr(start,end-start));
-			//std::cout<<*params.rbegin()<<std::endl;
-			start = end;
-			while(param[start] == ',' || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
-			{
-				start++;
-				end++;
-			}
+                start = end;
+                while(param[start] == ',' || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
+                {
+                    start++;
+                    end++;
+                }
+
 		}
 
-		if(pCount == 0 && param[end] == ')')
-		{
-			foundClosing = true;
-		}
-		else if(param[end] == '(')
-			pCount++;
-		else if(param[end] == ')')
-			pCount--;
 		end++;
 	}
 	return ++end;

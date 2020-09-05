@@ -5,9 +5,10 @@
  *      Author: andrew
  */
 
-#ifndef OBJECT_H_
-#define OBJECT_H_
+#ifndef OBJECT_HPP_
+#define OBJECT_HPP_
 #include <iostream>
+
 #include "AscalParameters.hpp"
 class Object {
 private:
@@ -16,7 +17,7 @@ public:
 	std::string id;
 	AscalParameters params;
 	//returns end index of params in string
-	int setParams(std::string param);
+	int setParams(std::string &param);
 	Object();
 	Object(std::string id,std::string expression,std::string param);
 	void addInstruction(std::string expression);
@@ -27,4 +28,4 @@ public:
 	virtual ~Object();
 };
 
-#endif /* OBJECT_H_ */
+#endif /* OBJECT_HPP_ */

@@ -5,8 +5,8 @@
  *      Author: andrew
  */
 
-#ifndef SVO_H_
-#define SVO_H_
+#ifndef SVO_HPP_
+#define SVO_HPP_
 #include <vector>
 template <typename type,int bufferSize>
 class Svo{
@@ -194,4 +194,4 @@ public:
 
 
 
-#endif /* SVO_H_ */
+#endif /* SVO_HPP_ */

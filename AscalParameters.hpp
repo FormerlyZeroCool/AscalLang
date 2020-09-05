@@ -5,8 +5,8 @@
  *      Author: andrew
  */
 
-#ifndef ASCALPARAMETERS_H_
-#define ASCALPARAMETERS_H_
+#ifndef ASCALPARAMETERS_HPP_
+#define ASCALPARAMETERS_HPP_
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -23,4 +23,4 @@ public:
 	std::string toString();
 };
 
-#endif /* ASCALPARAMETERS_H_ */
+#endif /* ASCALPARAMETERS_HPP_ */

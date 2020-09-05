@@ -5,8 +5,8 @@
  *      Author: andrew
  */
 
-#ifndef VECT2D_H_
-#define VECT2D_H_
+#ifndef VECT2D_HPP_
+#define VECT2D_HPP_
 
 #include <vector>
 template <typename t>
@@ -42,4 +42,4 @@ public:
 	}
 };
 
-#endif /* VECT2D_H_ */
+#endif /* VECT2D_HPP_ */
