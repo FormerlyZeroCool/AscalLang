@@ -15,6 +15,8 @@
 #include <map>
 #include <chrono>
 #include <ctime>
+#include <cmath>
+#include <algorithm>
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -433,6 +435,7 @@ void initParamMapper()
     inputMapper["o"] = showOpBoolSetting;
     inputMapper["p"] = printBoolSetting;
     inputMapper["t"] = timeToRunBoolSetting;
+    inputMapper["memoize"] = timeToRunBoolSetting;
 #if DEBUG == 1
     inputMapper["d"] = debugBoolSetting;
 #endif
@@ -491,6 +494,14 @@ int main(int argc,char* argv[])
                 "l",
             /*variable*/
                 true);
+        boolsettings[set.getCommand()] = set;
+        set = setting<bool>(
+            /*name*/
+                "Auto Memoize all function calls to improve recursive performance",
+            /*command line command*/
+                "memoize",
+            /*variable*/
+                false);
         boolsettings[set.getCommand()] = set;
         set = setting<bool>(
             /*name*/
@@ -1408,7 +1419,7 @@ std::vector<std::string> parseExpList(const SubStr &codeBlock)
         SubStr exp = getExpr(codeBlock.data,i);
         expressions.push_back(exp.data);
         //when exp.end == 0 then 1 else exp.end-1 end
-        i += exp.end == 0 + (exp.end != 0)*(exp.end-1);
+        i += exp.end == 0?1:exp.end-1;
 
     }
     if(expressions.size() == 0)
@@ -1688,11 +1699,8 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
         std::cout<<"Execution Complete. "<<(boolExpValue?"true":"false")<<"\n\n";
     }
     codeBlock = getExpr(expbkp,index);
-    //codeBlock.data.substr(0, codeBlock.data.size());
     if(boolExpValue != 0)
     {
-        //Build List of expressions from code block associated with the while
-
         while(boolExpValue != 0)
         {
             if(*boolsettings["o"])
@@ -1995,6 +2003,7 @@ bool cmpstr(const std::string &s1,const std::string &s2)
     }
     return isEqual;
 }
+std::unordered_map<uint64_t,double> memoPad;
 double calcWithOptions(AscalFrame<double>* frame)
 {
     bool timeInstruction = *boolsettings["t"];
@@ -2036,6 +2045,7 @@ double calcWithOptions(AscalFrame<double>* frame)
     }
     frameCount = 1;
     varCount = 0;
+    memoPad.clear();
     return result;
 
 }
@@ -2258,15 +2268,19 @@ void printStack(stack<t> &operands)
 
 #include "AscalFrame.hpp"
 template <typename t>
-void createFrame(stack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp, int i);
-std::unordered_map<uint64_t,double> memoPad;
-uint64_t hashFunctionCall(std::string &exp,AscalParameters& params)
+void createFrame(stack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp, int i,uint64_t hash);
+
+uint64_t hashFunctionCall(std::string &exp)
 {
     long hash = 123456;
     for(char c : exp)
     {
         hash += c*19;
     }
+    return hash;
+}
+uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
+{
     for(auto s:params)
         for(char c : s)
         {
@@ -2300,10 +2314,29 @@ t calculateExpression(AscalFrame<double>* frame)
     AscalFrame<t>* currentFrame = frame;
     executionStack.push(currentFrame);
     try{
+        top:
     while(!executionStack.isEmpty())
     {
         new_frame_execution:
         executionStack.top(currentFrame);
+        if(currentFrame->isFunction() && currentFrame->isFirstRun() && *boolsettings["memoize"])
+        {
+            currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
+            currentFrame->setIsFirstRun(false);
+            if(memoPad.count(currentFrame->memoPointer))
+            {
+            	data = memoPad[currentFrame->memoPointer];
+                currentFrame->returnResult(data, memory);
+                currentFrame->returnPointer = nullptr;
+                currentFrame->index = currentFrame->exp.length();
+
+                if(*boolsettings["o"])
+                {
+                    if(std::to_string(data).length() != MAX.length())
+                        std::cout<<"Returning value: "<<data<<'\n';
+                }
+            }
+        }
         LOG_DEBUG("In expression: "<<currentFrame->exp<<" ");
 
          LOG_DEBUG("Stack depth: "<<executionStack.length()<<"\nLocal Memory: "<<printMemory(*currentFrame->getLocalMemory(),"=",false," "))
@@ -2415,7 +2448,7 @@ t calculateExpression(AscalFrame<double>* frame)
 
                      i = endOfParams;
                      createFrame(executionStack, currentFrame,
-                            localData.params,localData.getInstructions(),startOfEnd);
+                            localData.params,localData.getInstructions(),startOfEnd,hashFunctionCall(localData.id));
                      goto new_frame_execution;
                  }
                  else if(data.id.length() != 0)
@@ -2432,7 +2465,7 @@ t calculateExpression(AscalFrame<double>* frame)
                      //and calculation of each of it's parameters
                      //also returns function/var's value to this function's initialOperands stack
                              createFrame(executionStack, currentFrame,
-                                    data.params,data.getInstructions(),startOfEnd);
+                                    data.params,data.getInstructions(),startOfEnd,hashFunctionCall(data.id));
                              goto new_frame_execution;
                               //*boolsettings["p"] = printValue;
 
@@ -2455,8 +2488,9 @@ t calculateExpression(AscalFrame<double>* frame)
                      //creates a new set of stack frames, one for the function/var and one for resolution,
                      //and calculation of each of it's parameters
                      //also returns function/var's value to this function's initialOperands stack
+
                      createFrame(executionStack, currentFrame,
-                                 paramData.params,paramData.getInstructions(),startOfEnd);
+                                 paramData.params,paramData.getInstructions(),startOfEnd,hashFunctionCall(paramData.id));
                                      goto new_frame_execution;
                                       //*boolsettings["p"] = printValue;
                  }
@@ -2477,7 +2511,7 @@ t calculateExpression(AscalFrame<double>* frame)
                      i = varName.end;*/
 
                      createFrame(executionStack, currentFrame,
-                            localVar.params,localVar.getInstructions(),startOfEnd);
+                            localVar.params,localVar.getInstructions(),startOfEnd,hashFunctionCall(localVar.id));
                      goto new_frame_execution;
                  }
                  else
@@ -2577,10 +2611,15 @@ t calculateExpression(AscalFrame<double>* frame)
         LOG_DEBUG("\nFinal Process: "<<currentFrame->exp)
         //process values in stacks, and return final solution
         data = processStack(processOperands, processOperators);
-        if(currentFrame->getReturnPointer()){
-            if(currentFrame->isFunction() && *boolsettings["o"])
+        if(currentFrame->getReturnPointer())
+        {
+            if(currentFrame->isFunction())
             {
-                if(std::to_string(data).length() != MAX.length())
+                if(*boolsettings["memoize"])
+                {
+                    memoPad[currentFrame->memoPointer] = data;
+                }
+                if(*boolsettings["o"] && std::to_string(data).length() != MAX.length())
                     std::cout<<"Returning value: "<<data<<'\n';
             }
             currentFrame->returnResult(data, memory);
@@ -2640,7 +2679,7 @@ bool isDouble(std::string &exp)
     return isADouble;
 }
 template <typename t>
-void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp, int i)
+void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp, int i, uint64_t hash)
 {
     //save index
     currentFrame->index = i;
@@ -2657,6 +2696,7 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
         newFrame->stackIndex = currentFrame->stackIndex+1;
         newFrame->exp = exp;
+        newFrame->memoPointer = hash;
         //Create new frame, and set return pointer
         newFrame->returnPointer = currentFrame;
         //push new frame

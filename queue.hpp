@@ -5,8 +5,8 @@
  *      Author: andrew
  */
 
-#ifndef QUEUE_H_
-#define QUEUE_H_
+#ifndef QUEUE_HPP_
+#define QUEUE_HPP_
 
 
 
@@ -117,4 +117,4 @@ template <typename t>
 
 
 
-#endif /* QUEUE_H_ */
+#endif /* QUEUE_HPP_ */

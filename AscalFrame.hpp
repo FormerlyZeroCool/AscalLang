@@ -18,26 +18,26 @@ class AscalFrame {
 private:
 
 protected:
-	//+1 sets if result flag to true, +8 sets isDynamicAllocation true
-	uint8_t flagRegisters = 1 + 8;
+    //+1 sets if result flag to true, +8 sets isDynamicAllocation true
+    uint8_t flagRegisters = 1 + 8 + 64;
     AscalParameters* params;
     std::map<std::string,Object>* paramMemory;
     std::map<std::string,Object>* localMemory;
 
 public:
-	AscalFrame* returnPointer = nullptr;
+    AscalFrame* returnPointer = nullptr;
     uint8_t level = 0;
-	uint32_t stackIndex = 0;
-	uint32_t index = 0;
-	uint64_t memoPointer = 0;
-	std::string exp;
-	stack<t> initialOperands;
-	stack<char> initialOperators;
+    uint32_t stackIndex = 0;
+    uint32_t index = 0;
+    uint64_t memoPointer = 0;
+    std::string exp;
+    stack<t> initialOperands;
+    stack<char> initialOperators;
     AscalFrame<t>*  getReturnPointer()
     {
-    	return returnPointer;
+        return returnPointer;
     }
-	//The retrieve data from flag registers functions bitmask all the bits that don't represent the data the user wishes to retreive
+    //The retrieve data from flag registers functions bitmask all the bits that don't represent the data the user wishes to retreive
     //Then auto cast the byte to a bool
     bool ifResultFlag() { return flagRegisters & (uint8_t)1; };
     bool ifFlag() { return flagRegisters & (uint8_t)2; };
@@ -45,6 +45,7 @@ public:
     bool isDynamicAllocation() { return flagRegisters & (uint8_t)8; };
     bool isRoot() { return flagRegisters & (uint8_t)16; };
     bool isFunction() { return flagRegisters & (uint8_t)32; };
+    bool isFirstRun() { return flagRegisters & (uint8_t)64; };
     void setIfResultFlag(bool value)
     {
         flagRegisters = flagRegisters&(uint8_t)254;
@@ -70,13 +71,18 @@ public:
         flagRegisters = flagRegisters&(uint8_t)(255-16);
         flagRegisters = flagRegisters^(uint8_t)(16*value);
     };
+    void setIsFirstRun(bool value)
+    {
+        flagRegisters = flagRegisters&(uint8_t)(255-64);
+        flagRegisters = flagRegisters^(uint8_t)(64*value);
+    };
     std::map<std::string,Object>* getParamMemory(){ return paramMemory; };
     std::map<std::string,Object>* getLocalMemory(){ return localMemory; };
     AscalParameters* getParams(){ return params; };
-	virtual
-	void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) {};
-	virtual
-	~AscalFrame() {};
+    virtual
+    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) {};
+    virtual
+    ~AscalFrame() {};
 };
 template <typename t>
 class ParamFrame: public AscalFrame<t> {
@@ -150,26 +156,27 @@ public:
         this->params = new AscalParameters;
         this->paramMemory = new std::map<std::string,Object>;
         this->localMemory = new std::map<std::string,Object>;
-    	//+1 sets if result flag to true, +8 sets isDynamicAllocation true
+        //+1 sets if result flag to true, +8 sets isDynamicAllocation true
         //+32 sets isFunction true
-        this->flagRegisters = 1 + 8 + 32;
+        this->flagRegisters = this->flagRegisters&(255-32);
+        this->flagRegisters = this->flagRegisters^32;
     }
-	void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
-	{
-		if(this->returnPointer)
-		{
-			this->returnPointer->initialOperands.push_back(result);
+    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
+    {
+        if(this->returnPointer)
+        {
+            this->returnPointer->initialOperands.push_back(result);
             /*std::cout<<"From Ascal Frame "<<result<<" to stack\n";
-			std::cout<<"    returned from index: "<<this->stackIndex<<" exp: "<<this->exp<<"\n";
-			std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
-		*/}
-	}
-	~FunctionFrame(){
-		//std::cout<<"from ascalframe.h Function popped\n";
+            std::cout<<"    returned from index: "<<this->stackIndex<<" exp: "<<this->exp<<"\n";
+            std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
+        */}
+    }
+    ~FunctionFrame(){
+        //std::cout<<"from ascalframe.h Function popped\n";
         delete this->params;
         delete this->paramMemory;
         delete this->localMemory;
-	}
+    }
 };
 
 #endif /* ASCALFRAME_HPP_ */
