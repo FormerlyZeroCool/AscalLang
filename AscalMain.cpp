@@ -2270,22 +2270,17 @@ void printStack(stack<t> &operands)
 template <typename t>
 void createFrame(stack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp, int i,uint64_t hash);
 
+static const std::hash<std::string> hashfn;
 uint64_t hashFunctionCall(std::string &exp)
 {
     long hash = 123456;
-    for(char c : exp)
-    {
-        hash += c*19;
-    }
+    hash += hashfn(exp);
     return hash;
 }
 uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
-    for(auto s:params)
-        for(char c : s)
-        {
-            hash += c*19;
-        }
+    for(std::string &s:params)
+        hash = hash+hashfn(s)+hash+hash;
     return hash;
 }
 stack<double> processOperands;
