@@ -228,10 +228,10 @@ The exists keyword when supplied the name of a variable returns 1 if the variabl
 By default when running any expression the Ascal Interpreter will print out the result of any expressions calculations, but keep reading to learn how to print information about variables saved in memory.<br>
 <br>
 print all is a command that will print all the information saved in memory pertaining to all saved functions<br>
-print [variableName] to print everything in memory related to the specified variable.<br>
+print var [variableName] to print everything in memory related to the specified variable.<br>
 print sdf to print only system defined functions.<br>
 print udf to print only user defined functions<br>
-printStr can be used to print a string, you can also add function called into the string by placing them in parenthesis like so:<br>
+print can be used to print a string, you can also add function called into the string by placing them in parenthesis like so:<br>
 
 
 `printStr "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))"`
