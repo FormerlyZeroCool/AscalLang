@@ -177,7 +177,7 @@ loc, and cloc can also be used inside of multi-line functions implemented like:<
 
 
 `let x = {
-loc y = z^2
+loc y = z^2;
 y(c^2)
 }`
 
@@ -234,7 +234,7 @@ print udf to print only user defined functions<br>
 print can be used to print a string, you can also add function called into the string by placing them in parenthesis like so:<br>
 
 
-`printStr "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))"`
+`print "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))"`
 <br>
 <h3>The input keyword:</h3>
 <p>
