@@ -313,7 +313,7 @@ void loadInitialFunctions()
     loadFn(fib);
     Object fibr("fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};memoize 1;fr(x);memoize 0;}","");
     loadFn(fibr);
-    Object rfibr("rfibr","(x){(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}","");
+    Object rfibr("rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}","");
     loadFn(rfibr);
     Object ack("ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end","");
     loadFn(ack);
@@ -2404,8 +2404,6 @@ t calculateExpression(AscalFrame<double>* frame)
          {
         	 //This needs to be updated, and simplified it makes conditional jumps very expensive
              SubStr varName(getVarName(currentFrame->exp,i));
-             Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
-             Object localData = currentFrame->getLocalMemory()->count(varName.data)!=0?(*currentFrame->getLocalMemory())[varName.data]:Object();
 
              //Keyword handling only one keyword at the beginning of each statement allowed,
              //including statements defined in variables
@@ -2471,6 +2469,9 @@ t calculateExpression(AscalFrame<double>* frame)
              }
              else
              {
+                 Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
+                 Object localData = currentFrame->getLocalMemory()->count(varName.data)!=0?(*currentFrame->getLocalMemory())[varName.data]:Object();
+
                  //Variable handling section
                  if(localData.id.length() != 0)
                  {

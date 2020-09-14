@@ -1,3 +1,0 @@
-AscalParams.o: AscalParams.hpp AscalParams.cpp
-	g++ -c AscalParams.hpp AscalParams.cpp
-
