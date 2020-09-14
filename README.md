@@ -57,10 +57,11 @@ parameters to choose between the following options or see below for how to use v
 t to show time taken to interpret, and calculate expression<br>
 o to show operations in order of execution in console<br>
 d to show debug information in console<br>
+p to print out the result of calculating each line of code(useful as a calculator because it will always print the result of a simple calculation)<br>
 memoize to memoize all function outputs this works to optimize doubly recursive functions very well, but will make any function not mathematically pur run improperly, this includes all subroutines(functions without parameters)
 <br>
 <h3>What is a param?</h3>
-<p>A param is a runtime parameter the Ascal interpreter uses at runtime to modify what happens when it executes code, for instance the t parameter causes the interpreter to either time, or not time program execution, by default it does not time execution.
+<p>A param is a parameter the Ascal interpreter uses at runtime to modify what happens when it executes code, for instance the t parameter causes the interpreter to either time, or not time program execution, by default it does not time execution. The p parameter auto prints the result of each line of code you write, and o shows the execution path, and every operation the interpreter is doing to execute your code, including telling you which branch it executes.
 </p>
 <p>
 <h4>Example of how o parameter works</h4>
@@ -194,16 +195,15 @@ because it replaces x with c^2, and c with the parameter supplied.
 <br>
 
 <br>
-<h3>The when then end set of keywords.</h3>
+<h3>The when then else end set of keywords.</h3>
 <p>
 The when then end keywords are the first way in Ascal to conditionally execute your code, allowing for recursion.<br>
 This functionality is still in testing, but it appears stable in this release<br>
 Example Ascal Code for a recursive summation series function:<br>
 
 
-`let f = when x>1 then f(x-1)+x when x<1 + x=1 then 1 end;`<br>
-If the parser sees the keyword when it will evaluate the expression between the when, and the proceeding then. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
-*Note if you end up with a stack overflow you will currenty get a segmentation fault, and the Ascal Interpreter will crash
+`let f = when x>1 then f(x-1)+x else 1 end;`<br>
+If the parser sees the keyword when it will evaluate the expression between the `when`, and the next `then`. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
                                         </p>
 <h3>The While keyword</h3>
 <p>
