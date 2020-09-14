@@ -282,82 +282,53 @@ void loadUserDefinedFn(Object function)
 void loadInitialFunctions()
 {
     //Unary boolean Operations
-    Object notTrue("not","value=0","");
-    loadFn(notTrue);
-    Object isTrue("true","value=0=0","");
-    loadFn(isTrue);
+    loadFn(Object("not","value=0",""));
+    loadFn(Object("true","value=0=0",""));
+    loadFn(Object("True","1",""));
+    loadFn(Object("False","0",""));
 
     //Calculus Functions
-    Object fPrime("fprime","x*0+(f(x+0.000001)-f(x))/0.000001","");
-    loadFn(fPrime);
+    loadFn(Object("fprime","x*0+(f(x+0.000001)-f(x))/0.000001",""));
 
     //Trig Functions
-    Object sinD("sinDeg","sin(toRad(theta))","");
-    loadFn(sinD);
-    Object sin("sin","notSin(theta%(2*pi))","");
-    loadFn(sin);
-    Object notSin("notSin","theta-theta^3/6+theta^5/120-theta^7/5040+theta^9/362800-theta^11/39916800+theta^13/6227020800-theta^15/(15P15)","");
-    loadFn(notSin);
-    Object csc("csc","1/sin(theta)","");
-    loadFn(csc);
-    Object cosD("cosDeg","cos(toRad(theta))","");
-    loadFn(cosD);
-    Object cos("cos","sin(theta+pi/2)","");
-    loadFn(cos);
-    Object sec("sec","1/cos(theta)","");
-    loadFn(sec);
-    Object tan("tan","sin(theta)/cos(theta)","");
-    loadFn(tan);
+    loadFn(Object("sinDeg","sin(toRad(theta))",""));
+    loadFn(Object("sin","notSin(theta%(2*pi))",""));
+    loadFn(Object("notSin","theta-theta^3/6+theta^5/120-theta^7/5040+theta^9/362800-theta^11/39916800+theta^13/6227020800-theta^15/(15P15)",""));
+    loadFn(Object("csc","1/sin(theta)",""));
+    loadFn(Object("cosDeg","cos(toRad(theta))",""));
+    loadFn(Object("cos","sin(theta+pi/2)",""));
+    loadFn(Object("sec","1/cos(theta)",""));
+    loadFn(Object("tan","sin(theta)/cos(theta)",""));
     //Helpful functions
-    Object fib("fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}","");
-    loadFn(fib);
-    Object fibr("fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};memoize 1;fr(x);memoize 0;}","");
-    loadFn(fibr);
-    Object rfibr("rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}","");
-    loadFn(rfibr);
-    Object ack("ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end","");
-    loadFn(ack);
-    Object fastAck("fastAck","(m,n){memoize 1;ack(m,n);memoize 0;}","");
-    loadFn(fastAck);
-    Object gcd("gcd","a*b*0+ when b=0 then a when a=0=0 then gcd(b,a%b) end","");
-    loadFn(gcd);
-    Object sumBetween("sumBetween","0*numberzxa*numberzxb + "
+    loadFn(Object("fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
+    loadFn(Object("fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};memoize 1;fr(x);memoize 0;}",""));
+    loadFn(Object("rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
+    loadFn(Object("ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
+    loadFn(Object("fastAck","(m,n){memoize 1;ack(m,n);memoize 0;}",""));
+    loadFn(Object("gcd","a*b*0+ when b=0 then a when a=0=0 then gcd(b,a%b) end",""));
+    loadFn(Object("sumBetween","0*numberzxa*numberzxb + "
             "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb)"
             "when (numberzxb>numberzxa) then sumOneTo(numberzxb)-sumOneTo(numberzxa) end"
-            ,"");
-    loadFn(sumBetween);
-    Object sumOneTo("sumOneTo","(numberzxa(numberzxa+1))/2","");
-    loadFn(sumOneTo);
+            ,""));
+    loadFn(Object("sumOneTo","(numberzxa(numberzxa+1))/2",""));
     //factorial of >= 171 overflows double datatype
-    Object rfact("rfact",
-            "when (i>1)*(i<171) then rfact(i-1)*i when not(i>1) then 1 else 0 end","");
-    loadFn(rfact);
-    Object absoluteValue("abs","when numberx<0 then numberx*-1 else numberx end","");
-    loadFn(absoluteValue);
-    Object ln("ln","when argument>0 then e@argument else null end","");
-    loadFn(ln);
-    Object log("log","when argument>0 then 10@argument else null end","");
-    loadFn(log);
-    Object logbx("logbx","base@argument","");
-    loadFn(logbx);
-    Object sqrt("sqrt","2$radicand","");
-    loadFn(sqrt);
-    Object factorial("fact","when numberzxa<171 then numberzxaPnumberzxa when not(numberzxa<171) then 0 end","");
-    loadFn(factorial);
-    Object dist("dist","2$((dx)^2+(dy)^2)","");
-    loadFn(dist);
-    Object toDeg("toDeg","rad*180/pi","");
-    loadFn(toDeg);
-    Object toRad("toRad","deg*pi/180","");
-    loadFn(toRad);
-    Object println("println","(x){let counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null","");
-    loadFn(println);
-    Object floor("floor","x-x%1","");
-    loadFn(floor);
-    Object ceiling("ceiling","when x%1=0 then x else x+1-x%1 end","");
-    loadFn(ceiling);
-    Object round("round","when x%1<0.5 then floor(x) else ceiling(x) end","");
-    loadFn(round);
+    Object rfact;
+    loadFn(Object("rfact",
+            "when (i>1)*(i<171) then rfact(i-1)*i when not(i>1) then 1 else 0 end",""));
+    loadFn(Object("abs","when numberx<0 then numberx*-1 else numberx end",""));
+    loadFn(Object("ln","when argument>0 then e@argument else null end",""));
+    loadFn(Object("log","when argument>0 then 10@argument else null end",""));
+    loadFn(Object("logbx","base@argument",""));
+    loadFn(Object("sqrt","2$radicand",""));
+    loadFn(Object("fact","when numberzxa<171 then numberzxaPnumberzxa when not(numberzxa<171) then 0 end",""));
+    loadFn(Object("dist","2$((dx)^2+(dy)^2)",""));
+    loadFn(Object("toDeg","rad*180/pi",""));
+    loadFn(Object("toRad","deg*pi/180",""));
+    loadFn(Object("println","(x){let counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null",""));
+    loadFn(Object("clear","{let counter = 0;while counter<150{set counter = counter +1;printStr \"endl\";};null",""));
+    loadFn(Object("floor","x-x%1",""));
+    loadFn(Object("ceiling","when x%1=0 then x else x+1-x%1 end",""));
+    loadFn(Object("round","when x%1<0.5 then floor(x) else ceiling(x) end",""));
 
     //Stats Functions
     Object binProbDist("binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
