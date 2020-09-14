@@ -57,9 +57,11 @@ parameters to choose between the following options or see below for how to use v
 t to show time taken to interpret, and calculate expression<br>
 o to show operations in order of execution in console<br>
 d to show debug information in console<br>
-u to show execute previous statement in console or "undo"<br>
-r to show "redo"<br>
+memoize to memoize all function outputs this works to optimize doubly recursive functions very well, but will make any function not mathematically pur run improperly, this includes all subroutines(functions without parameters)
 <br>
+<h3>What is a param?</h3>
+<p>A param is a runtime parameter the Ascal interpreter uses at runtime to modify what happens when it executes code, for instance the t parameter causes the interpreter to either time, or not time program execution, by default it does not time execution.
+</p>
 <p>
 <h4>Example of how o parameter works</h4>
 >>
