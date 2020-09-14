@@ -7,7 +7,7 @@ There are also now plans to encapsulate Ascal within a class for use as a progra
 Ascal tries to be as succinct as possible while expressing the mathematical functions, and aims to use a mathematical/C style syntax, it does this to make the UX as easy as possible for people in STEM to get used to.<br>
 <br>
 <h3>A quick help guide to using the language, further documentation to come</h3>
-Note: functions have been tested to provide at least 160 levels of nesting.<br>
+Note: functions have been tested to provide at least 160 levels of nesting, and when using when [condition] then recursive call else [base case to return] end almost unlimited recursion.<br>
 The not function returns 1 if a 0 is supplied, and zero with all other values, the true functions returns 1 if any value other than 0 is supplied
 <br>
 <h5>Your input testing the value supplied in this case 0</h5>
@@ -57,9 +57,12 @@ parameters to choose between the following options or see below for how to use v
 t to show time taken to interpret, and calculate expression<br>
 o to show operations in order of execution in console<br>
 d to show debug information in console<br>
-u to show execute previous statement in console or "undo"<br>
-r to show "redo"<br>
+p to print out the result of calculating each line of code(useful as a calculator because it will always print the result of a simple calculation)<br>
+memoize to memoize all function outputs this works to optimize doubly recursive functions very well, but will make any function not mathematically pur run improperly, this includes all subroutines(functions without parameters)
 <br>
+<h3>What is a param?</h3>
+<p>A param is a parameter the Ascal interpreter uses at runtime to modify what happens when it executes code, for instance the t parameter causes the interpreter to either time, or not time program execution, by default it does not time execution. The p parameter auto prints the result of each line of code you write, and o shows the execution path, and every operation the interpreter is doing to execute your code, including telling you which branch it executes.
+</p>
 <p>
 <h4>Example of how o parameter works</h4>
 >>
@@ -174,7 +177,7 @@ loc, and cloc can also be used inside of multi-line functions implemented like:<
 
 
 `let x = {
-loc y = z^2
+loc y = z^2;
 y(c^2)
 }`
 
@@ -192,16 +195,15 @@ because it replaces x with c^2, and c with the parameter supplied.
 <br>
 
 <br>
-<h3>The when then end set of keywords.</h3>
+<h3>The when then else end set of keywords.</h3>
 <p>
 The when then end keywords are the first way in Ascal to conditionally execute your code, allowing for recursion.<br>
 This functionality is still in testing, but it appears stable in this release<br>
 Example Ascal Code for a recursive summation series function:<br>
 
 
-`let f = when x>1 then f(x-1)+x when x<1 + x=1 then 1 end;`<br>
-If the parser sees the keyword when it will evaluate the expression between the when, and the proceeding then. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
-*Note if you end up with a stack overflow you will currenty get a segmentation fault, and the Ascal Interpreter will crash
+`let f = when x>1 then f(x-1)+x else 1 end;`<br>
+If the parser sees the keyword when it will evaluate the expression between the `when`, and the next `then`. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
                                         </p>
 <h3>The While keyword</h3>
 <p>
@@ -226,13 +228,13 @@ The exists keyword when supplied the name of a variable returns 1 if the variabl
 By default when running any expression the Ascal Interpreter will print out the result of any expressions calculations, but keep reading to learn how to print information about variables saved in memory.<br>
 <br>
 print all is a command that will print all the information saved in memory pertaining to all saved functions<br>
-print [variableName] to print everything in memory related to the specified variable.<br>
+print var [variableName] to print everything in memory related to the specified variable.<br>
 print sdf to print only system defined functions.<br>
 print udf to print only user defined functions<br>
-printStr can be used to print a string, you can also add function called into the string by placing them in parenthesis like so:<br>
+print can be used to print a string, you can also add function called into the string by placing them in parenthesis like so:<br>
 
 
-`printStr "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))"`
+`print "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))"`
 <br>
 <h3>The input keyword:</h3>
 <p>
