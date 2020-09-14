@@ -27,7 +27,6 @@ protected:
 public:
     AscalFrame* returnPointer = nullptr;
     uint8_t level = 0;
-    uint32_t stackIndex = 0;
     uint32_t index = 0;
     uint64_t memoPointer = 0;
     std::string exp;
