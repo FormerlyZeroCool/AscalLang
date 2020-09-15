@@ -9,7 +9,38 @@ let f = (x){
 }
   c
 };
-
+let ftw = {
+  loc c = 0;
+  while 1{
+    print "We won! (c) times!endl";
+    set c = c+1 ;
+    
+  };
+  
+}
+let saw = (x,y,z){
+  loc n = {
+    loc c = 0;
+    while c<x{
+      print " ";
+      set c = c+1;
+      
+    };
+    
+  };
+  loc c = 0;
+  loc w = 1;
+  while c<x{
+    n(abs(c-floor(c+0.5))*y + 5);
+    print "Xendl";
+    set c = c+z ;
+    if (c>w){
+  set w = w+1;
+  println(60);
+  }
+  };
+  
+}
 let isNeg = {
 if x<0{
 printStr "The number is negative (-1*x)endl"
