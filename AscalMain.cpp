@@ -312,7 +312,6 @@ void loadInitialFunctions()
             ,""));
     loadFn(Object("sumOneTo","(numberzxa(numberzxa+1))/2",""));
     //factorial of >= 171 overflows double datatype
-    Object rfact;
     loadFn(Object("rfact",
             "when (i>1)*(i<171) then rfact(i-1)*i when not(i>1) then 1 else 0 end",""));
     loadFn(Object("abs","when numberx<0 then numberx*-1 else numberx end",""));
@@ -325,7 +324,7 @@ void loadInitialFunctions()
     loadFn(Object("toDeg","rad*180/pi",""));
     loadFn(Object("toRad","deg*pi/180",""));
     loadFn(Object("println","(x){let counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null",""));
-    loadFn(Object("clear","{let counter = 0;while counter<150{set counter = counter +1;printStr \"endl\";};null",""));
+    loadFn(Object("clear","println(150)",""));
     loadFn(Object("floor","x-x%1",""));
     loadFn(Object("ceiling","when x%1=0 then x else x+1-x%1 end",""));
     loadFn(Object("round","when x%1<0.5 then floor(x) else ceiling(x) end",""));
@@ -341,14 +340,10 @@ void loadInitialFunctions()
     //loadFn(desWeight);
 
     //Constants Definition
-    Object pi("pi","3.14159265359","");
-    loadFn(pi);
-    Object e("e","2.718281828459045","");
-    loadFn(e);
-    Object null("null",MAX,"");
-    loadFn(null);
-    Object printf("printf","print \"(x)endl\"","");
-    loadFn(printf);
+    loadFn(Object("pi","3.14159265359",""));
+    loadFn(Object("e","2.718281828459045",""));
+    loadFn(Object("null",MAX,""));
+    loadFn(Object("printf","print \"(x)endl\"",""));
 }
 void printAllFunctions()
 {
@@ -643,6 +638,11 @@ std::string to_string(double input)
 
     return data.substr(0,data.length()-offsetFromEnd);
 }
+/*std::string testRuntimeAction(AscalFrame<double>* frame,bool s)
+{
+	std::string variableTest,functionNoParamsTest,functionOneParamTest,functionTwoParamTest,
+
+}*/
 std::string printStringAction(AscalFrame<double>* frame,bool s)
 {
         //int startingIndex = expr.find("input");
@@ -1612,7 +1612,7 @@ t callOnFrameFormatted(AscalFrame<t>* callingFrame,std::string subExp)
     ParamFrame<t> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
-    t data = calculateExpression<t>(&executionFrame);
+    t data = calcWithOptions(&executionFrame);
 
     return data;
 }
@@ -1854,6 +1854,7 @@ std::string printCalculation(AscalFrame<double>* frame,bool saveLast)
     //and it's not like the expression itself can start at 5+ the index of print,
     //that must begin at 6+ the index of the p in print at least
     std::string exp = getExpr(frame->exp.substr(frame->exp.find("print",frame->index)+6,frame->exp.length()),0).data;
+    std::cout<<"The print calc exp is s:"<<exp<<'\n';
     bool print = *boolsettings["p"];
     *boolsettings["p"] = true;
     callOnFrameFormatted(frame, exp);
