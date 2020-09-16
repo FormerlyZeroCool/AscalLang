@@ -1854,7 +1854,6 @@ std::string printCalculation(AscalFrame<double>* frame,bool saveLast)
     //and it's not like the expression itself can start at 5+ the index of print,
     //that must begin at 6+ the index of the p in print at least
     std::string exp = getExpr(frame->exp.substr(frame->exp.find("print",frame->index)+6,frame->exp.length()),0).data;
-    std::cout<<"The print calc exp is s:"<<exp<<'\n';
     bool print = *boolsettings["p"];
     *boolsettings["p"] = true;
     callOnFrameFormatted(frame, exp);
