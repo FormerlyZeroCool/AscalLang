@@ -11,6 +11,8 @@
 //when the DEBUG Macro is equal to 1
 
 
+#define __STDC_FORMAT_MACROS
+#include <inttypes.h>
 #include <unordered_map>
 #include <map>
 #include <chrono>
@@ -187,7 +189,7 @@ t root(t b,t p)
         t num;
         t delta =  1,prev;
         int count = 0;
-        while(delta > 0.000001 && count < 1000)
+        while(delta > 0.000001 && count < 10000)
         {
             num = pow(result,p) - base;
             den = pow(result,newPow)*p;
@@ -377,8 +379,14 @@ std::string printVersion(AscalFrame<double>* frame,bool s)
     std::cout<<VERSION<<std::endl;
     return MAX;
 }
+std::string popandAction(AscalFrame<double>* frame,bool s)
+{
+    frame->initialOperands.pop();
+    return MAX;
+}
 void initParamMapper()
 {
+    inputMapper["popand"] = popandAction;
     inputMapper["version"] = printVersion;
     inputMapper["ver"] = printVersion;
     inputMapper["approxInt"] = approxIntAction;
@@ -730,13 +738,14 @@ std::string inputAction(AscalFrame<double>* frame,bool s)
         }
         else
         {
-            result = "number: ";
-            endOfPrint = 6;
+            //result = "number: ";
+            endOfPrint = frame->index+4;
         }
         std::cout<<result;
         std::string input;
         get_line(std::cin,input);
-    return "a"+input+frame->exp.substr(endOfPrint+1,frame->exp.size());
+        std::string inputReduced = to_string(callOnFrame(frame,input));
+    return "a"+inputReduced+frame->exp.substr(endOfPrint+1,frame->exp.size());
 
 }
 void loadFile(const std::string & expr,int startIndex)
@@ -1753,7 +1762,6 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     //if the expression evaluates to anything other than 0
     //then extract the expression proceeding the then statement
 
-    LOG_DEBUG("Expression before When:"<<frame->exp<<"\n Params: "<<frame->getParams()->toString())
     std::string expbkp = frame->exp;
     uint32_t indexBackup = frame->index;
     frame->index = 0;
@@ -2043,7 +2051,7 @@ double calcWithOptions(AscalFrame<double>* frame)
         //std::cout<<"\nresult: "<<to_string(result)<<"\nMax: "<<Max<<std::endl>;
         if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
         {
-            std::cout<<"Final Answer: "<<std::endl<<result<<std::endl;
+            std::cout<<to_string(result)<<std::endl;
         }
     }
     frameCount = 1;
@@ -2280,19 +2288,43 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
 static const std::hash<std::string> hashfn;
 uint64_t hashFunctionCall(std::string &exp)
 {
-    long hash = 123456;
-    hash += hashfn(exp);
-    return hash;
+    return hashfn(exp);
 }
 uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
-	uint64_t h;
     for(std::string &s:params)
     {
-    	h = hashfn(s);
-        hash = hash+h+h+hash+hash;
+        hash ^= hash<<5;
+        hash ^= hash<<12;
+        hash ^= hash<<18;
+        hash ^= hash<<21;
+        hash ^= hash<<26;
+        hash ^= hash<<29;
+        hash += hashfn(s);
     }
     return hash;
+}
+uint64_t hash(AscalFrame<double>* currentFrame)
+{
+	uint64_t frameptr = (uint64_t) currentFrame;
+	uint64_t rtnptr = (uint64_t) currentFrame->returnPointer;
+	uint64_t paramsptr = (uint64_t) currentFrame->getParamMemory();
+	uint64_t locvarptr = (uint64_t) currentFrame->getLocalMemory();
+	uint64_t hash = ((frameptr<<(1 + (15&rtnptr)))^currentFrame->memoPointer^paramsptr^locvarptr);
+	hash |= paramsptr;
+	hash |= paramsptr<<16;
+	hash ^= rtnptr<<6;
+	hash ^= rtnptr<<26;
+	hash |= currentFrame->memoPointer<<3;
+	hash ^= currentFrame->memoPointer<<20;
+	hash ^= hash<<5;
+	hash ^= hash<<10;
+	hash ^= hash<<15;
+	hash ^= hash<<20;
+	hash ^= hash<<28;
+	hash += currentFrame->memoPointer;
+	hash += frameptr<<8;
+	return hash;
 }
 //stack for function calls
 //stack for params resolution. no, inheritance is the answer
@@ -2309,7 +2341,6 @@ t calculateExpression(AscalFrame<double>* frame)
     char currentChar;
 
     t data = NULL;
-    LOG_DEBUG("Calculating expression: "<<frame->exp)
     AscalFrame<double>* rtnFrame = frame->returnPointer;
     frame->returnPointer = nullptr;
     //This loop handles parsing the numbers, and adding the data from the expression
@@ -2323,10 +2354,12 @@ t calculateExpression(AscalFrame<double>* frame)
     {
         new_frame_execution:
         executionStack.top(currentFrame);
-        if(currentFrame->isFunction() && currentFrame->isFirstRun() && *boolsettings["memoize"])
+        if(currentFrame->isFunction() && currentFrame->isFirstRun())
         {
-            currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
             currentFrame->setIsFirstRun(false);
+        	if(*boolsettings["memoize"])
+        	{
+            currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
             if(memoPad.count(currentFrame->memoPointer))
             {
             	data = memoPad[currentFrame->memoPointer];
@@ -2343,17 +2376,17 @@ t calculateExpression(AscalFrame<double>* frame)
                     }
                 }
             }
-        }
-        LOG_DEBUG("In expression: "<<currentFrame->exp<<" ");
+        	}
+        	if(*boolsettings["d"])
+           	{
+        	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
+                std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+           	    std::cout<<"Beginning execution of frame id: ";
+           	    printf("%"PRIx64"\n", hash(currentFrame));
+           	    std::cout<<std::ctime(&end_time);
+           	}
 
-         LOG_DEBUG("Stack depth: "<<executionStack.length()<<"\nLocal Memory: "<<printMemory(*currentFrame->getLocalMemory(),"=",false," "))
-         LOG_DEBUG("Param Memory: "<<printMemory(*currentFrame->getParamMemory(),"=",false," "))
-        // std::cout<<" Printing Params passed to this function: ";
-        // for(std::string s:currentFrame->params)
-        //{
-         //    std::cout<<s<<", ";
-        //}
-         //std::cout<<std::endl;
+        }
         for(int i = currentFrame->index;i <= currentFrame->exp.length();i++)
         {
          currentFrame->index = i;
@@ -2362,7 +2395,6 @@ t calculateExpression(AscalFrame<double>* frame)
          //anything used outside of the first { gets dropped from program stack, for param definition
          currentFrame->level = currentFrame->level + (currentChar == '{') - (currentChar == '}');
 
-            LOG_DEBUG("currentChar: "<<currentChar<<" ");
 
          if(currentChar == '{' && currentFrame->level == 1)
          {
@@ -2371,7 +2403,7 @@ t calculateExpression(AscalFrame<double>* frame)
             while(!currentFrame->initialOperators.isEmpty())
                 currentFrame->initialOperators.pop();
          }
-         else if(isalpha(currentChar) && !isOperator(currentChar) && currentChar != 'X')
+         else if(isalpha(currentChar) && !isOperator(currentChar))
          {
         	 //This needs to be updated, and simplified it makes conditional jumps very expensive
              SubStr varName(getVarName(currentFrame->exp,i));
@@ -2381,22 +2413,15 @@ t calculateExpression(AscalFrame<double>* frame)
              if(inputMapper.count(varName.data) != 0)
              {
 
-                 //std::cout<<"Old Exp Before inputMapper: "<<exp<<std::endl;
-                 AscalFrame<t>* frame = currentFrame;
                  bool isDynamicBackup = currentFrame->isDynamicAllocation();
-                 //int indexbkp = currentFrame->index;
                  std::string result;
                  try{
-                     currentFrame->setIsDynamicAllocation(false);
                  result = inputMapper[varName.data](currentFrame,false);
                  currentFrame->setIsDynamicAllocation(isDynamicBackup);
                  }catch(std::string& s){
                      currentFrame->setIsDynamicAllocation(isDynamicBackup);
                      throw s;
                  }
-
-                 //currentFrame->index = indexbkp;
-                 currentFrame = frame;
 
                  uint8_t subLevel = 0;
                  while((subLevel != 0 && currentFrame->exp[i]) || (currentFrame->exp[i] && currentFrame->exp[i] != ';' && currentFrame->exp[i] != '\n'))
@@ -2521,7 +2546,6 @@ t calculateExpression(AscalFrame<double>* frame)
          else
             if (currentChar==')')
             {
-                LOG_DEBUG("Parentheses Process: "<<currentFrame->exp)
               currentFrame->initialOperators.top(peeker);
               while(!currentFrame->initialOperators.isEmpty() && peeker != '(')
               {
@@ -2592,9 +2616,16 @@ t calculateExpression(AscalFrame<double>* frame)
               currentFrame->initialOperators.pop();
           }
         }
-        LOG_DEBUG("\nFinal Process: "<<currentFrame->exp)
         //process values in stacks, and return final solution
         data = processStack(processOperands, processOperators);
+        if(currentFrame->isFunction() && *boolsettings["d"])
+        {
+    	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
+            std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+       	    std::cout<<"Finished execution of frame id: ";
+       	    printf("%"PRIx64"\n", hash(currentFrame));
+       	    std::cout<<std::ctime(&end_time);
+        }
         if(currentFrame->getReturnPointer())
         {
             if(currentFrame->isFunction())
@@ -2603,8 +2634,10 @@ t calculateExpression(AscalFrame<double>* frame)
                 {
                     memoPad[currentFrame->memoPointer] = data;
                 }
-                if(*boolsettings["o"] && std::to_string(data).length() != MAX.length())
+                if(*boolsettings["o"] && std::to_string(data).length() != MAX.length()){
+                	//include unix time finished
                     std::cout<<"Returning value: "<<data<<'\n';
+                }
             }
             currentFrame->returnResult(data, memory);
         }
@@ -2614,7 +2647,6 @@ t calculateExpression(AscalFrame<double>* frame)
             delete currentFrame;
         }
         currentFrame = nullptr;
-        LOG_DEBUG("Return Data: "<<data);
     }
 
     }catch(std::string &error)
@@ -2646,7 +2678,6 @@ t calculateExpression(AscalFrame<double>* frame)
         throw error;
     }
     frame->returnPointer = rtnFrame;
-    LOG_DEBUG("Depth: "<<--stackDepth)
     return data;
 }
 bool isDouble(std::string &exp)
@@ -2984,11 +3015,11 @@ t combinations(t &and1,t &and2)
     return result;
 }
 template <class t>
-t log(t &and1,t &and2){    return log(and2)/log(and1);}
+t log(t &and1,t &and2){return log(and2)/log(and1);}
 template <class t>
-t rootOp(t &and1,t &and2){    return root(and2,and1);}
+t rootOp(t &and1,t &and2){return root(and2,and1);}
 template <class t>
-t equals(t &and1,t &and2){    return and1==and2;}
+t equals(t &and1,t &and2){return and1==and2;}
 template <class t>
 t lessThan(t &and1,t &and2){return and1<and2;}
 template <class t>
