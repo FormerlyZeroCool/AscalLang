@@ -137,6 +137,9 @@ std::string loopBoolSetting(AscalFrame<double>* frame,bool s);
 std::string printBoolSetting(AscalFrame<double>* frame,bool s);
 std::string debugBoolSetting(AscalFrame<double>* frame,bool s);
 std::string timeToRunBoolSetting(AscalFrame<double>* frame,bool s);
+std::string arctanAction(AscalFrame<double>* frame,bool saveLast);
+std::string arcsinAction(AscalFrame<double>* frame,bool saveLast);
+std::string arccosAction(AscalFrame<double>* frame,bool saveLast);
 //End Ascal System Defined  Keyword functionality
 //////////////////////////////////////////////////////////
 
@@ -177,6 +180,7 @@ template <class t>
 t calc(char op,t and1,t and2);
 template <class t>
 t processStack(stack<t> &operands,stack<char> &operators);
+
 template <class t>
 t root(t b,t p)
 {
@@ -194,7 +198,7 @@ t root(t b,t p)
             num = pow(result,p) - base;
             den = pow(result,newPow)*p;
             prev = result;
-            result = (result*den - num)/den;
+            result = result - num/den;
             delta = result - prev;
             if(delta < 0)
                 delta *= -1;
@@ -386,6 +390,9 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 }
 void initParamMapper()
 {
+	inputMapper["arctan"] = arctanAction;
+	inputMapper["arcsin"] = arcsinAction;
+	inputMapper["arccos"] = arccosAction;
     inputMapper["popand"] = popandAction;
     inputMapper["version"] = printVersion;
     inputMapper["ver"] = printVersion;
@@ -1361,6 +1368,51 @@ std::string existsAction(AscalFrame<double>* frame,bool saveLast)
         return "a1;"+frame->exp.substr(index,frame->exp.size());
     }
     return "a0;"+frame->exp.substr(index,frame->exp.size());
+}
+std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
+{
+    int index = frame->exp.find("arctan",frame->index)+6;
+    while(frame->exp[index] == ' ')
+        index++;
+    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
+        index += exp.data.length()-1;
+    double input = callOnFrame(frame,exp.data);
+    frame->initialOperands.push(atan(input));
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"arctan("<<input<<") = "<<atan(input)<<'\n';
+    }
+    return frame->exp.substr(index,frame->exp.size());
+}
+std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
+{
+    int index = frame->exp.find("arcsin",frame->index)+6;
+    while(frame->exp[index] == ' ')
+        index++;
+    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
+        index += exp.data.length()-1;
+    double input = callOnFrame(frame,exp.data);
+    frame->initialOperands.push(asin(input));
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"arcsin("<<input<<") = "<<asin(input)<<'\n';
+    }
+    return frame->exp.substr(index,frame->exp.size());
+}
+std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
+{
+    int index = frame->exp.find("arccos",frame->index)+6;
+    while(frame->exp[index] == ' ')
+        index++;
+    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
+        index += exp.data.length()-1;
+    double input = callOnFrame(frame,exp.data);
+    frame->initialOperands.push(acos(input));
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"arccos("<<input<<") = "<<acos(input)<<'\n';
+    }
+    return frame->exp.substr(index,frame->exp.size());
 }
 std::string setAction(AscalFrame<double>* frame,bool saveLast)
 {
