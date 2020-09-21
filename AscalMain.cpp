@@ -1375,14 +1375,14 @@ std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
     while(frame->exp[index] == ' ')
         index++;
     SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-1;
+        index += exp.data.length()-3;
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(atan(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"arctan("<<input<<") = "<<atan(input)<<'\n';
     }
-    return frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(index,frame->exp.size());
 }
 std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -1390,14 +1390,14 @@ std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
     while(frame->exp[index] == ' ')
         index++;
     SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-1;
+        index += exp.data.length()-3;
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(asin(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"arcsin("<<input<<") = "<<asin(input)<<'\n';
     }
-    return frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(index,frame->exp.size());
 }
 std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -1405,14 +1405,15 @@ std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
     while(frame->exp[index] == ' ')
         index++;
     SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-1;
+    std::cout<<exp.data<<'\n';
+        index += exp.data.length()-3;
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(acos(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"arccos("<<input<<") = "<<acos(input)<<'\n';
     }
-    return frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(index,frame->exp.size());
 }
 std::string setAction(AscalFrame<double>* frame,bool saveLast)
 {
