@@ -2435,7 +2435,7 @@ t calculateExpression(AscalFrame<double>* frame)
         	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
                 std::time_t end_time = std::chrono::system_clock::to_time_t(end);
            	    std::cout<<"Beginning execution of frame id: ";
-           	    printf("%"PRIx64"\n", hash(currentFrame));
+           	    printf("%lx\n", hash(currentFrame));
            	    std::cout<<std::ctime(&end_time);
            	}
 
@@ -2676,7 +2676,7 @@ t calculateExpression(AscalFrame<double>* frame)
     	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
             std::time_t end_time = std::chrono::system_clock::to_time_t(end);
        	    std::cout<<"Finished execution of frame id: ";
-       	    printf("%"PRIx64"\n", hash(currentFrame));
+       	    printf("%lx\n", hash(currentFrame));
        	    std::cout<<std::ctime(&end_time);
         }
         if(currentFrame->getReturnPointer())
