@@ -52,7 +52,6 @@ struct SubStr{
     int start,end;
     SubStr(std::string data,int start,int end):data(data),start(start),end(end){}
 };
-//
 static uint32_t frameCount = 1;
 static uint32_t varCount = 0;
 
@@ -134,6 +133,7 @@ std::string deleteObject(AscalFrame<double>* frame,bool saveLast);
 std::string undoAction(AscalFrame<double>* frame,bool s);
 std::string redoAction(AscalFrame<double>* frame,bool s);
 std::string showOpBoolSetting(AscalFrame<double>* frame,bool s);
+std::string updateBoolSettingAction(AscalFrame<double>* frame,bool s);
 std::string loopBoolSetting(AscalFrame<double>* frame,bool s);
 std::string printBoolSetting(AscalFrame<double>* frame,bool s);
 std::string debugBoolSetting(AscalFrame<double>* frame,bool s);
@@ -325,12 +325,13 @@ void loadInitialFunctions()
     loadFn(Object("ln","when argument>0 then e@argument else null end",""));
     loadFn(Object("log","when argument>0 then 10@argument else null end",""));
     loadFn(Object("logbx","base@argument",""));
-    loadFn(Object("sqrt","2$radicand",""));
+    loadFn(Object("sqrt","radicand^0.5",""));
     loadFn(Object("fact","when numberzxa<171 then numberzxaPnumberzxa when not(numberzxa<171) then 0 end",""));
-    loadFn(Object("dist","2$((dx)^2+(dy)^2)",""));
+    loadFn(Object("dist","sqrt((dx)^2+(dy)^2)",""));
+    loadFn(Object("dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
     loadFn(Object("toDeg","rad*180/pi",""));
     loadFn(Object("toRad","deg*pi/180",""));
-    loadFn(Object("println","(x){let counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null",""));
+    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null",""));
     loadFn(Object("clear","println(150)",""));
     loadFn(Object("floor","x-x%1",""));
     loadFn(Object("ceiling","when x%1=0 then x else x+1-x%1 end",""));
@@ -391,6 +392,7 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 }
 void initParamMapper()
 {
+	inputMapper["sci"] = updateBoolSettingAction;
 	inputMapper["arctan"] = arctanAction;
 	inputMapper["arcsin"] = arcsinAction;
 	inputMapper["arccos"] = arccosAction;
@@ -440,6 +442,7 @@ char invertCase(char data)
 }
 int main(int argc,char* argv[])
 {
+
   /*
    * Initializing values in system hashmaps
    * */
@@ -465,6 +468,16 @@ int main(int argc,char* argv[])
                     "Print all expressions results",
                 /*command line command*/
                     "p",
+                /*variable*/
+                    true);
+
+        boolsettings[set.getCommand()] = set;
+
+        set = setting<bool> (
+                /*name*/
+                    "Use scientific notation for output of numbers larger than 999,999",
+                /*command line command*/
+                    "sci",
                 /*variable*/
                     true);
 
@@ -548,11 +561,6 @@ int main(int argc,char* argv[])
 
   do
   {
-      //runs the calculation using the global variable expr
-      //this function also infers the datatype of the expression based on
-      //if there is a . present in the string it will use doubles else long
-
-
       if(*boolsettings["l"])
       {
           //Interpreter prompt to let user know program is expecting a command/expression
@@ -575,7 +583,7 @@ int main(int argc,char* argv[])
 
       }
   } while(*boolsettings["l"]);
-  if(undoneExp.length() > 1 || lastExp.length()>1)
+  if(undoneExp.length() > 1 || lastExp.length() > 1)
   {
       std::cout<<std::endl<<"Ascal exited"<<std::endl;
   }
@@ -847,6 +855,11 @@ std::string showOpBoolSetting(AscalFrame<double>* frame,bool s)
     updateBoolSetting(frame);
     return MAX;
 }
+std::string updateBoolSettingAction(AscalFrame<double>* frame,bool s)
+{
+    updateBoolSetting(frame);
+    return MAX;
+}
 std::string loopBoolSetting(AscalFrame<double>* frame,bool s)
 {
     updateBoolSetting(frame);
@@ -854,7 +867,6 @@ std::string loopBoolSetting(AscalFrame<double>* frame,bool s)
 }
 std::string printBoolSetting(AscalFrame<double>* frame,bool s)
 {
-    int index = 0;
     updateBoolSetting(frame);
     return MAX;
 }
@@ -1180,7 +1192,8 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
     for(int j = 0;j<functions.size();j++)
     {
         std::string function = functions[j];
-        std::cout<<"\nProcessing: "<<function<<"\n";
+        if(*boolsettings["o"])
+        	std::cout<<"\nProcessing: "<<function<<"\n";
         for(int i = 0;i<tableWidth;i++)
         {
             xi = xMin+dx*(i);
@@ -1189,18 +1202,16 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
             outPuts.push_back(
                     calculateExpression<double>(calledFunction));
             sumArea[j] += outPuts.get(i,j)*dx;
-            if(!*boolsettings["o"] && *boolsettings["p"])
-                std::cout<<function<<"("<<to_string(xi)<<")"<<"="<<outPuts.get(i,j)<<",";
         }
     }
 
-    double yClosestToZero = std::numeric_limits<double>::max();
+    double yClosestToZero = yMax;
     for(int y = tableHeight+1;y>=0;y--)
     {
         if(abs(yMin+dy*y)<yClosestToZero)
             yClosestToZero = yMin+dy*y;
     }
-    double xClosestToZero = std::numeric_limits<double>::max();
+    double xClosestToZero = xMax;
     std::cout<<"\n";
     for(int i = 0;i<=tableWidth;i++)
     {
@@ -1406,7 +1417,6 @@ std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
     while(frame->exp[index] == ' ')
         index++;
     SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-    std::cout<<exp.data<<'\n';
         index += exp.data.length()-3;
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(acos(input));
@@ -1817,7 +1827,6 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     //then extract the expression proceeding the then statement
 
     std::string expbkp = frame->exp;
-    uint32_t indexBackup = frame->index;
     frame->index = 0;
     const int startIndex = frame->exp.find("when",frame->index)<1000?frame->exp.find("when",frame->index):0;
     const int endIndex = frame->exp.find("end",frame->index)<1000?frame->exp.find("end",frame->index):0;
@@ -2105,7 +2114,10 @@ double calcWithOptions(AscalFrame<double>* frame)
         //std::cout<<"\nresult: "<<to_string(result)<<"\nMax: "<<Max<<std::endl>;
         if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
         {
-            std::cout<<to_string(result)<<std::endl;
+        	if(*boolsettings["sci"])
+        		std::cout<<result<<std::endl;
+        	else
+        		std::cout<<to_string(result)<<std::endl;
         }
     }
     frameCount = 1;
@@ -2394,7 +2406,7 @@ t calculateExpression(AscalFrame<double>* frame)
     //in the for loop
     char currentChar;
 
-    t data = NULL;
+    t data = 0;
     AscalFrame<double>* rtnFrame = frame->returnPointer;
     frame->returnPointer = nullptr;
     //This loop handles parsing the numbers, and adding the data from the expression
@@ -2403,7 +2415,6 @@ t calculateExpression(AscalFrame<double>* frame)
     AscalFrame<t>* currentFrame = frame;
     executionStack.push(currentFrame);
     try{
-        top:
     while(!executionStack.isEmpty())
     {
         new_frame_execution:
@@ -3018,8 +3029,7 @@ t subtract(t &and1,t &and2){return and1-and2;}
 template <class t>
 t multiply(t &and1,t &and2){return and1*and2;}
 template <class t>
-t divide(t &and1,t &and2){int ind;
-              return and2!=0?and1/and2:throw std::string("Error division by zero.");}
+t divide(t &and1,t &and2){return and2!=0?and1/and2:throw std::string("Error division by zero.");}
 template <class t>
 t doubleModulus(t &and1,t &and2)
 {
