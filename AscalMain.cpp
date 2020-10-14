@@ -141,6 +141,9 @@ std::string timeToRunBoolSetting(AscalFrame<double>* frame,bool s);
 std::string arctanAction(AscalFrame<double>* frame,bool saveLast);
 std::string arcsinAction(AscalFrame<double>* frame,bool saveLast);
 std::string arccosAction(AscalFrame<double>* frame,bool saveLast);
+std::string tanAction(AscalFrame<double>* frame,bool saveLast);
+std::string sinAction(AscalFrame<double>* frame,bool saveLast);
+std::string cosAction(AscalFrame<double>* frame,bool saveLast);
 //End Ascal System Defined  Keyword functionality
 //////////////////////////////////////////////////////////
 
@@ -299,13 +302,9 @@ void loadInitialFunctions()
 
     //Trig Functions
     loadFn(Object("sinDeg","sin(toRad(theta))",""));
-    loadFn(Object("sin","notSin(theta%(2*pi))",""));
-    loadFn(Object("notSin","theta-theta^3/6+theta^5/120-theta^7/5040+theta^9/362800-theta^11/39916800+theta^13/6227020800-theta^15/(15P15)",""));
     loadFn(Object("csc","1/sin(theta)",""));
     loadFn(Object("cosDeg","cos(toRad(theta))",""));
-    loadFn(Object("cos","sin(theta+pi/2)",""));
     loadFn(Object("sec","1/cos(theta)",""));
-    loadFn(Object("tan","sin(theta)/cos(theta)",""));
     //Helpful functions
     loadFn(Object("fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
     loadFn(Object("fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};memoize 1;fr(x);memoize 0;}",""));
@@ -313,11 +312,11 @@ void loadInitialFunctions()
     loadFn(Object("ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
     loadFn(Object("fastAck","(m,n){memoize 1;ack(m,n);memoize 0;}",""));
     loadFn(Object("gcd","a*b*0+ when b=0 then a when a=0=0 then gcd(b,a%b) end",""));
-    loadFn(Object("sumBetween","0*numberzxa*numberzxb + "
-            "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb)"
-            "when (numberzxb>numberzxa) then sumOneTo(numberzxb)-sumOneTo(numberzxa) end"
+    loadFn(Object("sumBetween","(numberzxa,numberzxb){"
+            "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb-1)"
+            "else sumOneTo(numberzxb)-sumOneTo(numberzxa-1) end}"
             ,""));
-    loadFn(Object("sumOneTo","(numberzxa(numberzxa+1))/2",""));
+    loadFn(Object("sumOneTo","(numberzxa*(numberzxa+1))/2",""));
     //factorial of >= 171 overflows double datatype
     loadFn(Object("rfact",
             "when (i>1)*(i<171) then rfact(i-1)*i when not(i>1) then 1 else 0 end",""));
@@ -348,7 +347,7 @@ void loadInitialFunctions()
     //loadFn(desWeight);
 
     //Constants Definition
-    loadFn(Object("pi","3.14159265359",""));
+    loadFn(Object("pi","3.141592653589793238462643383279",""));
     loadFn(Object("e","2.718281828459045",""));
     loadFn(Object("null",MAX,""));
     loadFn(Object("printf","print \"(x)endl\"",""));
@@ -393,6 +392,9 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 void initParamMapper()
 {
 	inputMapper["sci"] = updateBoolSettingAction;
+	inputMapper["tan"] = tanAction;
+	inputMapper["sin"] = sinAction;
+	inputMapper["cos"] = cosAction;
 	inputMapper["arctan"] = arctanAction;
 	inputMapper["arcsin"] = arcsinAction;
 	inputMapper["arccos"] = arccosAction;
@@ -421,12 +423,10 @@ void initParamMapper()
     inputMapper["delete"] = deleteObject;
     inputMapper["u"] = undoAction;
     inputMapper["r"] = redoAction;
-    inputMapper["-u"] = undoAction;
-    inputMapper["-r"] = redoAction;
-    inputMapper["l"] = loopBoolSetting;
-    inputMapper["o"] = showOpBoolSetting;
-    inputMapper["p"] = printBoolSetting;
-    inputMapper["t"] = timeToRunBoolSetting;
+    inputMapper["l"] = updateBoolSettingAction;
+    inputMapper["o"] = updateBoolSettingAction;
+    inputMapper["p"] = updateBoolSettingAction;
+    inputMapper["t"] = updateBoolSettingAction;
     inputMapper["memoize"] = timeToRunBoolSetting;
 #if DEBUG == 1
     inputMapper["d"] = debugBoolSetting;
@@ -455,7 +455,7 @@ int main(int argc,char* argv[])
       loadInitialFunctions();
       setting<bool> set(
             /*name*/
-                "Show Operations",
+                "Show Operations that the interpreter uses while executing code",
             /*command line command*/
                 "o",
             /*variable*/
@@ -465,7 +465,7 @@ int main(int argc,char* argv[])
 
         set = setting<bool> (
                 /*name*/
-                    "Print all expressions results",
+                    "Auto print results of calculations",
                 /*command line command*/
                     "p",
                 /*variable*/
@@ -484,7 +484,7 @@ int main(int argc,char* argv[])
         boolsettings[set.getCommand()] = set;
         set = setting<bool>(
             /*name*/
-                "Debug Mode",
+                "Debug Ascal Mode",
             /*command line command*/
                 "d",
             /*variable*/
@@ -492,7 +492,7 @@ int main(int argc,char* argv[])
         boolsettings[set.getCommand()] = set;
         set = setting<bool>(
             /*name*/
-                "Loop calculator",
+                "Keep Interpreter listening for input to stdin",
             /*command line command*/
                 "l",
             /*variable*/
@@ -500,7 +500,7 @@ int main(int argc,char* argv[])
         boolsettings[set.getCommand()] = set;
         set = setting<bool>(
             /*name*/
-                "Auto Memoize all function calls to improve multiple recursive function performance",
+                "Auto Memoize all function calls to improve multiple recursive function performance,\nwill cause erroneous calculations if not using pure mathematical functions.",
             /*command line command*/
                 "memoize",
             /*variable*/
@@ -559,10 +559,9 @@ int main(int argc,char* argv[])
   //command line by the user loop will not run, unless that param was the loop command
   //by default the loop runs
 
-  do
+  while(*boolsettings["l"])
   {
-      if(*boolsettings["l"])
-      {
+
           //Interpreter prompt to let user know program is expecting a command/expression
           FunctionFrame<double>* frame = new FunctionFrame<double>(nullptr,nullptr,nullptr);
           std::cout<<std::endl<<">>";
@@ -581,8 +580,8 @@ int main(int argc,char* argv[])
             std::cerr<<"Failed to exec: "<<arg<<std::endl;
         }
 
-      }
-  } while(*boolsettings["l"]);
+
+  }
   if(undoneExp.length() > 1 || lastExp.length() > 1)
   {
       std::cout<<std::endl<<"Ascal exited"<<std::endl;
@@ -590,6 +589,7 @@ int main(int argc,char* argv[])
   }
   catch(int exitCode){
       std::cerr<<"exit code: "<<exitCode<<std::endl;
+      return exitCode;
   }
   return 0;
 }
@@ -1380,6 +1380,51 @@ std::string existsAction(AscalFrame<double>* frame,bool saveLast)
         return "a1;"+frame->exp.substr(index,frame->exp.size());
     }
     return "a0;"+frame->exp.substr(index,frame->exp.size());
+}
+std::string sinAction(AscalFrame<double>* frame,bool saveLast)
+{
+    int index = frame->exp.find("sin",frame->index)+3;
+    while(frame->exp[index] == ' ')
+        index++;
+    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
+        index += exp.data.length()-3;
+    double input = callOnFrame(frame,exp.data);
+    frame->initialOperands.push(sin(input));
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"sin("<<input<<") = "<<sin(input)<<'\n';
+    }
+    return 'a'+frame->exp.substr(index,frame->exp.size());
+}
+std::string cosAction(AscalFrame<double>* frame,bool saveLast)
+{
+    int index = frame->exp.find("cos",frame->index)+3;
+    while(frame->exp[index] == ' ')
+        index++;
+    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
+        index += exp.data.length()-3;
+    double input = callOnFrame(frame,exp.data);
+    frame->initialOperands.push(cos(input));
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"cos("<<input<<") = "<<cos(input)<<'\n';
+    }
+    return 'a'+frame->exp.substr(index,frame->exp.size());
+}
+std::string tanAction(AscalFrame<double>* frame,bool saveLast)
+{
+    int index = frame->exp.find("tan",frame->index)+3;
+    while(frame->exp[index] == ' ')
+        index++;
+    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
+        index += exp.data.length()-3;
+    double input = callOnFrame(frame,exp.data);
+    frame->initialOperands.push(tan(input));
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"tan("<<input<<") = "<<tan(input)<<'\n';
+    }
+    return 'a'+frame->exp.substr(index,frame->exp.size());
 }
 std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -2447,7 +2492,7 @@ t calculateExpression(AscalFrame<double>* frame)
         	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
                 std::time_t end_time = std::chrono::system_clock::to_time_t(end);
            	    std::cout<<"Beginning execution of frame id: ";
-           	    printf("%lx\n", hash(currentFrame));
+           	    printf("%p\n",(void*) hash(currentFrame));
            	    std::cout<<std::ctime(&end_time);
            	}
 
@@ -2458,7 +2503,7 @@ t calculateExpression(AscalFrame<double>* frame)
          currentChar = currentFrame->exp[i];
          currentFrame->initialOperators.top(peeker);
          //anything used outside of the first { gets dropped from program stack, for param definition
-         currentFrame->level = currentFrame->level + (currentChar == '{') - (currentChar == '}');
+         currentFrame->level += (currentChar == '{') - (currentChar == '}');
 
 
          if(currentChar == '{' && currentFrame->level == 1)
@@ -2525,7 +2570,6 @@ t calculateExpression(AscalFrame<double>* frame)
                  }
                  //std::cout<<"New Expression after inputMapper: "<<exp<<std::endl;
                  i = -1;
-                 currentChar = currentFrame->exp[i];
                  currentFrame->index = i;
              }
              else
@@ -2654,7 +2698,7 @@ t calculateExpression(AscalFrame<double>* frame)
                 currentFrame->initialOperands.push(nextDouble);
             }
             //This is to support multiplication when expressions look like 2(4)
-            else if(currentChar == '(' && isNumeric(currentFrame->exp[i-1]))
+            else if(currentChar == '(' && i > 0 && isNumeric(currentFrame->exp[i-1]))
 
             {
                 currentFrame->initialOperators.push('*');
@@ -2688,7 +2732,7 @@ t calculateExpression(AscalFrame<double>* frame)
     	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
             std::time_t end_time = std::chrono::system_clock::to_time_t(end);
        	    std::cout<<"Finished execution of frame id: ";
-       	    printf("%lx\n", hash(currentFrame));
+       	    printf("%p\n",(void*) hash(currentFrame));
        	    std::cout<<std::ctime(&end_time);
         }
         if(currentFrame->getReturnPointer())
@@ -2710,6 +2754,10 @@ t calculateExpression(AscalFrame<double>* frame)
         if(currentFrame->isDynamicAllocation())
         {
             delete currentFrame;
+        }
+        else
+        {
+            frame->returnPointer = rtnFrame;
         }
         currentFrame = nullptr;
     }
@@ -2742,7 +2790,6 @@ t calculateExpression(AscalFrame<double>* frame)
         }
         throw error;
     }
-    frame->returnPointer = rtnFrame;
     return data;
 }
 bool isDouble(std::string &exp)
