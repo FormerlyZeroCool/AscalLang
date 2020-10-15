@@ -31,20 +31,6 @@
 
 #define DEBUG 1
 #define THROWERRORS 1
-#if DEBUG==1
-static uint32_t lastRunAllocatedTotal = 0,allocated = 0, allocatedCount = 0, freed = 0, rememberedFromMemoTableCount = 0;
-void* operator new(size_t size)
-{
-    allocated += size;
-    allocatedCount++;
-    return malloc(size);
-}
-void operator delete(void* memory)
-{
-    freed++;
-    free(memory);
-}
-#endif
 
 static const std::string VERSION = "2.01";
 struct SubStr{
@@ -71,6 +57,7 @@ std::string (*)(AscalFrame<double>*,bool)> inputMapper;
 
 template <class t>
 static std::map<char,t (*)(t&,t&)> operations;
+static size_t rememberedFromMemoTableCount;
 //End Program Global Memory Declaration
 /////////////////////////////
 
@@ -2148,13 +2135,13 @@ double calcWithOptions(AscalFrame<double>* frame)
             std::cout <<
                       "Stack frames used: "<<frameCount<<'\n'
                         <<"Variables accessed: "<<varCount<<'\n'
-						<<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
+						/*<<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
             <<"Currently active allocations: "<<allocatedCount-freed<<" Total Allocated: "<<allocatedCount<<" Total freed: "<<freed<<'\n'
-            <<"Memory used this call: "<<allocated-lastRunAllocatedTotal<<'\n'
+            <<"Memory used this call: "<<allocated-lastRunAllocatedTotal<<'\n'*/
 			<< "finished computation at " << std::ctime(&end_time)
 			                      << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
-            lastRunAllocatedTotal = allocated;
+            //lastRunAllocatedTotal = allocated;
         }
         //std::cout<<"\nresult: "<<to_string(result)<<"\nMax: "<<Max<<std::endl>;
         if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
@@ -2697,15 +2684,15 @@ t calculateExpression(AscalFrame<double>* frame)
                 double nextDouble = getNextDouble(currentFrame->exp,i);
                 currentFrame->initialOperands.push(nextDouble);
             }
+            else if(isOperator(currentChar))
+            {
+                currentFrame->initialOperators.push(currentChar);
+            }
             //This is to support multiplication when expressions look like 2(4)
             else if(currentChar == '(' && i > 0 && isNumeric(currentFrame->exp[i-1]))
 
             {
                 currentFrame->initialOperators.push('*');
-                currentFrame->initialOperators.push(currentChar);
-            }
-            else if(isOperator(currentChar))
-            {
                 currentFrame->initialOperators.push(currentChar);
             }
           }
