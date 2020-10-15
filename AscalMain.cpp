@@ -2424,8 +2424,8 @@ uint64_t hash(AscalFrame<double>* currentFrame)
 	hash += frameptr<<8;
 	return hash;
 }
-//stack for function calls
-//stack for params resolution. no, inheritance is the answer
+void clearStackOnError(bool printStack, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame);
+
 template <class t>
 t calculateExpression(AscalFrame<double>* frame)
 {
@@ -2751,33 +2751,42 @@ t calculateExpression(AscalFrame<double>* frame)
 
     }catch(std::string &error)
     {
-        frame->returnPointer = rtnFrame;
-        if(frame->isDynamicAllocation())
-        {
-            std::cerr<<"\nFunction call stack trace:\n";
-            while(!executionStack.isEmpty())
-            {
-                executionStack.top(currentFrame);
-                std::cerr<<"   ~:"<<currentFrame->exp<<'\n';
-                if(currentFrame->isDynamicAllocation())
-                    delete currentFrame;
-                executionStack.pop();
-            }
-            std::cerr<<"End of function call stack trace.\n";
-        }
-        else
-        {
-            while(!executionStack.isEmpty())
-            {
-                executionStack.top(currentFrame);
-                if(currentFrame->isDynamicAllocation())
-                    delete currentFrame;
-                executionStack.pop();
-            }
-        }
+    	clearStackOnError(frame->isDynamicAllocation(), executionStack, currentFrame, frame, rtnFrame);
         throw error;
     }
+    catch(int exitCode)
+    {
+    	clearStackOnError(false, executionStack, currentFrame, frame, rtnFrame);
+    	throw exitCode;
+    }
     return data;
+}
+void clearStackOnError(bool printStack, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame)
+{
+	frame->returnPointer = rtnFrame;
+	        if(printStack)
+	        {
+	            std::cerr<<"\nFunction call stack trace:\n";
+	            while(!executionStack.isEmpty())
+	            {
+	                executionStack.top(currentFrame);
+	                std::cerr<<"   ~:"<<currentFrame->exp<<'\n';
+	                if(currentFrame->isDynamicAllocation())
+	                    delete currentFrame;
+	                executionStack.pop();
+	            }
+	            std::cerr<<"End of function call stack trace.\n";
+	        }
+	        else
+	        {
+	            while(!executionStack.isEmpty())
+	            {
+	                executionStack.top(currentFrame);
+	                if(currentFrame->isDynamicAllocation())
+	                    delete currentFrame;
+	                executionStack.pop();
+	            }
+	        }
 }
 bool isDouble(std::string &exp)
 {
