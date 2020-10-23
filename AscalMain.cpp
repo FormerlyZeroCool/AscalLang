@@ -793,7 +793,7 @@ void loadFile(const std::string & expr,int startIndex)
         get_line(inputFile, calledFunctionMemory->exp);
         try{
 
-            interpretParam(calledFunctionMemory,false);
+            calculateExpression<double>(calledFunctionMemory);
         }
         catch(std::string &exception)
         {
@@ -1195,7 +1195,7 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
     double yClosestToZero = yMax;
     for(int y = tableHeight+1;y>=0;y--)
     {
-        if(abs(yMin+dy*y)<yClosestToZero)
+        if(std::abs(yMin+dy*y)<yClosestToZero)
             yClosestToZero = yMin+dy*y;
     }
     double xClosestToZero = xMax;
@@ -1204,7 +1204,7 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
     {
         xi = (dx*i+xMin);
 
-        if(abs(xi) < abs(xClosestToZero))
+        if(std::abs(xi) < std::abs(xClosestToZero))
             xClosestToZero = xi;
         if(i%5 == 0)
             std::cout<<std::to_string(xi).substr(0,4);
@@ -1953,7 +1953,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
 std::string printCalculation(AscalFrame<double>* frame,bool saveLast)
 {
     //the 6 added here could be 5 as print is only 5 char long,
-    //but I also want to accomodate printa sending unaltered statements to this function,
+    //but I also want to accomodate printc sending unaltered statements to this function,
     //and it's not like the expression itself can start at 5+ the index of print,
     //that must begin at 6+ the index of the p in print at least
     std::string exp = getExpr(frame->exp.substr(frame->exp.find("print",frame->index)+6,frame->exp.length()),0).data;
@@ -2420,8 +2420,8 @@ uint64_t hash(AscalFrame<double>* currentFrame)
 	hash ^= hash<<15;
 	hash ^= hash<<20;
 	hash ^= hash<<28;
-	hash += currentFrame->memoPointer;
 	hash += frameptr<<8;
+	hash += currentFrame->memoPointer;
 	return hash;
 }
 void clearStackOnError(bool printStack, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame);
