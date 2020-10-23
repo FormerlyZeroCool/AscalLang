@@ -1227,11 +1227,11 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
             bool drawNonFn = true;
             for(int z = outPuts.getHeight(); z>=0;z--)
             {
-                const double roundedFunctionOutput = (round((outPuts.get(x,z) - yMin) / dy) * dy) + yMin;
+                const double roundedFunctionOutput = (std::round((outPuts.get(x,z) - yMin) / dy) * dy) + yMin;
                 bool drawFnValue = true;
                 for(int a =0;drawFnValue && a < z;a++)
                 {
-                    drawFnValue = (roundedFunctionOutput != (round((outPuts.get(x,a) - yMin) / dy) * dy) + yMin);
+                    drawFnValue = (roundedFunctionOutput != (std::round((outPuts.get(x,a) - yMin) / dy) * dy) + yMin);
                 }
                 if(drawFnValue && y*dy+yMin == roundedFunctionOutput)
                 {
@@ -1249,7 +1249,7 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
                     std::cout<<" ";
             }
         }
-        std::cout<<" "<<round((y*dy+yMin)*10000)/10000<<"\n";
+        std::cout<<" "<<std::round((y*dy+yMin)*10000)/10000<<"\n";
     }
 
     for(int x = 0;x<tableWidth;x++)
