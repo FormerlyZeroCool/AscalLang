@@ -8,11 +8,14 @@
 #ifndef OBJECT_HPP_
 #define OBJECT_HPP_
 #include <iostream>
-
+#include <map>
 #include "AscalParameters.hpp"
+#include "ObjectKey.h"
 class Object {
 private:
 	std::string instructions;
+
+	std::map<std::string, Object> objectMap;
 public:
 	std::string id;
 	AscalParameters params;
@@ -24,6 +27,8 @@ public:
 	std::string instructionsToString();
 	std::string instructionsToFormattedString();
 	std::string& getInstructions();
+	Object& getChild(std::string &id);
+	void pushList(Object &data);
 	bool operator==(Object o);
 	virtual ~Object();
 };

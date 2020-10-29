@@ -98,6 +98,15 @@ bool Object::operator==(Object o)
 	return equal;
 }
 
+Object& Object::getChild(std::string &id)
+{
+	return this->objectMap.count(id)?this->objectMap[id]:throw std::string("Error finding "+this->id+"."+id);
+}
+
+void Object::pushList(Object &data)
+{
+	this->objectMap[data.id] = data;
+}
 int Object::setParams(std::string &param)
 {
 	//std::cout<<"Expression:"<<instructions<<" setParam in Object class input: "<<param<<std::endl;

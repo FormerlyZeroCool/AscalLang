@@ -31,7 +31,8 @@
 
 #define DEBUG 1
 #define THROWERRORS 1
-
+static const size_t sizeofFrame = sizeof(AscalFrame<double>);
+static size_t allocated = 0, deallocated = 0;;
 static const std::string VERSION = "2.01";
 struct SubStr{
     std::string data;
@@ -54,6 +55,9 @@ static std::map<std::string,setting<bool> > boolsettings;
 static std::unordered_map
 <std::string,
 std::string (*)(AscalFrame<double>*,bool)> inputMapper;
+static std::map
+<ObjectKey,
+std::string (*)(AscalFrame<double>*,Object&)> objectActionMapper;
 
 template <class t>
 static std::map<char,t (*)(t&,t&)> operations;
@@ -67,8 +71,10 @@ static size_t rememberedFromMemoTableCount;
 
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR '\\'
+#include <windows.h>
 #else
 #define PATH_SEPARATOR '/'
+#include <unistd.h>
 #endif
 
 #if DEBUG==1
@@ -96,6 +102,10 @@ void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 void updateBoolSetting(AscalFrame<double>* frame);
 
+std::string getListElementAction(AscalFrame<double>* frame, Object&);
+
+
+std::string sleepAction(AscalFrame<double>* frame,bool saveLast);
 std::string approxIntAction(AscalFrame<double>* frame,bool saveLast);
 std::string printDefaultAction(AscalFrame<double>* frame,bool saveLast);
 std::string elseAction(AscalFrame<double>* frame,bool saveLast);
@@ -378,6 +388,8 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 }
 void initParamMapper()
 {
+	objectActionMapper[ObjectKey("[","")] = getListElementAction;
+	inputMapper["sleep"] = sleepAction;
 	inputMapper["sci"] = updateBoolSettingAction;
 	inputMapper["tan"] = tanAction;
 	inputMapper["sin"] = sinAction;
@@ -531,12 +543,15 @@ int main(int argc,char* argv[])
         }
         try{
             FunctionFrame<double>* frame = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+            allocated += sizeofFrame;
             frame->exp = arg;
             interpretParam(frame,true);
     }
     catch(std::string &exception)
     {
+        std::cerr<<"Function call stack trace.\n";
         std::cerr<<exception<<std::endl;
+        std::cerr<<"End of function call stack trace.\n";
         std::cerr<<"Failed to exec: "<<arg<<std::endl;
     }
     }
@@ -548,7 +563,7 @@ int main(int argc,char* argv[])
 
   while(*boolsettings["l"])
   {
-
+      allocated += sizeofFrame;
           //Interpreter prompt to let user know program is expecting a command/expression
           FunctionFrame<double>* frame = new FunctionFrame<double>(nullptr,nullptr,nullptr);
           std::cout<<std::endl<<">>";
@@ -563,6 +578,7 @@ int main(int argc,char* argv[])
         }
         catch(std::string &exception)
         {
+            std::cerr<<"Function call stack trace.\n";
             std::cerr<<exception<<std::endl;
             std::cerr<<"Failed to exec: "<<arg<<std::endl;
         }
@@ -747,8 +763,8 @@ std::string inputAction(AscalFrame<double>* frame,bool s)
         std::cout<<result;
         std::string input;
         get_line(std::cin,input);
-        std::string inputReduced = to_string(callOnFrame(frame,input));
-    return "a"+inputReduced+frame->exp.substr(endOfPrint+1,frame->exp.size());
+        frame->initialOperands.push(callOnFrame(frame,input));
+    return "a"+frame->exp.substr(endOfPrint+1,frame->exp.size());
 
 }
 void loadFile(const std::string & expr,int startIndex)
@@ -789,6 +805,8 @@ void loadFile(const std::string & expr,int startIndex)
     int locLineCount = lineCount;
     while(inputFile)
     {
+
+        allocated += sizeofFrame;
         FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
         get_line(inputFile, calledFunctionMemory->exp);
         try{
@@ -803,6 +821,7 @@ void loadFile(const std::string & expr,int startIndex)
     }
     std::cin.rdbuf(stream_buffer_cin);
 }
+
 std::string importAction(AscalFrame<double>* frame,bool s)
 {
     bool print = *boolsettings["p"];
@@ -1184,6 +1203,7 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
         for(int i = 0;i<tableWidth;i++)
         {
             xi = xMin+dx*(i);
+            allocated += sizeofFrame;
             FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
             calledFunction->exp = function+'('+to_string(xi)+')';
             outPuts.push_back(
@@ -1315,6 +1335,7 @@ std::string approxIntAction(AscalFrame<double>* frame,bool saveLast)
         for(int i = 0;i<tableWidth;i++)
         {
             xi = xMin+dx*(i+1);
+            allocated += sizeofFrame;
             FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
             calledFunction->exp = function+'('+to_string(xi)+')';
             thisIndex = calculateExpression<double>(calledFunction);//outPuts.get(i,j)*dx;
@@ -1368,95 +1389,140 @@ std::string existsAction(AscalFrame<double>* frame,bool saveLast)
     }
     return "a0;"+frame->exp.substr(index,frame->exp.size());
 }
+SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start, char end)
+{
+	int index = frame->index+id.length();
+	    while(frame->exp[index] == ' ')
+	        index++;
+	    SubStr exp = getExpr(frame->exp,index, start, end,'\1');
+	        index += exp.data.length()-3;
+	      exp.end = index;
+	      return exp;
+}
+Object getObject(AscalFrame<double>* frame, std::string &functionName)
+{
+	Object fn;
+	if(frame->getLocalMemory()->count(functionName))
+	            {
+	                fn = (*frame->getLocalMemory())[functionName];
+	            }
+	            else if(frame->getParamMemory()->count(functionName))
+	            {
+	                fn = (*frame->getParamMemory())[functionName];
+	            }
+	            else if(memory.count(functionName))
+	            {
+	                fn = memory[functionName];
+	            }
+	            else
+	            {
+	                throw std::string("Error locating object\n");
+	            }
+	return fn;
+}
+std::string objectAction(AscalFrame<double>* frame,bool saveLast)
+{
+	frame->index += 5;
+	SubStr varName = getVarName(frame->exp, frame->index);
+	frame->index += varName.data.length();
+
+	ObjectKey key(frame->exp.substr(frame->index, frame->index), varName.data);
+	Object obj = getObject(frame, varName.data);
+	frame->initialOperands.push(callOnFrame(frame, objectActionMapper[key](frame, obj)));
+	return 'a'+frame->exp.substr(frame->index);
+}
+std::string getListElementAction(AscalFrame<double>* frame, Object &obj)
+{
+	SubStr expIndex = getExpr(frame->exp,frame->index,'[',']');
+	frame->index += expIndex.data.length();
+	while(frame->exp[frame->index] == ' ')
+	{
+		frame->index++;
+	}
+	return obj.getChild(expIndex.data).getInstructions();
+}
 std::string sinAction(AscalFrame<double>* frame,bool saveLast)
 {
-    int index = frame->exp.find("sin",frame->index)+3;
-    while(frame->exp[index] == ' ')
-        index++;
-    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-3;
+    SubStr exp = getFollowingExpr(frame, "sin");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(sin(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"sin("<<input<<") = "<<sin(input)<<'\n';
     }
-    return 'a'+frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "sleep");
+    double input = callOnFrame(frame,exp.data);
+    usleep(((int)input)*100);
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"sleeping for "<<input<<" tenths of a milli-second\n";
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string cosAction(AscalFrame<double>* frame,bool saveLast)
 {
-    int index = frame->exp.find("cos",frame->index)+3;
-    while(frame->exp[index] == ' ')
-        index++;
-    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-3;
+
+    SubStr exp = getFollowingExpr(frame, "cos");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(cos(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"cos("<<input<<") = "<<cos(input)<<'\n';
     }
-    return 'a'+frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string tanAction(AscalFrame<double>* frame,bool saveLast)
 {
-    int index = frame->exp.find("tan",frame->index)+3;
-    while(frame->exp[index] == ' ')
-        index++;
-    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-3;
+
+    SubStr exp = getFollowingExpr(frame, "tan");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(tan(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"tan("<<input<<") = "<<tan(input)<<'\n';
     }
-    return 'a'+frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
 {
-    int index = frame->exp.find("arctan",frame->index)+6;
-    while(frame->exp[index] == ' ')
-        index++;
-    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-3;
+
+    SubStr exp = getFollowingExpr(frame, "arctan");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(atan(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"arctan("<<input<<") = "<<atan(input)<<'\n';
     }
-    return 'a'+frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
 {
-    int index = frame->exp.find("arcsin",frame->index)+6;
-    while(frame->exp[index] == ' ')
-        index++;
-    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-3;
+
+    SubStr exp = getFollowingExpr(frame, "arcsin");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(asin(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"arcsin("<<input<<") = "<<asin(input)<<'\n';
     }
-    return 'a'+frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
 {
-    int index = frame->exp.find("arccos",frame->index)+6;
-    while(frame->exp[index] == ' ')
-        index++;
-    SubStr exp = getExpr(frame->exp,index, '(', ')','\0');
-        index += exp.data.length()-3;
+
+    SubStr exp = getFollowingExpr(frame, "arccos");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(acos(input));
     if(*boolsettings["o"])
     {
     	std::cout<<"arccos("<<input<<") = "<<acos(input)<<'\n';
     }
-    return 'a'+frame->exp.substr(index,frame->exp.size());
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string setAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -1519,6 +1585,7 @@ void execExpList( std::vector<std::string> &expressions,std::map<std::string,Obj
     {
         try{
             //std::cout<<"Execedin exec explist: "<<exp<<std::endl;
+            allocated += sizeofFrame;
             FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
             calledFunction->exp = exp;
             calculateExpression<double>(calledFunction);
@@ -1704,21 +1771,23 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
 template <class t>
 t callOnFrame(AscalFrame<t>* callingFrame,std::string subExp)
 {
+    allocated += sizeofFrame;
     ParamFrame<t> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
     t data = calculateExpression<t>(&executionFrame);
-
+    deallocated += sizeofFrame;
     return data;
 }
 template <class t>
 t callOnFrameFormatted(AscalFrame<t>* callingFrame,std::string subExp)
 {
+    allocated += sizeofFrame;
     ParamFrame<t> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
     t data = calcWithOptions(&executionFrame);
-
+    deallocated += sizeofFrame;
     return data;
 }
 std::string whileAction(AscalFrame<double>* frame,bool saveLast)
@@ -1861,7 +1930,22 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     std::string expbkp = frame->exp;
     frame->index = 0;
     const int startIndex = frame->exp.find("when",frame->index)<1000?frame->exp.find("when",frame->index):0;
-    const int endIndex = frame->exp.find("end",frame->index)<1000?frame->exp.find("end",frame->index):0;
+
+    int endIndex = frame->index;
+    {
+    int i = endIndex;
+    uint8_t qCount = 0;
+    while(i < frame->exp.length()-2)
+    {
+    	qCount = ((frame->exp[i] == '\"') + qCount) & 1;
+    	if(frame->exp[i] == 'e' && frame->exp[i+1] == 'n' && frame->exp[i+2] == 'd' && qCount == 0)
+    	{
+    		endIndex = i;
+    		i = 2000000000;
+    	}
+    	i++;
+    }
+    }
     //std::string startOfExp = expr.substr(0,startIndex);
     std::string endOfExp = frame->exp.substr(endIndex+3,frame->exp.length());
     std::string value;
@@ -1874,7 +1958,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     int whenIndex = startIndex;
     double boolExpValue;
     int elseIndex = frame->exp.find("else",frame->index);
-    elseIndex = elseIndex==-1?1000000:elseIndex;
+    elseIndex = elseIndex==-1?2000000000:elseIndex;
     int lastThen = 0;
     //std::cout<<"start: "<<startOfExp<<" End: "<<endOfExp<<"\n";
     do {
@@ -2135,9 +2219,8 @@ double calcWithOptions(AscalFrame<double>* frame)
             std::cout <<
                       "Stack frames used: "<<frameCount<<'\n'
                         <<"Variables accessed: "<<varCount<<'\n'
-						/*<<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
-            <<"Currently active allocations: "<<allocatedCount-freed<<" Total Allocated: "<<allocatedCount<<" Total freed: "<<freed<<'\n'
-            <<"Memory used this call: "<<allocated-lastRunAllocatedTotal<<'\n'*/
+						<<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
+            <<"Currently active allocations: "<<allocated-deallocated<<" Total Allocated: "<<allocated<<" Total freed: "<<deallocated<<'\n'
 			<< "finished computation at " << std::ctime(&end_time)
 			                      << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
@@ -2379,7 +2462,6 @@ void printStack(stack<t> &operands)
 //then using * operator to get setting data
 //which is an overloaded operator in the settings class
 
-#include "AscalFrame.hpp"
 template <typename t>
 void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp,std::string &varName, int i,uint64_t hash);
 
@@ -2388,19 +2470,21 @@ uint64_t hashFunctionCall(std::string &exp)
 {
     return hashfn(exp);
 }
+static uint64_t h;
 uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
+	h = hash;
     for(std::string &s:params)
     {
+        hash += hashfn(s);
         hash ^= hash<<5;
         hash ^= hash<<12;
         hash ^= hash<<18;
         hash ^= hash<<21;
         hash ^= hash<<26;
         hash ^= hash<<29;
-        hash += hashfn(s);
     }
-    return hash;
+    return hash+h;
 }
 uint64_t hash(AscalFrame<double>* currentFrame)
 {
@@ -2424,7 +2508,7 @@ uint64_t hash(AscalFrame<double>* currentFrame)
 	hash += currentFrame->memoPointer;
 	return hash;
 }
-void clearStackOnError(bool printStack, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame);
+void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame);
 
 template <class t>
 t calculateExpression(AscalFrame<double>* frame)
@@ -2476,11 +2560,8 @@ t calculateExpression(AscalFrame<double>* frame)
         	}
         	if(*boolsettings["d"])
            	{
-        	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
-                std::time_t end_time = std::chrono::system_clock::to_time_t(end);
            	    std::cout<<"Beginning execution of frame id: ";
            	    printf("%p\n",(void*) hash(currentFrame));
-           	    std::cout<<std::ctime(&end_time);
            	}
 
         }
@@ -2543,11 +2624,8 @@ t calculateExpression(AscalFrame<double>* frame)
                      //just make sure first character in returned string is a throwaway alphabetical character
                      //it will not be parsed so ensure it is not meaningful code
                      currentFrame->exp = result.substr(1,currentFrame->exp.length());
-                     //std::cout<<"Expression after statement altering keyword: "<<exp<<std::endl;
-                     //std::cout<<"expression returned from when action: "<<exp<<std::endl;
 
                      i = -1;
-                     //currentChar = exp[i];
                      currentFrame->index = 0;
                      continue;
                  }
@@ -2555,7 +2633,6 @@ t calculateExpression(AscalFrame<double>* frame)
                  {
                      currentFrame->exp = currentFrame->exp.substr(i,currentFrame->exp.length());
                  }
-                 //std::cout<<"New Expression after inputMapper: "<<exp<<std::endl;
                  i = -1;
                  currentFrame->index = i;
              }
@@ -2579,7 +2656,6 @@ t calculateExpression(AscalFrame<double>* frame)
                  }
                  else if(data.id.length() != 0)
                  {
-                              //*boolsettings["p"]  = false;
                      std::string params = currentFrame->exp[varName.end+1] =='('?
                      currentFrame->exp.substr(varName.end+1):"";
                      int endOfParams = data.setParams(params);
@@ -2602,7 +2678,7 @@ t calculateExpression(AscalFrame<double>* frame)
                      ?currentFrame->exp.substr(varName.end+1)
                      :"";
                      int endOfParams = paramData.setParams(params);
-                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
+                     int startOfEnd = paramData.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
 
                      //creates a new set of stack frames, one for the function/var and one for resolution,
                      //and calculation of each of it's parameters
@@ -2731,59 +2807,67 @@ t calculateExpression(AscalFrame<double>* frame)
                     memoPad[currentFrame->memoPointer] = data;
                 }
                 if(*boolsettings["o"] && std::to_string(data).length() != MAX.length()){
-                	//include unix time finished
                     std::cout<<"Returning value: "<<data<<'\n';
                 }
             }
             currentFrame->returnResult(data, memory);
         }
         executionStack.pop();
+        frame->returnPointer = rtnFrame;
         if(currentFrame->isDynamicAllocation())
         {
             delete currentFrame;
-        }
-        else
-        {
-            frame->returnPointer = rtnFrame;
+            deallocated += sizeofFrame;
         }
         currentFrame = nullptr;
     }
 
     }catch(std::string &error)
     {
-    	clearStackOnError(frame->isDynamicAllocation(), executionStack, currentFrame, frame, rtnFrame);
+    	clearStackOnError(true, error, executionStack, currentFrame, frame, rtnFrame);
         throw error;
     }
     catch(int exitCode)
     {
-    	clearStackOnError(false, executionStack, currentFrame, frame, rtnFrame);
+    	clearStackOnError(false, frame->exp, executionStack, currentFrame, frame, rtnFrame);
     	throw exitCode;
     }
     return data;
 }
-void clearStackOnError(bool printStack, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame)
+#include <sstream>
+void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame)
 {
 	frame->returnPointer = rtnFrame;
 	        if(printStack)
 	        {
-	            std::cerr<<"\nFunction call stack trace:\n";
+	        	std::stringstream data;
+	            size_t errorStartMarker = error.find("\1\1\2\3");
+	            if(errorStartMarker<0 || errorStartMarker > error.length())
+	            	errorStartMarker = 0;
+	            data<<error.substr(0, errorStartMarker);
 	            while(!executionStack.isEmpty())
 	            {
 	                executionStack.top(currentFrame);
-	                std::cerr<<"   ~:"<<currentFrame->exp<<'\n';
-	                if(currentFrame->isDynamicAllocation())
+	                data << "   ~:"<<currentFrame->exp<<'\n';
+	                if(currentFrame->isDynamicAllocation()){
 	                    delete currentFrame;
+	                    deallocated += sizeofFrame;
+	                }
 	                executionStack.pop();
 	            }
-	            std::cerr<<"End of function call stack trace.\n";
+	            data << "\1\1\2\3";
+	            data << error.substr(errorStartMarker);
+	            error = data.str();
 	        }
 	        else
 	        {
 	            while(!executionStack.isEmpty())
 	            {
 	                executionStack.top(currentFrame);
-	                if(currentFrame->isDynamicAllocation())
+	                if(currentFrame->isDynamicAllocation()){
 	                    delete currentFrame;
+	                    deallocated += sizeofFrame;
+	                }
 	                executionStack.pop();
 	            }
 	        }
@@ -2817,6 +2901,7 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         frameCount++;
         //create and set new frame expression
         FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
+        allocated += sizeofFrame;
         //newFrame->stackIndex = currentFrame->stackIndex+1;
         newFrame->exp = exp;
         if(memory.count(varName) == 0)
@@ -2828,6 +2913,7 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         executionStack.push(newFrame);
         for(int i = 0; i < params.size(); i++)
         {
+            allocated += sizeofFrame;
             if(params[i][0] != '&')
             {
                 //create and set new frame expression
