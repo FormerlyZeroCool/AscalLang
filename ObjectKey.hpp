@@ -5,8 +5,8 @@
  *      Author: andrewrubinstein
  */
 
-#ifndef OBJECTKEY_H_
-#define OBJECTKEY_H_
+#ifndef OBJECTKEY_HPP_
+#define OBJECTKEY_HPP_
 #include <utility>
 #include <string>
 class ObjectKey: public std::pair<std::string,std::string> {

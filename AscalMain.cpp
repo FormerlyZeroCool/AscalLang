@@ -25,6 +25,7 @@
 
 #include "AscalFrame.hpp"
 #include "Object.hpp"
+#include "ObjectKey.hpp"
 #include "setting.hpp"
 #include "stack.hpp"
 #include "Vect2D.hpp"

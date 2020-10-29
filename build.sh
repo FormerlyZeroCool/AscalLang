@@ -1,7 +1,7 @@
 echo "Building Ascal Interpreter with g++ -o"
-g++ -c -O2 AscalMain.cpp AscalFrame.hpp AscalParameters.cpp Object.cpp queue.hpp setting.hpp stack.hpp unsortedlist.hpp
-g++ -o ascal AscalMain.o Object.o AscalParameters.o   
-rm AscalMain.o Object.o AscalParameters.o
+g++ -c -O2 AscalMain.cpp AscalFrame.hpp AscalParameters.cpp Object.cpp queue.hpp setting.hpp stack.hpp unsortedlist.hpp ObjectKey.cpp
+g++ -o ascal AscalMain.o Object.o AscalParameters.o ObjectKey.o 
+rm AscalMain.o Object.o AscalParameters.o ObjectKey.o
 rm AscalFrame.hpp.gch AscalParameters.hpp.gch Object.hpp.gch queue.hpp.gch stack.hpp.gch unsortedlist.hpp.gch setting.hpp.gch
 clear
 echo "Starting Ascal interpreter"
