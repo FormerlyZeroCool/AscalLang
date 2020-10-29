@@ -27,7 +27,7 @@ public:
 	std::string instructionsToString();
 	std::string instructionsToFormattedString();
 	std::string& getInstructions();
-	Object& getChild(std::string &id);
+	Object getChild(std::string &id);
 	void pushList(Object &data);
 	bool operator==(Object o);
 	virtual ~Object();

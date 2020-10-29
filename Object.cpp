@@ -98,7 +98,7 @@ bool Object::operator==(Object o)
 	return equal;
 }
 
-Object& Object::getChild(std::string &id)
+Object Object::getChild(std::string &id)
 {
 	return this->objectMap.count(id)?this->objectMap[id]:throw std::string("Error finding "+this->id+"."+id);
 }
