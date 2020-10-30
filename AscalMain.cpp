@@ -1471,7 +1471,6 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
-#include "hashmap.hpp"
 std::string pauseAction(AscalFrame<double>* frame,bool saveLast)
 {
     std::string s;
