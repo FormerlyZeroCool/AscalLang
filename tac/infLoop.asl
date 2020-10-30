@@ -11,14 +11,14 @@ loc n = {
       
     };
 loc x = 0;
-loc max = 100
+
     while True{
       set x = (x+1)%max;
-      n(sin(x/30)*max);
-      print "Hello!endl"
-      sleep(120);
+      n(max+sin(x/(max/(2*pi)))*max);
+      print "Hello!endl";
+      sleep(220);
     };
     
   };
 
-f()
+f(60)
