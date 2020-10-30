@@ -25,7 +25,6 @@
 
 #include "AscalFrame.hpp"
 #include "Object.hpp"
-#include "ObjectKey.hpp"
 #include "setting.hpp"
 #include "stack.hpp"
 #include "Vect2D.hpp"
@@ -566,15 +565,12 @@ int main(int argc,char* argv[])
   {
       allocated += sizeofFrame;
           //Interpreter prompt to let user know program is expecting a command/expression
-          FunctionFrame<double>* frame = new FunctionFrame<double>(nullptr,nullptr,nullptr);
-          std::cout<<std::endl<<">>";
-          get_line(std::cin, arg);
-          arg = getExpr(arg,0).data;
-          frame->exp = arg;
-            std::map<std::string,Object> localMemory;
-            std::map<std::string,Object> paramMemory;
-            try{
-
+      FunctionFrame<double>* frame = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+      std::cout<<std::endl<<">>";
+      get_line(std::cin, arg);
+      arg = getExpr(arg,0).data;
+      frame->exp = arg;
+        try{
                 interpretParam(frame, true);
         }
         catch(std::string &exception)
@@ -583,8 +579,6 @@ int main(int argc,char* argv[])
             std::cerr<<exception<<std::endl;
             std::cerr<<"Failed to exec: "<<arg<<std::endl;
         }
-
-
   }
   if(undoneExp.length() > 1 || lastExp.length() > 1)
   {
@@ -763,7 +757,10 @@ std::string inputAction(AscalFrame<double>* frame,bool s)
         }
         std::cout<<result;
         std::string input;
+    	std::streambuf* currentBuffer = std::cin.rdbuf();
+        std::cin.rdbuf(stream_buffer_cin);
         get_line(std::cin,input);
+        std::cin.rdbuf(currentBuffer);
         frame->initialOperands.push(callOnFrame(frame,input));
     return "a"+frame->exp.substr(endOfPrint+1,frame->exp.size());
 
@@ -1440,6 +1437,12 @@ std::string getListElementAction(AscalFrame<double>* frame, Object &obj)
 	while(frame->exp[frame->index] == ' ')
 	{
 		frame->index++;
+	}
+	if(frame->exp[frame->index] == '(')
+	{
+		SubStr params = getExpr(frame->exp,frame->index, '(', ')');
+		frame->index += params.data.length();
+
 	}
 	return obj.getChild(expIndex.data).getInstructions();
 }
@@ -2771,6 +2774,18 @@ t calculateExpression(AscalFrame<double>* frame)
             {
                 currentFrame->initialOperators.push('*');
                 currentFrame->initialOperators.push(currentChar);
+            }else if(currentChar == ';')
+            {
+            	int index = frame->index + 1;
+            	while(frame->exp[index] == ' ')
+            		index++;
+            	if(index != frame->exp.length() - 1)
+            	{
+                    while(!currentFrame->initialOperands.isEmpty())
+                        currentFrame->initialOperands.pop();
+                    while(!currentFrame->initialOperators.isEmpty())
+                        currentFrame->initialOperators.pop();
+            	}
             }
           }
         //Finally pop all values off initial stack onto final stacks for processing
@@ -2877,11 +2892,11 @@ bool isDouble(std::string &exp)
 {
     bool isADouble = true;
     char periodCount = 0;
-    for(int i = exp[0] == '-'; isADouble && exp[i] && i < exp.length(); i++)
+    for(int i = (exp[0] == '-'); isADouble && i < exp.length(); i++)
     {
         //to avoid branching I'm doing boolean arithmetic to determine if a string is a double
         periodCount += (exp[i] == '.');
-        isADouble = (isNumeric(exp[i]) || (periodCount <= 1 && exp[i] == '.') ||
+        isADouble = ((exp[i] >= '0' && exp[i] <= '9' ) || (periodCount == 1 && exp[i] == '.') ||
                      (exp[i] == ';' && exp[i+1] == 0));
     }
     return isADouble;
