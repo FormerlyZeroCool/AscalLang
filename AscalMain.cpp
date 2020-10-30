@@ -105,6 +105,7 @@ void updateBoolSetting(AscalFrame<double>* frame);
 std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
+std::string pauseAction(AscalFrame<double>* frame,bool saveLast);
 std::string sleepAction(AscalFrame<double>* frame,bool saveLast);
 std::string approxIntAction(AscalFrame<double>* frame,bool saveLast);
 std::string printDefaultAction(AscalFrame<double>* frame,bool saveLast);
@@ -328,7 +329,7 @@ void loadInitialFunctions()
     loadFn(Object("dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
     loadFn(Object("toDeg","rad*180/pi",""));
     loadFn(Object("toRad","deg*pi/180",""));
-    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null",""));
+    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";pause;};null",""));
     loadFn(Object("clear","println(150)",""));
     loadFn(Object("floor","x-x%1",""));
     loadFn(Object("ceiling","when x%1=0 then x else x+1-x%1 end",""));
@@ -390,6 +391,7 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
+	inputMapper["pause"] = pauseAction;
 	inputMapper["sleep"] = sleepAction;
 	inputMapper["sci"] = updateBoolSettingAction;
 	inputMapper["tan"] = tanAction;
@@ -1469,6 +1471,17 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
+std::string pauseAction(AscalFrame<double>* frame,bool saveLast)
+{
+    std::string s;
+    std::cout<<"Pausing press enter to continue.\n";
+
+	std::streambuf* currentBuffer = std::cin.rdbuf();
+    std::cin.rdbuf(stream_buffer_cin);
+    get_line(std::cin,s);
+    std::cin.rdbuf(currentBuffer);
+    return 'a'+frame->exp.substr(frame->index+5,frame->exp.size());
+}
 std::string cosAction(AscalFrame<double>* frame,bool saveLast)
 {
 
@@ -2052,9 +2065,27 @@ std::string printCalculation(AscalFrame<double>* frame,bool saveLast)
     *boolsettings["p"] = print;
     return MAX;
 }
-void printVar(const std::string &expr,bool saveLast)
+void printVar(AscalFrame<double>* frame,bool saveLast)
 {
-    std::cout<<getVarName(expr,10).data<<" = "<<memory[getVarName(expr,10).data].instructionsToFormattedString()<<"\n";
+	std::string data;
+
+	if(frame->getLocalMemory()->count(getVarName(frame->exp, frame->index+10).data))
+	{
+		data = (*frame->getLocalMemory())[getVarName(frame->exp, frame->index+10).data].instructionsToFormattedString();
+	}
+	else if(memory.count(getVarName(frame->exp, frame->index+10).data))
+	{
+		data = memory[getVarName(frame->exp, frame->index+10).data].instructionsToFormattedString();
+	}
+	else if(frame->getParamMemory()->count(getVarName(frame->exp, frame->index+10).data))
+	{
+		data = (*frame->getParamMemory())[getVarName(frame->exp, frame->index+10).data].instructionsToFormattedString();
+	}
+	else
+	{
+		throw std::string("Error invalid variable");
+	}
+    std::cout<<getVarName(frame->exp, frame->index+10).data<<" = "<<data<<"\n";
 }
 
 std::string printDefaultAction(AscalFrame<double>* frame,bool saveLast)
@@ -2096,7 +2127,7 @@ std::string printCommand(AscalFrame<double>* frame,bool saveLast)
             }
             else if(cmpstr(frame->exp.substr(start,3),"var"))
             {
-                printVar(frame->exp,saveLast);
+                printVar(frame,saveLast);
             }
             else
             {
@@ -2364,8 +2395,6 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
             }
             if(line[line.size()-1]!=opening && result[result.size()-1] != lineBreak)
                 result.push_back(lineBreak);
-
-
         }
         if(openingCount > 0 && line.length() <= index+count)
         {
@@ -2823,7 +2852,7 @@ t calculateExpression(AscalFrame<double>* frame)
                 {
                     memoPad[currentFrame->memoPointer] = data;
                 }
-                if(*boolsettings["o"] && std::to_string(data).length() != MAX.length()){
+                if(currentFrame != frame && *boolsettings["o"] && std::to_string(data).length() != MAX.length()){
                     std::cout<<"Returning value: "<<data<<'\n';
                 }
             }
@@ -2889,16 +2918,18 @@ void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFra
 	            }
 	        }
 }
+static char periodCount;
+static bool isADouble;
 bool isDouble(std::string &exp)
 {
-    bool isADouble = true;
-    char periodCount = 0;
-    for(int i = (exp[0] == '-'); isADouble && i < exp.length(); i++)
+    isADouble = true;
+    periodCount = 0;
+    for(uint16_t i = (exp[0] == '-'); isADouble && i < exp.length(); i++)
     {
         //to avoid branching I'm doing boolean arithmetic to determine if a string is a double
         periodCount += (exp[i] == '.');
         isADouble = ((exp[i] >= '0' && exp[i] <= '9' ) || (periodCount == 1 && exp[i] == '.') ||
-                     (exp[i] == ';' && exp[i+1] == 0));
+                     (exp[i] == ';' && (exp[i+1] == 0 || exp[i+2] == 0|| exp[i+3] == 0) ));
     }
     return isADouble;
 }
