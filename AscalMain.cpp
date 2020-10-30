@@ -246,7 +246,8 @@ void get_line(std::istream &in,std::string&data)
 
 void printLoadedMemMessage(Object function)
 {
-    std::cout<<"Loaded Function: "<<function.id<<"\nexpression: "<<function.instructionsToFormattedString()<<std::endl<<std::endl;
+	if(*boolsettings["o"])
+		std::cout<<"Loaded Function: "<<function.id<<"\nexpression: "<<function.instructionsToFormattedString()<<std::endl<<std::endl;
 }
 bool containsOperator(std::string s)
 {
@@ -586,7 +587,7 @@ int main(int argc,char* argv[])
   }
   }
   catch(int exitCode){
-      std::cerr<<"exit code: "<<exitCode<<std::endl;
+      //std::cerr<<"exit code: "<<exitCode<<std::endl;
       return exitCode;
   }
   return 0;
@@ -887,7 +888,7 @@ std::string timeToRunBoolSetting(AscalFrame<double>* frame,bool s)
 }
 std::string quitAction(AscalFrame<double>* frame,bool s)
 {
-    if(*boolsettings["p"])
+    if(*boolsettings["o"])
         std::cout<<"Quitting Ascal, have a nice day!"<<std::endl;
     throw 0;
     return MAX;
