@@ -1471,10 +1471,11 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
+#include "hashmap.hpp"
 std::string pauseAction(AscalFrame<double>* frame,bool saveLast)
 {
     std::string s;
-    std::cout<<"Pausing press enter to continue.\n";
+    std::cout<<"Paused press enter to continue.\n";
 
 	std::streambuf* currentBuffer = std::cin.rdbuf();
     std::cin.rdbuf(stream_buffer_cin);
@@ -1944,10 +1945,8 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     //find when evaluate expression between it and then
     //if the expression evaluates to anything other than 0
     //then extract the expression proceeding the then statement
-
-    std::string expbkp = frame->exp;
-    frame->index = 0;
-    const int startIndex = frame->exp.find("when",frame->index)<1000?frame->exp.find("when",frame->index):0;
+    //frame->index = 0;
+    const int startIndex = frame->index;
 
     int endIndex = frame->index;
     {
@@ -1967,7 +1966,6 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     //std::string startOfExp = expr.substr(0,startIndex);
     std::string endOfExp = frame->exp.substr(endIndex+3,frame->exp.length());
     std::string value;
-    std::string extractedBranch;
     int index = startIndex + 4;
     std::vector<char> exp;
     //should always start after when is finished to build boolean expression
@@ -2011,7 +2009,6 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
         {
             throw std::string("In When Action Calculating BooleanExpression: "+booleanExpression+"\n"+exception);
         }
-        //*boolsettings["o"] = showOp;
     //false case simply set the index to the next instance of when+4
     //and repeat until true, or at end of case when
         if(boolExpValue == 0)
@@ -2021,11 +2018,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
             if(whenIndex == -1 && elseIndex != 1000000)
             {
                 value = getExpr(frame->exp.substr(elseIndex+4,endIndex-(elseIndex+4)),0).data;
-                extractedBranch = value;
                 index = endIndex;
-                value = //startOfExp+
-                        value.substr(0,value.length()-1)+endOfExp;
-                //std::cout<<"In Else Case rtn val: "<<value<<"\n";
             }
 
         }
@@ -2035,22 +2028,17 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
             index += 5;
             thenIndex = frame->exp.find("when",index);
             thenIndex = thenIndex==-1?endIndex+1:thenIndex;
-
             value = getExpr(frame->exp.substr(index,std::min(std::min(endIndex,thenIndex),elseIndex)-index),0).data;
-            extractedBranch = value;
-
-            value = //startOfExp+
-            value.substr(0,value.length()-1)+endOfExp;
         }
         lastThen = thenIndex;
     } while(frame->exp[index] && boolExpValue == 0 && index < endIndex);
     if(*boolsettings["o"])
     {
-        std::cout<<"Executing Branch: "<<extractedBranch<<" Params: "<<printMemory(*frame->getParamMemory()," = ",false,"|");
+        std::cout<<"Executing Branch: "<<value<<" Params: "<<printMemory(*frame->getParamMemory()," = ",false,"|");
         std::cout<<"\n";
     }
     frame->index = 0;
-    return "a"+value;
+    return "a"+value.substr(0,value.length()-1)+endOfExp;
 }
 std::string printCalculation(AscalFrame<double>* frame,bool saveLast)
 {
@@ -2804,18 +2792,6 @@ t calculateExpression(AscalFrame<double>* frame)
             {
                 currentFrame->initialOperators.push('*');
                 currentFrame->initialOperators.push(currentChar);
-            }else if(currentChar == ';')
-            {
-            	int index = frame->index + 1;
-            	while(frame->exp[index] == ' ')
-            		index++;
-            	if(index != frame->exp.length() - 1)
-            	{
-                    while(!currentFrame->initialOperands.isEmpty())
-                        currentFrame->initialOperands.pop();
-                    while(!currentFrame->initialOperators.isEmpty())
-                        currentFrame->initialOperators.pop();
-            	}
             }
           }
         //Finally pop all values off initial stack onto final stacks for processing
