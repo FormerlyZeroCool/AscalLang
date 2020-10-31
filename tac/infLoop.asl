@@ -1,4 +1,5 @@
-let f = (iterations, max){
+let f = {
+
     loc n = {
       loc c = 0;
       while c<x{
@@ -16,6 +17,9 @@ let f = (iterations, max){
       };
       
     };
+    cloc iterations = input "How many lines should I print? ";
+    quitl(iterations);
+    cloc max = input "Enter an amplitude: ";
     loc x = 0;
     loc y = 0;
     if(iterations = 0){
@@ -40,5 +44,6 @@ let f = (iterations, max){
       
     };
     
- }
+ };
+f
 
