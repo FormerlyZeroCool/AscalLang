@@ -105,6 +105,7 @@ void updateBoolSetting(AscalFrame<double>* frame);
 std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
+std::string randomAction(AscalFrame<double>* frame,bool saveLast);
 std::string pauseAction(AscalFrame<double>* frame,bool saveLast);
 std::string sleepAction(AscalFrame<double>* frame,bool saveLast);
 std::string approxIntAction(AscalFrame<double>* frame,bool saveLast);
@@ -306,10 +307,10 @@ void loadInitialFunctions()
     loadFn(Object("sec","1/cos(theta)",""));
     //Helpful functions
     loadFn(Object("fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
-    loadFn(Object("fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};memoize 1;fr(x);memoize 0;}",""));
+    loadFn(Object("fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};loc z = 0;memoize 1;set z = fr(x);memoize 0;z}",""));
     loadFn(Object("rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
     loadFn(Object("ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
-    loadFn(Object("fastAck","(m,n){memoize 1;ack(m,n);memoize 0;}",""));
+    loadFn(Object("fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
     loadFn(Object("gcd","a*b*0+ when b=0 then a when a=0=0 then gcd(b,a%b) end",""));
     loadFn(Object("sumBetween","(numberzxa,numberzxb){"
             "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb-1)"
@@ -329,7 +330,7 @@ void loadInitialFunctions()
     loadFn(Object("dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
     loadFn(Object("toDeg","rad*180/pi",""));
     loadFn(Object("toRad","deg*pi/180",""));
-    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";pause;};null",""));
+    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null",""));
     loadFn(Object("clear","println(150)",""));
     loadFn(Object("floor","x-x%1",""));
     loadFn(Object("ceiling","when x%1=0 then x else x+1-x%1 end",""));
@@ -392,6 +393,7 @@ void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
 	inputMapper["pause"] = pauseAction;
+	inputMapper["rand"] = randomAction;
 	inputMapper["sleep"] = sleepAction;
 	inputMapper["sci"] = updateBoolSettingAction;
 	inputMapper["tan"] = tanAction;
@@ -904,7 +906,7 @@ std::string redoAction(AscalFrame<double>* frame,bool s)
         undoneExp.pop();
         lastExp.push(last);
         std::cout<<last<<std::endl;
-        value = callOnFrame(frame,last);
+        value = callOnFrame(frame,"print "+last);
     }
     else
         std::cout<<"No statements can be redone"<<std::endl;
@@ -919,7 +921,7 @@ std::string undoAction(AscalFrame<double>* frame,bool s)
         lastExp.pop();
         undoneExp.push(last);
         std::cout<<last<<std::endl;
-        value = callOnFrame(frame,last);
+        value = callOnFrame(frame,"print "+last);
     }
     else
         std::cout<<"No previous statements"<<std::endl;
@@ -1470,6 +1472,29 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     	std::cout<<"sleeping for "<<input<<" tenths of a milli-second\n";
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+std::string randomAction(AscalFrame<double>* frame,bool saveLast)
+{
+	static long hashRand = time(NULL);
+	hashRand += time(NULL);
+	long h1 = hashRand, h2 = hashRand, h3 = hashRand, h4 = hashRand, h5 = hashRand, h6 = hashRand, h7 = hashRand, h8 = hashRand;
+	h1 ^= hashRand<<30;
+	h2 ^= hashRand<<26;
+	h3 ^= hashRand<<20;
+	h4 ^= hashRand<<16;
+	h5 ^= hashRand<<12;
+	h6 ^= hashRand<<8;
+	h7 ^= hashRand<<4;
+	h8 ^= hashRand<<2;
+	hashRand += h1^h2^h3^h4^h5^h6^h7^h8;
+	hashRand &= (1L<<33)-1;
+	hashRand *= ((hashRand&(1L<<22))!=0)*-1 + ((hashRand&(1L<<22))==0);
+	frame->initialOperands.push(hashRand);
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"rand "<<hashRand<<"\n";
+    }
+    return 'a'+frame->exp.substr(frame->index+4,frame->exp.size());
 }
 std::string pauseAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -2792,6 +2817,11 @@ t calculateExpression(AscalFrame<double>* frame)
                 currentFrame->initialOperators.push('*');
                 currentFrame->initialOperators.push(currentChar);
             }
+            else if(currentChar == ';')
+            {
+                currentFrame->clearStackIfAnotherStatementProceeds(isOperator);
+            }
+
           }
         //Finally pop all values off initial stack onto final stacks for processing
         while(!currentFrame->initialOperands.isEmpty() || !currentFrame->initialOperators.isEmpty())
@@ -2918,10 +2948,16 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         int i = 0;
         currentFrame->initialOperands.push(getNextDoubleS(exp, i));
         varCount++;
+        if(*boolsettings["o"])
+        	std::cout<<"Reading variable: "<<varName<<" = "<<exp<<'\n';
     }
     else
     {
         frameCount++;
+        if(*boolsettings["o"])
+        {
+        	std::cout<<"Parsing params then executing: "<<varName<<'('<<params.toString()<<')'<<'\n';
+        }
         //create and set new frame expression
         FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
         allocated += sizeofFrame;
@@ -3079,7 +3115,6 @@ t getNextInt(std::string data,int &index)//index is a reference so that when we 
             stillReading = false;
         }
     }
-
     previous = data[index++];
   }
   index -= 2;
@@ -3151,26 +3186,51 @@ double getNextDouble(const std::string &data,int &index)
 }
 int getPriority(char ator)
 {
-  int priority = 0;
-  if(ator == '(' || ator == ')')
-  {
-    priority = 0;
-  }
-  else if (ator == '^')
-  {
-    priority = 90;
-  }
-  else if (ator == '*' || ator == '/' || ator == '%' || ator == '$' || ator == 'P' || ator == 'C')
-  {
-    priority = 80;
-  }
-  else if (ator == '+' || ator == '-')
-  {
-    priority = 70;
-  }
-  else if(ator == '=' || ator == '>' || ator == '<')
-  {
-      priority = 60;
+  int priority = -1;
+  switch (ator){
+  case '(':
+	  priority = 0;
+	  break;
+  case ')':
+	  priority = 0;
+	  break;
+  case '^':
+	  priority = 90;
+	  break;
+  case '*':
+	  priority = 80;
+	  break;
+  case '/':
+	  priority = 80;
+	  break;
+  case '%':
+	  priority = 80;
+	  break;
+  case '$':
+	  priority = 80;
+	  break;
+  case 'P':
+	  priority = 80;
+	  break;
+  case 'C':
+	  priority = 80;
+	  break;
+  case '+':
+	  priority = 70;
+	  break;
+  case '-':
+	  priority = 70;
+	  break;
+  case '=':
+	  priority = 60;
+	  break;
+  case '>':
+	  priority = 60;
+	  break;
+  case '<':
+	  priority = 60;
+	  break;
+
   }
   return priority;
 }
@@ -3209,7 +3269,7 @@ t doubleModulus(t &and1,t &and2)
       return result;
 }
 template <class t>
-t exponentiate(t &and1,t &and2){return pow(and1,and2);}
+t exponentiate(t &and1,t &and2){return std::pow(and1,and2);}
 template <class t>
 t permute(t &and1,t &and2){
     t result = 1;
@@ -3264,51 +3324,6 @@ t calc(char op,t and1,t and2)
     t result = 0;
         result = operations<t>[op](and1,and2);
 
-    /*switch (op) {
-    case '+':
-    	result = add<t>(and1,and2);
-    	break;
-    case '-':
-        	result = subtract<t>(and1,and2);
-        	break;
-    case '*':
-        	result = multiply<t>(and1,and2);
-        	break;
-    case '/':
-        	result = divide<t>(and1,and2);
-        	break;
-    case '%':
-        	result = doubleModulus<t>(and1,and2);
-        	break;
-    case '^':
-        	result = exponentiate<t>(and1,and2);
-        	break;
-    case 'P':
-        	result = permute<t>(and1,and2);
-        	break;
-    case 'C':
-        	result = combinations<t>(and1,and2);
-        	break;
-    case '@':
-        	result = log<t>(and1,and2);
-        	break;
-    case '$':
-        	result = rootOp<t>(and1,and2);
-        	break;
-
-    case '=':
-        	result = equals<t>(and1,and2);
-        	break;
-
-    case '>':
-        	result = lessThan<t>(and1,and2);
-        	break;
-
-    case '<':
-        	result = greaterThan<t>(and1,and2);
-        	break;
-
-    }*/
     if(*boolsettings["o"])
       std::cout<<and1<<op<<and2<<" = "<<result<<'\n';
     return result;

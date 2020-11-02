@@ -18,7 +18,7 @@ class AscalFrame {
 private:
 
 protected:
-    //+1 sets if result flag to true, +8 sets isDynamicAllocation true
+    //+1 sets if result flag to true, +8 sets isDynamicAllocation true, +64 designates the frame as never run
     uint8_t flagRegisters = 1 + 8 + 64;
     AscalParameters* params;
     std::map<std::string,Object>* paramMemory;
@@ -79,9 +79,34 @@ public:
     std::map<std::string,Object>* getLocalMemory(){ return localMemory; };
     AscalParameters* getParams(){ return params; };
     virtual
+	char getType(){
+    	return 'a';
+    }
+    virtual
     void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) {};
     virtual
     ~AscalFrame() {};
+    void clearStackIfAnotherStatementProceeds(bool (*isOperator)(char))
+    {
+    	this->index++;
+    	bool clear = false;
+    	while(!clear && this->exp[index])
+    	{
+    		if(isalpha(this->exp[index]) || (this->exp[index] >= 48 && this->exp[index] < 58) || isOperator(this->exp[index]))
+    		{
+    			clear = true;
+    		}
+    		index++;
+    	}
+    	if(clear)
+    	{
+            while(!this->initialOperands.isEmpty() || !this->initialOperators.isEmpty())
+            {
+                this->initialOperands.pop();
+                this->initialOperators.pop();
+            }
+    	}
+    }
 };
 template <typename t>
 class ParamFrame: public AscalFrame<t> {
@@ -102,6 +127,10 @@ public:
             std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
         */}
     }
+	char getType() override
+	{
+		return 'p';
+	}
     ~ParamFrame(){
         //std::cout<<"from ascalframe.h Param popped\n";
     };
@@ -135,7 +164,7 @@ public:
             }
             else
             {
-                throw std::string("Error, could not find function "+functionName+" referenced.");
+                fnBody = functionName;
             }
             this->returnPointer->getParams()->push_back(fnBody);
             /*std::cout<<"From Ascal PFrame "<<fnBody<<" to params\n";
@@ -143,6 +172,11 @@ public:
             std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
        */ }
     }
+
+	char getType() override
+	{
+		return 'z';
+	}
     ~ParamFrameFunctionPointer(){
         //std::cout<<"from ascalframe.h Param popped\n";
     };
@@ -170,6 +204,10 @@ public:
             std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
         */}
     }
+	char getType() override
+	{
+		return 'f';
+	}
     ~FunctionFrame(){
         //std::cout<<"from ascalframe.h Function popped\n";
         delete this->params;

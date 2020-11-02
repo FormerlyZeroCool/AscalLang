@@ -149,7 +149,6 @@ int Object::setParams(std::string &param)
 Object::Object(std::string id,std::string expression,std::string param):id(id)
 {
 	setParams(param);
-	int start = 0;
 	instructions = expression;
 	//std::cout<<expression<<std::endl;
 	/*for(int i = 0;i < expression.length();i++)
