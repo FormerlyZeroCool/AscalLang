@@ -105,6 +105,7 @@ void updateBoolSetting(AscalFrame<double>* frame);
 std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
+std::string srandomAction(AscalFrame<double>* frame,bool saveLast);
 std::string randomAction(AscalFrame<double>* frame,bool saveLast);
 std::string pauseAction(AscalFrame<double>* frame,bool saveLast);
 std::string sleepAction(AscalFrame<double>* frame,bool saveLast);
@@ -394,6 +395,7 @@ void initParamMapper()
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
 	inputMapper["pause"] = pauseAction;
 	inputMapper["rand"] = randomAction;
+	inputMapper["srand"] = srandomAction;
 	inputMapper["sleep"] = sleepAction;
 	inputMapper["sci"] = updateBoolSettingAction;
 	inputMapper["tan"] = tanAction;
@@ -541,7 +543,6 @@ int main(int argc,char* argv[])
             if(arg[arg.size()-4] == '.' && toLower(arg[arg.size()-3]) == 'a' &&
                     toLower(arg[arg.size()-2]) == 's' && toLower(arg[arg.size()-1]) == 'l')
             {
-                std::cout<<"Loading file: "<<arg<<std::endl;
                 loadFile(arg,0);
                 continue;
             }
@@ -576,7 +577,7 @@ int main(int argc,char* argv[])
       arg = getExpr(arg,0).data;
       frame->exp = arg;
         try{
-                interpretParam(frame, true);
+        	interpretParam(frame, true);
         }
         catch(std::string &exception)
         {
@@ -601,8 +602,8 @@ double floor(double input)
     double one = 1;
     return input - doubleModulus(input,one);
 }
-/*#include <math.h>
-std::string to_string(double input)
+
+/*std::string to_string(double input)
 {
 
     std::vector<char> output;
@@ -642,13 +643,20 @@ std::string to_string(double input)
     return std::string(output.begin(),output.end());
 //    return std::to_string(input);
 }*/
+#include <sstream>
+template <typename T>
+std::string to_string_with_precision(const T a_value, const int n = 20)
+{
+    std::ostringstream out;
+    out.precision(n);
+    out << std::fixed << a_value;
+    return out.str();
+}
 std::string to_string(double input)
 {
     int offsetFromEnd = 0;
     bool brek = true;
-    std::string data = std::to_string(input);
-    /*while(data[data.length()-offsetFromEnd-1] == '0')
-        offsetFromEnd++;*/
+    std::string data = to_string_with_precision(input);
     brek = (data[data.length()-offsetFromEnd-1] == '0');
     offsetFromEnd += brek;
     brek = brek && (data[data.length()-offsetFromEnd-1] == '0');
@@ -665,14 +673,8 @@ std::string to_string(double input)
 
     return data.substr(0,data.length()-offsetFromEnd);
 }
-/*std::string testRuntimeAction(AscalFrame<double>* frame,bool s)
-{
-	std::string variableTest,functionNoParamsTest,functionOneParamTest,functionTwoParamTest,
-
-}*/
 std::string printStringAction(AscalFrame<double>* frame,bool s)
 {
-        //int startingIndex = expr.find("input");
         const int startOfPrint = frame->exp.find("\"",frame->index)+1;
         const int endOfPrint = frame->exp.find("\"",startOfPrint);
         if(endOfPrint <= startOfPrint)
@@ -723,33 +725,33 @@ std::string inputAction(AscalFrame<double>* frame,bool s)
         const int startOfPrint = frame->exp.find("\"")+1;
         int endOfPrint = frame->exp.find("\"",startOfPrint);
 
-        std::string result;
+        std::string usrPrompt;
         if(endOfPrint != -1)
         {
-            result = frame->exp.substr(startOfPrint,endOfPrint-startOfPrint);
+            usrPrompt = frame->exp.substr(startOfPrint,endOfPrint-startOfPrint);
             int index = 0;
             SubStr subexp("",0,0);
-            while(result[index] && result[index] != '\"')
+            while(usrPrompt[index] && usrPrompt[index] != '\"')
             {
             //std::cout<<"input In While: "<<std::endl;
-                if(result[index] == '(')
+                if(usrPrompt[index] == '(')
                 {
                     //std::cout<<"input In if: "<<std::endl;
-                    SubStr subexp = getExpr(result,index,'(',')',';');
+                    SubStr subexp = getExpr(usrPrompt,index,'(',')',';');
                     std::string value = to_string(callOnFrame(frame,subexp.data));
-                    std::string first = result.substr(0,index);
-                    std::string last = result.substr(index+subexp.end-3,frame->exp.size());
+                    std::string first = usrPrompt.substr(0,index);
+                    std::string last = usrPrompt.substr(index+subexp.end-3,frame->exp.size());
 
                 //std::cout<<"inputAction first: "<<first<<" value: "<<value<<"\nLast: "<<last<<std::endl;
 
-                    result = first+value+last;
+                    usrPrompt = first+value+last;
                     index = first.size()+value.size()-1;
                 //std::cout<<"inputActie"<<result.substr(index,result.length());
                 }
-                else if(result[index] == 'e' && result.size()-index>3 &&
-                        result[index+1] == 'n' && result[index+2] == 'd' && result[index+3] == 'l')
+                else if(usrPrompt[index] == 'e' && usrPrompt.size()-index>3 &&
+                        usrPrompt[index+1] == 'n' && usrPrompt[index+2] == 'd' && usrPrompt[index+3] == 'l')
                 {
-                    result = result.substr(0,index)+'\n'+result.substr(index+4,result.size());
+                    usrPrompt = usrPrompt.substr(0,index)+'\n'+usrPrompt.substr(index+4,usrPrompt.size());
                 }
                 index++;
             }
@@ -757,10 +759,9 @@ std::string inputAction(AscalFrame<double>* frame,bool s)
         }
         else
         {
-            //result = "number: ";
             endOfPrint = frame->index+4;
         }
-        std::cout<<result;
+        std::cout<<usrPrompt;
         std::string input;
     	std::streambuf* currentBuffer = std::cin.rdbuf();
         std::cin.rdbuf(stream_buffer_cin);
@@ -813,8 +814,11 @@ void loadFile(const std::string & expr,int startIndex)
         FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
         get_line(inputFile, calledFunctionMemory->exp);
         try{
-
-            calculateExpression<double>(calledFunctionMemory);
+        	uint32_t i = 0;
+        	while(calledFunctionMemory->exp[i] == ' ')
+        		i++;
+        	if(calledFunctionMemory->exp[i] != '#')
+        		calculateExpression<double>(calledFunctionMemory);
         }
         catch(std::string &exception)
         {
@@ -1399,7 +1403,7 @@ SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start,
 	    while(frame->exp[index] == ' ')
 	        index++;
 	    SubStr exp = getExpr(frame->exp,index, start, end,'\1');
-	        index += exp.data.length()-3;
+	        index += exp.data.length()>3?exp.data.length()-3:0;
 	      exp.end = index;
 	      return exp;
 }
@@ -1473,26 +1477,55 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
-std::string randomAction(AscalFrame<double>* frame,bool saveLast)
+static long hashRand = time(NULL);
+long ascalPRNG()
 {
-	static long hashRand = time(NULL);
-	hashRand += time(NULL);
-	long h1 = hashRand, h2 = hashRand, h3 = hashRand, h4 = hashRand, h5 = hashRand, h6 = hashRand, h7 = hashRand, h8 = hashRand;
-	h1 ^= hashRand<<30;
-	h2 ^= hashRand<<26;
-	h3 ^= hashRand<<20;
-	h4 ^= hashRand<<16;
-	h5 ^= hashRand<<12;
-	h6 ^= hashRand<<8;
-	h7 ^= hashRand<<4;
-	h8 ^= hashRand<<2;
-	hashRand += h1^h2^h3^h4^h5^h6^h7^h8;
+	hashRand |= (1L<<34);
+	hashRand ^= hashRand<<30;
+	hashRand ^= hashRand>>32;
+	hashRand ^= hashRand<<28;
+	hashRand ^= hashRand<<26;
+	hashRand ^= hashRand<<23;
+	hashRand ^= hashRand>>20;
+	hashRand ^= hashRand<<18;
+	hashRand ^= hashRand<<16;
+	hashRand ^= hashRand>>14;
+	hashRand ^= hashRand<<12;
+	hashRand ^= hashRand>>10;
+	hashRand ^= hashRand<<8;
+	hashRand ^= hashRand>>6;
+	hashRand ^= hashRand>>4;
+	hashRand ^= hashRand<<30;
+	hashRand ^= hashRand>>32;
+	hashRand ^= hashRand<<2;
 	hashRand &= (1L<<33)-1;
-	hashRand *= ((hashRand&(1L<<22))!=0)*-1 + ((hashRand&(1L<<22))==0);
-	frame->initialOperands.push(hashRand);
+	hashRand *= ((hashRand&(1L<<16))!=0)*-1 + ((hashRand&(1L<<16))==0);
+	return hashRand;
+}
+std::string srandomAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "srand");
+    double input = callOnFrame(frame,exp.data);
+    if(exp.data.length() > 5)
+    	hashRand = input;
+    else
+    {
+    	input = time(NULL);
+    	hashRand = input;
+    }
+	frame->initialOperands.push(ascalPRNG());
     if(*boolsettings["o"])
     {
-    	std::cout<<"rand "<<hashRand<<"\n";
+    	std::cout<<"srand("<<((long)input)<<") = "<<hashRand<<'\n';
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+std::string randomAction(AscalFrame<double>* frame,bool saveLast)
+{
+	frame->initialOperands.push(ascalPRNG());
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"rand = "<<hashRand<<"\n";
     }
     return 'a'+frame->exp.substr(frame->index+4,frame->exp.size());
 }
@@ -1509,7 +1542,6 @@ std::string pauseAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string cosAction(AscalFrame<double>* frame,bool saveLast)
 {
-
     SubStr exp = getFollowingExpr(frame, "cos");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(cos(input));
@@ -1521,7 +1553,6 @@ std::string cosAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string tanAction(AscalFrame<double>* frame,bool saveLast)
 {
-
     SubStr exp = getFollowingExpr(frame, "tan");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(tan(input));
@@ -1533,7 +1564,6 @@ std::string tanAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
 {
-
     SubStr exp = getFollowingExpr(frame, "arctan");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(atan(input));
@@ -1545,7 +1575,6 @@ std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
 {
-
     SubStr exp = getFollowingExpr(frame, "arcsin");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(asin(input));
@@ -1557,7 +1586,6 @@ std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
 {
-
     SubStr exp = getFollowingExpr(frame, "arccos");
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(acos(input));
@@ -2410,7 +2438,15 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
         }
         if(openingCount > 0 && line.length() <= index+count)
         {
-            get_line(std::cin, line);
+        	uint32_t i;
+        	do{
+        		get_line(std::cin, line);
+        		i = 0;
+        		while(line[i] == ' ')
+        			i++;
+        	}while(line[i] == '#');
+
+
             index = 0;
         }
         else
@@ -2523,10 +2559,11 @@ uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
     for(std::string &s:params)
     {
         hash += hashfn(s);
+        hash ^= hash>>2;
         hash ^= hash<<5;
-        hash ^= hash<<12;
+        hash ^= hash>>12;
         hash ^= hash<<18;
-        hash ^= hash<<21;
+        hash ^= hash>>21;
         hash ^= hash<<26;
         hash ^= hash<<29;
     }
@@ -2535,19 +2572,19 @@ uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 uint64_t hash(AscalFrame<double>* currentFrame)
 {
 	uint64_t frameptr = (uint64_t) currentFrame;
-	uint64_t rtnptr = (uint64_t) currentFrame->returnPointer;
+	uint64_t rtnptr =   (uint64_t) currentFrame->returnPointer;
 	uint64_t paramsptr = (uint64_t) currentFrame->getParamMemory();
 	uint64_t locvarptr = (uint64_t) currentFrame->getLocalMemory();
 	uint64_t hash = ((frameptr<<(1 + (15&rtnptr)))^currentFrame->memoPointer^paramsptr^locvarptr);
-	hash |= paramsptr;
-	hash |= paramsptr<<16;
-	hash ^= rtnptr<<6;
+	hash ^= paramsptr>>16;
+	hash ^= paramsptr<<16;
+	hash ^= rtnptr>>6;
 	hash ^= rtnptr<<26;
-	hash |= currentFrame->memoPointer<<3;
+	hash ^= currentFrame->memoPointer>>3;
 	hash ^= currentFrame->memoPointer<<20;
-	hash ^= hash<<5;
+	hash ^= hash>>5;
 	hash ^= hash<<10;
-	hash ^= hash<<15;
+	hash ^= hash>>15;
 	hash ^= hash<<20;
 	hash ^= hash<<28;
 	hash += frameptr<<8;
@@ -2798,7 +2835,7 @@ t calculateExpression(AscalFrame<double>* frame)
             //Section to parse numeric values from expression as a string to be inserted into
             //initialOperands stack
             else if(isNumeric(currentChar) ||
-            ((currentChar == '-' || currentChar == '.')&& (i == 0 || isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='(')
+            (((currentChar == '-' && isNumeric(frame->exp[i+1])) || currentChar == '.')&& (i == 0 || isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='(')
             ))
             {
                 //This comment block must be enabled to use Integer instead of long
@@ -2945,8 +2982,8 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
     currentFrame->index = i;
     if(isDouble(exp))
     {
-        int i = 0;
-        currentFrame->initialOperands.push(getNextDoubleS(exp, i));
+        int ib = 0;
+        currentFrame->initialOperands.push(getNextDoubleS(exp, ib));
         varCount++;
         if(*boolsettings["o"])
         	std::cout<<"Reading variable: "<<varName<<" = "<<exp<<'\n';
