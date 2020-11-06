@@ -656,7 +656,7 @@ std::string to_string(double input)
 {
     int offsetFromEnd = 0;
     bool brek = true;
-    std::string data = to_string_with_precision(input);
+    std::string data = std::to_string(input);
     brek = (data[data.length()-offsetFromEnd-1] == '0');
     offsetFromEnd += brek;
     brek = brek && (data[data.length()-offsetFromEnd-1] == '0');
@@ -1477,40 +1477,43 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
-static long hashRand = time(NULL);
+uint64_t lehmer64();
+static long hashRand = time(NULL), hr2 = 0;
 long ascalPRNG()
 {
-	hashRand |= (1L<<34);
+	hashRand ^= lehmer64();
 	hashRand ^= hashRand<<30;
 	hashRand ^= hashRand>>32;
-	hashRand ^= hashRand<<28;
-	hashRand ^= hashRand<<26;
-	hashRand ^= hashRand<<23;
-	hashRand ^= hashRand>>20;
-	hashRand ^= hashRand<<18;
-	hashRand ^= hashRand<<16;
-	hashRand ^= hashRand>>14;
-	hashRand ^= hashRand<<12;
-	hashRand ^= hashRand>>10;
-	hashRand ^= hashRand<<8;
-	hashRand ^= hashRand>>6;
-	hashRand ^= hashRand>>4;
-	hashRand ^= hashRand<<30;
-	hashRand ^= hashRand>>32;
-	hashRand ^= hashRand<<2;
+	hashRand ^= hashRand<<7;
+	hashRand ^= hashRand>>45;
 	hashRand &= (1L<<33)-1;
 	hashRand *= ((hashRand&(1L<<16))!=0)*-1 + ((hashRand&(1L<<16))==0);
 	return hashRand;
+}
+uint64_t lehmer64()
+{
+	hr2 += 0xe120fc15;
+	uint64_t tmp;
+	tmp = (uint64_t)hr2 * 0x4a39b70d;
+	uint64_t m1 = (tmp >> 32) ^ tmp;
+	tmp = (uint64_t) m1 * 0x12fad5c9;
+	uint64_t m2 = (tmp >> 32) ^ tmp;
+	return (m2^(m2>>32));
+
 }
 std::string srandomAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "srand");
     double input = callOnFrame(frame,exp.data);
     if(exp.data.length() > 5)
+    {
+    	hr2 = input;
     	hashRand = input;
+    }
     else
     {
-    	input = time(NULL);
+    	input = time(NULL) + hashRand;
+    	hr2 = input;
     	hashRand = input;
     }
 	frame->initialOperands.push(ascalPRNG());
