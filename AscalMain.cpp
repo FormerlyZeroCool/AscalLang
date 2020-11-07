@@ -2838,8 +2838,8 @@ t calculateExpression(AscalFrame<double>* frame)
             //Section to parse numeric values from expression as a string to be inserted into
             //initialOperands stack
             else if(isNumeric(currentChar) ||
-            (((currentChar == '-' && isNumeric(frame->exp[i+1])) || currentChar == '.')&& (i == 0 || isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='(')
-            ))
+            (currentChar == '-' && (i == 0 || isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='(')
+            ) || currentChar == '.')
             {
                 //This comment block must be enabled to use Integer instead of long
                 //as the number's datatype
