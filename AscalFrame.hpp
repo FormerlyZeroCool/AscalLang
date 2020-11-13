@@ -18,7 +18,9 @@ class AscalFrame {
 private:
 
 protected:
-    //+1 sets if result flag to true, +8 sets isDynamicAllocation true, +64 designates the frame as never run
+    //+1 sets if result flag to true, sp no else cases wil be initally executed
+	//+8 sets isDynamicAllocation true, so that the calculateExpression functions is responsible for managin the memory allocated for this frame
+	//+64 designates the frame as never run
     uint8_t flagRegisters = 1 + 8 + 64;
     AscalParameters* params;
     std::map<std::string,Object>* paramMemory;
@@ -45,19 +47,20 @@ public:
     bool isRoot() { return flagRegisters & (uint8_t)16; };
     bool isFunction() { return flagRegisters & (uint8_t)32; };
     bool isFirstRun() { return flagRegisters & (uint8_t)64; };
+    bool isAugmented() { return flagRegisters & (uint8_t)128; };
     void setIfResultFlag(bool value)
     {
-        flagRegisters = flagRegisters&(uint8_t)254;
+        flagRegisters = flagRegisters&(uint8_t)255-1;
         flagRegisters = flagRegisters^(uint8_t)(1*value);
     };
     void setIfFlag(bool value)
     {
-        flagRegisters = flagRegisters&(uint8_t)253;
+        flagRegisters = flagRegisters&(uint8_t)255-2;
         flagRegisters = flagRegisters^(uint8_t)(2*value);
     };
     void setComingfromElse(bool value)
     {
-        flagRegisters = flagRegisters&(uint8_t)251;
+        flagRegisters = flagRegisters&(uint8_t)255-4;
         flagRegisters = flagRegisters^(uint8_t)(4*value);
     };
     void setIsDynamicAllocation(bool value)
@@ -74,6 +77,11 @@ public:
     {
         flagRegisters = flagRegisters&(uint8_t)(255-64);
         flagRegisters = flagRegisters^(uint8_t)(64*value);
+    };
+    void setAugmented(bool value)
+    {
+        flagRegisters = flagRegisters&(uint8_t)(255-128);
+        flagRegisters = flagRegisters^(uint8_t)(128*value);
     };
     std::map<std::string,Object>* getParamMemory(){ return paramMemory; };
     std::map<std::string,Object>* getLocalMemory(){ return localMemory; };
@@ -131,9 +139,7 @@ public:
 	{
 		return 'p';
 	}
-    ~ParamFrame(){
-        //std::cout<<"from ascalframe.h Param popped\n";
-    };
+    ~ParamFrame(){};
 };
 template <typename t>
 class ParamFrameFunctionPointer: public AscalFrame<t> {
@@ -177,9 +183,7 @@ public:
 	{
 		return 'z';
 	}
-    ~ParamFrameFunctionPointer(){
-        //std::cout<<"from ascalframe.h Param popped\n";
-    };
+    ~ParamFrameFunctionPointer(){};
 };
 template <typename t>
 class FunctionFrame: public AscalFrame<t> {
@@ -198,18 +202,14 @@ public:
     {
         if(this->returnPointer)
         {
-            this->returnPointer->initialOperands.push_back(result);
-            /*std::cout<<"From Ascal Frame "<<result<<" to stack\n";
-            std::cout<<"    returned from index: "<<this->stackIndex<<" exp: "<<this->exp<<"\n";
-            std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
-        */}
+            this->returnPointer->initialOperands.push_back(result);}
     }
 	char getType() override
 	{
 		return 'f';
 	}
-    ~FunctionFrame(){
-        //std::cout<<"from ascalframe.h Function popped\n";
+    ~FunctionFrame()
+    {
         delete this->params;
         delete this->paramMemory;
         delete this->localMemory;

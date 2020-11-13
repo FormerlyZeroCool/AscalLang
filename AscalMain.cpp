@@ -815,7 +815,7 @@ void loadFile(const std::string & expr,int startIndex)
         get_line(inputFile, calledFunctionMemory->exp);
         try{
         	uint32_t i = 0;
-        	while(calledFunctionMemory->exp[i] == ' ')
+        	while(calledFunctionMemory->exp[i] == ' ' || calledFunctionMemory->exp[i] == '	')
         		i++;
         	if(calledFunctionMemory->exp[i] != '#')
         		calculateExpression<double>(calledFunctionMemory);
@@ -2677,6 +2677,7 @@ t calculateExpression(AscalFrame<double>* frame)
              if(inputMapper.count(varName.data) != 0)
              {
 
+                 currentFrame->setAugmented(true);
                  bool isDynamicBackup = currentFrame->isDynamicAllocation();
                  std::string result;
                  try{
@@ -2830,19 +2831,17 @@ t calculateExpression(AscalFrame<double>* frame)
               }
 
               currentFrame->initialOperands.push(and2);
-              if(isNumeric(currentFrame->exp[i+1]) || currentFrame->exp[i+1] == '(')
-              {
-                  currentFrame->initialOperators.push('*');
-              }
             }
             //Section to parse numeric values from expression as a string to be inserted into
             //initialOperands stack
             else if(isNumeric(currentChar) ||
-            (currentChar == '-' && (i == 0 || isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='(')
-            ) || currentChar == '.')
+            (currentChar == '-' && isNumeric(currentFrame->exp[i+1]) &&
+            		((i == 0 && !currentFrame->isAugmented()) ||
+            				(i > 0 && (isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='('))
+            						)
+            )
+				|| currentChar == '.')
             {
-                //This comment block must be enabled to use Integer instead of long
-                //as the number's datatype
                 double nextDouble = getNextDouble(currentFrame->exp,i);
                 currentFrame->initialOperands.push(nextDouble);
             }
