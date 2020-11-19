@@ -312,7 +312,7 @@ void loadInitialFunctions()
     loadFn(Object("rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
     loadFn(Object("ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
     loadFn(Object("fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
-    loadFn(Object("gcd","a*b*0+ when b=0 then a when a=0=0 then gcd(b,a%b) end",""));
+    loadFn(Object("gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else 0 end}",""));
     loadFn(Object("sumBetween","(numberzxa,numberzxb){"
             "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb-1)"
             "else sumOneTo(numberzxb)-sumOneTo(numberzxa-1) end}"
@@ -412,15 +412,12 @@ void initParamMapper()
     inputMapper["exists"] = existsAction;
     inputMapper["if"] = ifAction;
     inputMapper["else"] = elseAction;
-    inputMapper["print"] = printDefaultAction;
-    inputMapper["printStr"] = printStringAction;
     inputMapper["input"] = inputAction;
     inputMapper["import"] = importAction;
     inputMapper["while"] = whileAction;
     inputMapper["when"] = whenAction;
     inputMapper["plot"] = plotAction;
     inputMapper["quit"] = quitAction;
-    inputMapper["printc"] = printCommand;
     inputMapper["set"] = setAction;
     inputMapper["const"] = constNewVar;
     inputMapper["let"] = letNewVar;
@@ -434,6 +431,9 @@ void initParamMapper()
     inputMapper["p"] = updateBoolSettingAction;
     inputMapper["t"] = updateBoolSettingAction;
     inputMapper["memoize"] = timeToRunBoolSetting;
+    inputMapper["printc"] = printCommand;
+    inputMapper["print"] = printDefaultAction;
+    inputMapper["printStr"] = printStringAction;
 #if DEBUG == 1
     inputMapper["d"] = debugBoolSetting;
 #endif
@@ -567,7 +567,7 @@ int main(int argc,char* argv[])
   //command line by the user loop will not run, unless that param was the loop command
   //by default the loop runs
 
-  while(*boolsettings["l"])
+  while(std::cin && *boolsettings["l"])
   {
       allocated += sizeofFrame;
           //Interpreter prompt to let user know program is expecting a command/expression
@@ -805,17 +805,17 @@ void loadFile(const std::string & expr,int startIndex)
     {
         throw std::string("Malformed path: "+filePath);
     }
+    std::streambuf* cinrdbuf = std::cin.rdbuf();
     std::cin.rdbuf(inputFile.rdbuf());
     int locLineCount = lineCount;
     while(inputFile)
     {
-
         allocated += sizeofFrame;
         FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
         get_line(inputFile, calledFunctionMemory->exp);
         try{
         	uint32_t i = 0;
-        	while(calledFunctionMemory->exp[i] == ' ' || calledFunctionMemory->exp[i] == '	')
+        	while(calledFunctionMemory->exp[i] == ' ' || calledFunctionMemory->exp[i] == ' ')
         		i++;
         	if(calledFunctionMemory->exp[i] != '#')
         		calculateExpression<double>(calledFunctionMemory);
@@ -826,7 +826,7 @@ void loadFile(const std::string & expr,int startIndex)
             std::cerr<<"On Line: "<<(lineCount - locLineCount)<<std::endl;
         }
     }
-    std::cin.rdbuf(stream_buffer_cin);
+    std::cin.rdbuf(cinrdbuf);
 }
 
 std::string importAction(AscalFrame<double>* frame,bool s)
@@ -1048,23 +1048,21 @@ std::string letNewVar(AscalFrame<double>* frame,bool saveLast)
 }
 std::string constNewVar(AscalFrame<double>* frame,bool saveLast)
 {
-
-    SubStr exPart = getExpr(frame->exp,frame->exp.find('=',frame->index)+1);
-    SubStr newVarPart = getVarName(frame->exp,frame->index+4);
-    bool print = *boolsettings["p"];
-    frame->exp = exPart.data;
-    std::string value = to_string(calcWithOptions(frame));
-    *boolsettings["p"] = print;
-    Object var(newVarPart.data,value,"");
+	SubStr exPart = getExpr(frame->exp,frame->exp.find('=',frame->index)+1);
+	    SubStr newVarPart = getVarName(frame->exp,frame->index+5);
+	    bool print = *boolsettings["p"];
+	    std::string value = to_string(callOnFrame(frame,exPart.data));
+	    *boolsettings["p"] = print;
+	    Object var(newVarPart.data,value,"");
 
 
-    std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
-                            if(position != userDefinedFunctions.end())
-                                userDefinedFunctions.erase(position);
+	    std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
+	                            if(position != userDefinedFunctions.end())
+	                                userDefinedFunctions.erase(position);
 
-    //set var defined's value in hash map
-    loadUserDefinedFn(var);
-    return value;
+	    //set var defined's value in hash map
+	    loadUserDefinedFn(var);
+	    return MAX;
 }
 std::string locNewVar(AscalFrame<double>* frame,bool saveLast)
 {
@@ -1396,16 +1394,21 @@ std::string existsAction(AscalFrame<double>* frame,bool saveLast)
     }
     return "a0;"+frame->exp.substr(index,frame->exp.size());
 }
+
+SubStr getExprInString(const std::string &data,int index,char opening,char closing,char lineBreak);
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start, char end)
 {
 	int index = frame->index+id.length();
 	    while(frame->exp[index] == ' ')
 	        index++;
-	    SubStr exp = getExpr(frame->exp,index, start, end,'\1');
+	    SubStr exp = getExprInString(frame->exp,index, start, end,'\1');
 	        index += exp.data.length()>3?exp.data.length()-3:0;
 	      exp.end = index;
-	      return exp;
+    bool errorGettingParams = false;
+    index = frame->index+id.length();
+    return exp;
 }
 Object getObject(AscalFrame<double>* frame, std::string &functionName)
 {
@@ -1478,7 +1481,7 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 uint64_t lehmer64();
-static long hashRand = time(NULL), hr2 = 0;
+static uint64_t hashRand = time(NULL), hr2 = 0;
 long ascalPRNG()
 {
 	hashRand ^= lehmer64();
@@ -2001,6 +2004,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     //if the expression evaluates to anything other than 0
     //then extract the expression proceeding the then statement
     //frame->index = 0;
+	static const int invalidIndex = 2000000000;
     const int startIndex = frame->index;
 
     int endIndex = frame->index;
@@ -2013,7 +2017,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     	if(frame->exp[i] == 'e' && frame->exp[i+1] == 'n' && frame->exp[i+2] == 'd' && qCount == 0)
     	{
     		endIndex = i;
-    		i = 2000000000;
+    		i = invalidIndex;
     	}
     	i++;
     }
@@ -2029,7 +2033,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     int whenIndex = startIndex;
     double boolExpValue;
     int elseIndex = frame->exp.find("else",frame->index);
-    elseIndex = elseIndex==-1?2000000000:elseIndex;
+    elseIndex = elseIndex==-1?invalidIndex:elseIndex;
     int lastThen = 0;
     //std::cout<<"start: "<<startOfExp<<" End: "<<endOfExp<<"\n";
     do {
@@ -2070,7 +2074,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
         {
             index = frame->exp.find("when",index) + 5;
             whenIndex = index - 5;
-            if(whenIndex == -1 && elseIndex != 1000000)
+            if(whenIndex == -1 && elseIndex != invalidIndex)
             {
                 value = getExpr(frame->exp.substr(elseIndex+4,endIndex-(elseIndex+4)),0).data;
                 index = endIndex;
@@ -2263,12 +2267,41 @@ bool cmpstr(const std::string &s1,const std::string &s2)
 }
 //now with more stacks!
   //these stacks handle respecting priority, the can handle as many priority levels as you like
-
 stack<double> savedOperands;
 stack<char> savedOperators;
 stack<double> processOperands;
 stack<char> processOperators;
 std::unordered_map<uint64_t,double> memoPad;
+template <typename t>
+void cleanOnError(bool timeInstruction, t start, t end)
+{
+	if(timeInstruction)
+	    	        {
+	    	            end = std::chrono::system_clock::now();
+
+	    	            std::chrono::duration<double> elapsed_seconds = end-start;
+	    	            std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+
+	    	            std::cout <<
+	    	                      "Stack frames used: "<<frameCount<<'\n'
+	    	                        <<"Variables accessed: "<<varCount<<'\n'
+	    							<<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
+	    	            <<"Currently active allocations: "<<allocated-deallocated<<" Total Allocated: "<<allocated<<" Total freed: "<<deallocated<<'\n'
+	    				<< "finished computation at " << std::ctime(&end_time)
+	    				                      << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
+	    	            //lastRunAllocatedTotal = allocated;
+	    	        }
+
+	    	    frameCount = 1;
+	    	    varCount = 0;
+	    	    rememberedFromMemoTableCount = 0;
+	    	    savedOperands.clear();
+	    	    savedOperands.clear();
+	    	    processOperands.clear();
+	    	    processOperators.clear();
+	    	    memoPad.clear();
+}
 double calcWithOptions(AscalFrame<double>* frame)
 {
     bool timeInstruction = *boolsettings["t"];
@@ -2282,7 +2315,17 @@ double calcWithOptions(AscalFrame<double>* frame)
 
     //alternate beginning of calculation for doubles
     //-------------------------
-    double result = calculateExpression<double>(frame);
+    double result;
+    try{
+    	result = calculateExpression<double>(frame);
+    }catch(std::string &error)
+    {
+    	cleanOnError(timeInstruction, start, end);
+    	throw error;
+    }catch(int exitCode){
+    	cleanOnError(timeInstruction, start, end);
+    	throw exitCode;
+    }
     memoPad.clear();
     //------------------------
     //std::cout<<std::to_string(result).length()<<"  max len "<<MAX.length()<<std::endl;
@@ -2451,6 +2494,65 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
 
 
             index = 0;
+        }
+        else
+        {
+            index = index+count+1;
+        }
+        count = 0;
+    }while(openingCount > 0 && std::cin);
+
+    if(maxOpeningCount > 0)
+        result.push_back(closing);
+    result.push_back(0);
+
+    return SubStr(std::string(result.begin(),result.end()),index,result.size());
+}
+SubStr getExprInString(const std::string &data,int index,char opening,char closing,char lineBreak)
+{
+    int count = 0;
+    int openingCount = 0;
+    int maxOpeningCount = 0;
+    std::vector<char> result;
+    if(data.length()<256)
+        result.reserve(256);
+    else
+        result.reserve(data.length());
+    std::string line = data;
+
+    do{
+        while(line[index] && !isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]) &&
+                line[index] != closing && line[index] != opening)
+        {
+            openingCount = (openingCount + (line[index] == opening) - (line[index] == closing));
+            maxOpeningCount = (maxOpeningCount + (line[index] == opening));
+            index++;
+        }
+        while(line[index + count] && (line[index + count] != lineBreak && line[index + count] != '\n')
+                && !(line[index+count] == closing && openingCount == 1))
+        {
+            openingCount = (openingCount + (line[index+count] == opening) - (line[index+count] == closing));
+            maxOpeningCount = (maxOpeningCount + (line[index+count] == opening));
+            count++;
+        }
+        openingCount -= (line[index+count] == closing);
+
+        if(count > 0)
+        {
+
+            for(int i = index<line.size()?index:line.size();line[i] && i <= index+count;i++)
+            {
+                result.push_back(line[i]);
+            }
+            if(line[line.size()-1]!=opening && result[result.size()-1] != lineBreak)
+                result.push_back(lineBreak);
+        }
+        if(openingCount > 0 && line.length() <= index+count)
+        {
+        	std::stringstream s;
+			s<<"Error, no closing ";
+			s<<closing;
+        	throw s.str();
         }
         else
         {
