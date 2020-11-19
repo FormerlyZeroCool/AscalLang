@@ -10,6 +10,10 @@ Ascal tries to be as succinct as possible while expressing the mathematical func
 Note: functions have been tested to provide at least 160 levels of nesting, and when using when [condition] then recursive call else [base case to return] end almost unlimited recursion.<br>
 The not function returns 1 if a 0 is supplied, and zero with all other values, the true functions returns 1 if any value other than 0 is supplied
 <br>
+Try writing some code in ascal in repl at this link, just fork, and start coding. this readme should have everything you need to know about the language
+<br>
+https://repl.it/@AndrewRubinstei/AscalLang-1#myCode.asl
+<br>
 <h5>Your input testing the value supplied in this case 0</h5>
 >>
 
@@ -78,7 +82,6 @@ expression:
 `x^2+x`
 <br>
 <br>
-Final Answer:<br> 
 0<br>
 >>
 
@@ -90,8 +93,7 @@ Show Operations Status: 1<br>
 
 `f(2)`<br>
 `2^2 = 4`<br>
-`4+2 = 6`<br>
-Final Answer: 
+`4+2 = 6`
 <br>
 6
 <br>
@@ -104,8 +106,6 @@ Show Operations Status: 0
 >>
 
 `f(2)`
-<br>
-Final Answer: 
 <br>
 6
 </p>
@@ -132,28 +132,24 @@ Print time taken to run calculation Status: 0<br>
 >>
 
 `2+2`<br>
-Final Answer: <br>
 4<br>
 <br>
 <h4>Examples of r and u parameters short for redo and undo</h4>
 >>
 
 `cos(pi)`<br>
-Final Answer: <br>
 -1<br>
 <br>
 >>
 
 `u`<br>
 `cos(pi)`<br>
-Final Answer: <br>
 -1<br>
 <br>
 >>
 
 `r`<br>
 `cos(pi)`<br>
-Final Answer:<br> 
 -1
 <br>
 <h3>How to use variables/functions:</h3>
@@ -243,7 +239,7 @@ You may also supply your own prompt using a format similar to the printStr synta
  
 `2+input "type a number 2 to like (pi) for exampleendl"` the endl keyword inside the quotation marks will insert a line break, so upon execution the prompt will say<br>
 
-`type a number 2 to like (pi) for example`<br>
+`type a number 2 to like 3.14159 for example`<br>
 the user will start typing here, on the next line.<br>
 When the user types in their input the expression will be evaluated like normal as if the user's input was a hardcoded value.
 </p>
@@ -253,10 +249,31 @@ The import keyword can be used to load functions from files you've already writt
 The reccomended usage is to ensure the file is saved with the .asl file extension, and is in a plain text encoding<br>
 If you do that you can use the syntax <br>
  
- `import path1.path2.<your_file_name>`<br>
+ `import <path1>.<path2>.<your_file_name>`<br>
 otherwise you must specify the file format, note that the file must still be in a plain text encoding<br>
  
- `import path1.path2.<your_file_name>.<your_extension>`<br>
+ `import <path1>.<path2>.<your_file_name>.<your_extension>`<br>
+</p>
+<h3>The pause keyword</h3>
+<p>
+ this simply stops program flow until a newline is recieved, or enter is pressed 
+</p>
+<h3>The sleep(x) keyword</h3>
+<p>
+ this simply stops program flow for a multiple of 1/10000 seconds called like:
+ 
+ `sleep(10000)`
+ to make the program pause for 1 second then continue.
+</p>
+<h3>The rand keyword</h3>
+<p>
+ Using the keyword rand in an expression will get a random number from Ascal's pseudorandom number generator seeded with the system time unless srand is called.<br>
+ The number will be between 0 and 2^32-1
+</p>
+<h3>The srand(seed) keyword</h3>
+<p>
+ using the keyword rand in an expression will get a random number from Ascal's pseudorandom number generator seeded with the given parameter.<br>
+ The number will be between 0 and 2^32-1
 </p>
 <h3>Memory Managment:</h3>
 <h4>For Global Variables:</h4>
@@ -305,12 +322,12 @@ Operator precedence is defined below, in a case where two adjacent operations ha
   (...) - Parenthesis have the highest priority, and any expression inside them will be calculated before anything outside<br>
   '^' - or the exponentiation operator has the second highest priority, and will return the first operand raised to the power of the
   second<br>
-  This operator cannot handle fractional powers, and will return the result as if it was raised to the power of 0<br>
+  This operator can handle fractional powers.<br>
   written like : x^z<br>
   
-  'X' , '/' , '%' ,'$' , 'P','C' all have the same third level of priority<br>
+   '*', '/' , '%' ,'$' , 'P','C' all have the same third level of priority<br>
   <br>
-  Asterisk or 'X' is the multiplication operator<br>
+  Asterisk is the multiplication operator<br>
   <br>
   '/' is the division operator<br>
   <br>
@@ -322,7 +339,7 @@ Operator precedence is defined below, in a case where two adjacent operations ha
   
   
   `rightOperand^(1/leftOperand)`<br>
-  Although the exponentiation operator cannot handle fractional powers with this operator you should be able to express all rational powers<br>
+  Although the exponentiation operator can handle fractional powers with this operator you should be able to express all rational powers<br>
   <br>
   'P' is the permutation operator from statistics or 
   
