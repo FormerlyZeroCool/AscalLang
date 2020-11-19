@@ -10,6 +10,10 @@ Ascal tries to be as succinct as possible while expressing the mathematical func
 Note: functions have been tested to provide at least 160 levels of nesting, and when using when [condition] then recursive call else [base case to return] end almost unlimited recursion.<br>
 The not function returns 1 if a 0 is supplied, and zero with all other values, the true functions returns 1 if any value other than 0 is supplied
 <br>
+Try writing some code in ascal in repl at this link, just fork, and start coding. this readme should have everything you need to know about the language
+<br>
+https://repl.it/@AndrewRubinstei/AscalLang-1#myCode.asl
+<br>
 <h5>Your input testing the value supplied in this case 0</h5>
 >>
 
