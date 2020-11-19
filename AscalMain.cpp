@@ -771,7 +771,7 @@ std::string inputAction(AscalFrame<double>* frame,bool s)
     return "a"+frame->exp.substr(endOfPrint+1,frame->exp.size());
 
 }
-void loadFile(const std::string & expr,int startIndex)
+void loadFile(const std::string &expr,int startIndex)
 {
     std::ifstream inputFile;
     while(expr[startIndex] == ' ')
@@ -1489,7 +1489,7 @@ long ascalPRNG()
 	hashRand ^= hashRand>>32;
 	hashRand ^= hashRand<<7;
 	hashRand ^= hashRand>>45;
-	hashRand &= (1L<<33)-1;
+	hashRand &= ((uint64_t)1<<31)-1;
 	hashRand *= ((hashRand&(1L<<16))!=0)*-1 + ((hashRand&(1L<<16))==0);
 	return hashRand;
 }
