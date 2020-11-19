@@ -267,11 +267,13 @@ otherwise you must specify the file format, note that the file must still be in 
 </p>
 <h3>The rand keyword</h3>
 <p>
- using the keyword rand in an expression will get a random number from Ascal's pseudorandom number generator seeded with the system time unless srand is called.
+ Using the keyword rand in an expression will get a random number from Ascal's pseudorandom number generator seeded with the system time unless srand is called.<br>
+ The number will be between 0 and 2^32-1
 </p>
 <h3>The srand(seed) keyword</h3>
 <p>
- using the keyword rand in an expression will get a random number from Ascal's pseudorandom number generator seeded with the given parameter.
+ using the keyword rand in an expression will get a random number from Ascal's pseudorandom number generator seeded with the given parameter.<br>
+ The number will be between 0 and 2^32-1
 </p>
 <h3>Memory Managment:</h3>
 <h4>For Global Variables:</h4>
