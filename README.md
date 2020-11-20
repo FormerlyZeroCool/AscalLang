@@ -194,12 +194,12 @@ because it replaces x with c^2, and c with the parameter supplied.
 <h3>The when then else end set of keywords.</h3>
 <p>
 The when then end keywords are the first way in Ascal to conditionally execute your code, allowing for recursion.<br>
-This functionality is still in testing, but it appears stable in this release<br>
 Example Ascal Code for a recursive summation series function:<br>
 
 
-`let f = when x>1 then f(x-1)+x else 1 end;`<br>
-If the parser sees the keyword when it will evaluate the expression between the `when`, and the next `then`. If the expression evaluates <br> to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail,<br> working on else support.<br>
+`let f = when x>1 then f(x-1)+x else x end;`<br>
+If the interpreter sees the keyword when it will evaluate the expression between the `when`, and the next `then`. If the expression evaluates <br> 
+to anything other than 0 it will be interpreted as true, and the expression following the then will be executed, otherwise the next<br> expression proceeding the next when clause will be executed, all cases must be covered, missing cases will cause the program to fail, just use else to cover all edge cases.<br>
                                         </p>
 <h3>The While keyword</h3>
 <p>
@@ -218,7 +218,7 @@ If the parser sees the keyword when it will evaluate the expression between the 
 <p>
 The exists keyword when supplied the name of a variable returns 1 if the variable exists anywhere in memory, and 0 if it does not. <br>ex:<br>
  
- `exists sin`
+ `exists fibr`
 </p>
 <h3>Print Commmands:</h3>
 By default when running any expression the Ascal Interpreter will print out the result of any expressions calculations, but keep reading to learn how to print information about variables saved in memory.<br>
@@ -230,7 +230,7 @@ print udf to print only user defined functions<br>
 print can be used to print a string, you can also add function called into the string by placing them in parenthesis like so:<br>
 
 
-`print "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))"`
+`print "Hello world the number pi is approximately (pi), and sin of 0 is (sin(0))endl"`
 <br>
 <h3>The input keyword:</h3>
 <p>
