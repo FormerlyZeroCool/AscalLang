@@ -106,6 +106,7 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+std::string fibrcppAction(AscalFrame<double>* frame,bool saveLast);
 std::string forRangeAction(AscalFrame<double>* frame,bool saveLast);
 std::string srandomAction(AscalFrame<double>* frame,bool saveLast);
 std::string randomAction(AscalFrame<double>* frame,bool saveLast);
@@ -395,6 +396,7 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
+	inputMapper["fibrcpp"] = fibrcppAction;
 	inputMapper["for"] = forRangeAction;
 	inputMapper["pause"] = pauseAction;
 	inputMapper["rand"] = randomAction;
@@ -1431,12 +1433,11 @@ SubStr getExprInString(const std::string &data,int index,char opening,char closi
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start, char end)
 {
 	int index = frame->index+id.length();
-	    while(frame->exp[index] == ' ')
-	        index++;
-	    SubStr exp = getExprInString(frame->exp,index, start, end,'\1');
-	        index += exp.data.length()>3?exp.data.length()-3:0;
-	      exp.end = index;
-    bool errorGettingParams = false;
+	while(frame->exp[index] == ' ')
+		index++;
+	SubStr exp = getExprInString(frame->exp,index, start, end,'\1');
+	index += exp.data.length()>3?exp.data.length()-3:0;
+	exp.end = index;
     index = frame->index+id.length();
     return exp;
 }
@@ -1619,6 +1620,28 @@ std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
     if(*boolsettings["o"])
     {
     	std::cout<<"arcsin("<<input<<") = "<<asin(input)<<'\n';
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+double fibr(double x)
+{
+	if(x>0)
+	{
+		return fibr(x-1)+fibr(x-2);
+	}
+	else
+	{
+		return x;
+	}
+}
+std::string fibrcppAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "fibrcpp");
+    double input = callOnFrame(frame,exp.data);
+    frame->initialOperands.push(fibr(input)*-1);
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"fibrcpp("<<input<<") = "<<fibr(input*-1)<<'\n';
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
@@ -2024,7 +2047,11 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     SubStr itVar = getVarName(frame->exp, index);
     const int postRangeIndex = frame->exp.find("in range")+8;
     SubStr limitExpr = getExprInString(frame->exp, postRangeIndex, '(', ')', ' ');
-    double limit = callOnFrame(frame, limitExpr.data);
+    Object limitParams("","","");
+    limitParams.setParams(limitExpr.data);
+    if(limitParams.params.empty())
+    	throw std::string("Error no limit in for loop condition");
+    double limit = callOnFrame(frame, limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0]);
     int startOfCodeBlock = index;
     SubStr codeBlock("",0,0);
 
@@ -2046,7 +2073,11 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     int postBodyLineCount = lineCount;
     lineCount = preBodyLineCount;
     callOnFrame(frame, "loc "+itVar.data+" = 0");
-        for(int i = 0; i < limit; i++)
+    int i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0]):0;
+    //(10,0,-1)
+    if(i < limit)
+        for(; i < limit;
+        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
         {
 
             if(*boolsettings["o"])
@@ -2067,9 +2098,32 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
                 std::cout<<"for block Execution Complete.\n\n";
                 std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
             }
-            //callOnFrame(frame,incrementExp);
-
         }
+    else
+        for(; i > limit;
+        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+        {
+
+            if(*boolsettings["o"])
+            {
+                std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
+            }
+            try{
+                (*frame->getLocalMemory())[itVar.data] = Object(itVar.data,to_string(i),"");
+                callOnFrame(frame,codeBlock.data);
+            }
+            catch(std::string &exception)
+            {
+                *boolsettings["t"] = printTime;
+                throw std::string(exception + "\nIn for body subexp: ");
+            }
+            if(*boolsettings["o"])
+            {
+                std::cout<<"for block Execution Complete.\n\n";
+                std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
+            }
+        }
+
         callOnFrame(frame, "delete "+itVar.data);
 
 
@@ -3078,6 +3132,7 @@ t calculateExpression(AscalFrame<double>* frame)
             	lineCount++;
                 currentFrame->clearStackIfAnotherStatementProceeds(isOperator);
             }
+
 
           }
         //Finally pop all values off initial stack onto final stacks for processing
