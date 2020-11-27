@@ -100,15 +100,23 @@ let isprime = (x){
 
 let printprimes = (w,x){
   while (w < x){
-    when isprime(w) then print w else 0 end
+    when isprime(w) then printf(w) else 0 end
     set w = w+1
   }
   null
 }
 
-
-let fibr = when x > 1 then fibr(x-1)+fibr(x-2) else x end
-
+memoize 1
+let fibr = {
+loc z = 0;
+if(x > 1){
+print "(fibr(x-1))endl"
+set z = fibr(x-1)+fibr(x-2);
+}else{
+set z = x;
+}
+z
+}
 
 let printfib = (x){
 loc counter = 0;
@@ -230,3 +238,96 @@ let optmult = (a,b){when a>b then mult(b,a) else mult(a,b) end}
 
 let pow = (a,b){when b>1 then optmult(a,pow(a,b-1)) else 1 end}
 
+
+
+let pn = (x){when x>0 then floor(pn(x-1))*(pn(x-1)%1+1) else 2.92005 end};
+let pn = (x){
+loc c = 0;
+loc num = 2;
+while c<x {
+if isprime(num) {
+set c = c+1
+}
+set num = num+1
+}
+num-1
+}
+let hanoi = {
+    loc han = (n,from,h,to){
+      if(n>0) {
+        han(n-1,from,to,h);
+	print "move (from) to (to)endl"
+        han(n-1,h,from,to);
+        
+      };
+      
+    };
+    han(inp, 1, 2, 3)
+  }let hanoi = {
+    loc han = (n,from,h,to){
+      if(n>0) {
+        loc printer = {
+          loc con = when x=1 then print "A" when x=2 then print "B" else print "C" end;
+          print "move ";
+          con(from);
+          print " to ";
+          con(to);
+          print "endl";
+        };
+        han(n-1,from,to,h);
+        printer(from, to);
+        han(n-1,h,from,to);
+        
+      };
+      
+    };
+    han(inp, 1, 2, 3);
+    
+  }
+
+let tri = {
+loc g = (y){for x in range(y){print " *"};y;}
+loc f = (y){for x in range(y){print " "};y}
+    for x in range(y){
+      g(y-x);
+      f(4*x);
+      g(y-x);
+      println(1);
+      
+    };
+    for x in range(y){
+      g(x+1);
+      f(4*(y-x-1));
+      g(x+1)
+      println(1);
+      
+    };
+    
+  }
+
+let root = (b,c){
+   loc result = 100;
+    if(b>0)
+    {
+        cloc base = b
+	loc one = 1;
+        cloc newpow = c-one;
+        loc den;
+        loc num;
+        cloc delta =  1
+	let prev;
+        cloc count = 0;
+        while (delta > 0.00001) * (count < 10000){
+            set num = (result^c) - base;
+            set den = (result^newpow)*c;
+            set prev = result;
+            set result = result - num/den;
+            set delta = result - prev;
+            if(delta < 0){
+                set delta = delta*-1;
+	    }
+            set count = count+1;
+        }
+    }
+result
+}
