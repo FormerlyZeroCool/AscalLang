@@ -33,7 +33,7 @@
 #define THROWERRORS 1
 static const size_t sizeofFrame = sizeof(AscalFrame<double>);
 static size_t allocated = 0, deallocated = 0;;
-static const std::string VERSION = "2.01";
+static const std::string VERSION = "2.02";
 struct SubStr{
     std::string data;
     int start,end;
@@ -2073,7 +2073,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     int postBodyLineCount = lineCount;
     lineCount = preBodyLineCount;
     callOnFrame(frame, "loc "+itVar.data+" = 0");
-    int i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0]):0;
+    double i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0]):0;
     //(10,0,-1)
     if(i < limit)
         for(; i < limit;
