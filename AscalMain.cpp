@@ -2046,7 +2046,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
 
     SubStr itVar = getVarName(frame->exp, index);
     const int postRangeIndex = frame->exp.find("in range")+8;
-    SubStr limitExpr = getExprInString(frame->exp, postRangeIndex, '(', ')', ' ');
+    SubStr limitExpr = getExprInString(frame->exp, postRangeIndex, '(', ')', '{');
     Object limitParams("","","");
     limitParams.setParams(limitExpr.data);
     if(limitParams.params.empty())
