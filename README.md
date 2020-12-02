@@ -312,7 +312,7 @@ To use it type:
  
  
 `let f = x^2-4`<br>
-`plot f,-5<>5,-5<>15,0.2,0.1`<br>
+`plot f,-5<>5,-5<>15,0.2,1`<br>
  you should see the graph of f(x) = x^2-4 from -5 to 5 in the x, and -5 to 15 in the y axis, with measurements taken at increments of 0.2 in the x, and 0.1 the y<br>
 </p>
 <br>
