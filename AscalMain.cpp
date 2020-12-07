@@ -108,6 +108,7 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+std::string tryAction(AscalFrame<double>* frame,bool saveLast);
 std::string flushOutAction(AscalFrame<double>* frame,bool saveLast);
 std::string fprimeAction(AscalFrame<double>* frame,bool saveLast);
 std::string fibrcppAction(AscalFrame<double>* frame,bool saveLast);
@@ -402,6 +403,7 @@ void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
 	inputMapper["flush"] = flushOutAction;
+	inputMapper["try"] = tryAction;
 	inputMapper["fprime"] = fprimeAction;
 	inputMapper["fibrcpp"] = fibrcppAction;
 	inputMapper["for"] = forRangeAction;
@@ -1538,6 +1540,24 @@ std::string sinAction(AscalFrame<double>* frame,bool saveLast)
     if(*boolsettings["o"])
     {
     	std::cout<<"sin("<<input<<") = "<<sin(input)<<'\n';
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+std::string tryAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "try");
+    try{
+    	double input = callOnFrame(frame,exp.data);
+    	frame->initialOperands.push(input);
+    }
+    catch(std::string &s)
+    {
+    	callOnFrame(frame, "loc errorMessageLog = {"+s+"}");
+    	callOnFrame(frame, "loc hasErrorOccurred = 1");
+    }
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"try("<<exp.data<<")\n";
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
