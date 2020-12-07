@@ -22,6 +22,8 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+//if this causes compilation failure on windows feel free to comment this out
+#include <unistd.h>
 
 #include "AscalFrame.hpp"
 #include "Object.hpp"
@@ -33,10 +35,11 @@
 #define THROWERRORS 1
 static const size_t sizeofFrame = sizeof(AscalFrame<double>);
 static size_t allocated = 0, deallocated = 0;;
-static const std::string VERSION = "2.02";
+static const std::string VERSION = "2.01";
 struct SubStr{
     std::string data;
     int start,end;
+    bool loadedNew = false;
     SubStr(std::string data,int start,int end):data(data),start(start),end(end){}
 };
 static uint32_t frameCount = 1;
@@ -74,7 +77,6 @@ static size_t rememberedFromMemoTableCount;
 #include <windows.h>
 #else
 #define PATH_SEPARATOR '/'
-#include <unistd.h>
 #endif
 
 #if DEBUG==1
@@ -106,6 +108,8 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+std::string flushOutAction(AscalFrame<double>* frame,bool saveLast);
+std::string fprimeAction(AscalFrame<double>* frame,bool saveLast);
 std::string fibrcppAction(AscalFrame<double>* frame,bool saveLast);
 std::string forRangeAction(AscalFrame<double>* frame,bool saveLast);
 std::string srandomAction(AscalFrame<double>* frame,bool saveLast);
@@ -171,6 +175,7 @@ bool hasChar(const std::string &dat,const char &c);
 SubStr getVarName(const std::string &s,int index);
 int getClosingIndex(char opening,const std::string &data);
 SubStr getExpr(const std::string &data,int startingIndex,char opening = '{',char closing = '}',char lineBreak = ';');
+SubStr getCodeBlock(AscalFrame<double> *frame, int index);
 std::vector<std::string> getExprVec(const std::string &data,int index,char opening,char closing,char lineBreak);
 SubStr getNewVarName(const std::string &data);
 //End Parsing For Loading Ascal System Memory
@@ -396,6 +401,8 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
+	inputMapper["flush"] = flushOutAction;
+	inputMapper["fprime"] = fprimeAction;
 	inputMapper["fibrcpp"] = fibrcppAction;
 	inputMapper["for"] = forRangeAction;
 	inputMapper["pause"] = pauseAction;
@@ -702,20 +709,15 @@ std::string printStringAction(AscalFrame<double>* frame,bool s)
             SubStr subexp("",0,0);
             while(result[index] && result[index] != '\"')
             {
-            //std::cout<<"input In While: "<<std::endl;
                 if(result[index] == '(')
                 {
-                    //std::cout<<"input In if: "<<std::endl;
                     SubStr subexp = getExpr(result,index,'(',')',';');
                     std::string value = to_string(callOnFrame(frame, subexp.data));
                     std::string first = result.substr(0,index);
-                    std::string last = result.substr(index+subexp.end-3,frame->exp.size());
-
-                //std::cout<<"inputAction first: "<<first<<" value: "<<value<<"\nLast: "<<last<<std::endl;
+                    std::string last = result.substr(index+subexp.end-2,frame->exp.size());
 
                     result = first+value+last;
                     index = first.size()+value.size()-1;
-                //std::cout<<"inputActie"<<result.substr(index,result.length());
                 }
                 else if(result.size()-index>3 && result[index] == 'e' &&
                         result[index+1] == 'n' && result[index+2] == 'd' && result[index+3] == 'l')
@@ -827,11 +829,19 @@ void loadFile(const std::string &expr,int startIndex)
     std::cin.rdbuf(inputFile.rdbuf());
     int locLineCount = lineCount;
     lineCount = 0;
+    FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+    allocated += sizeofFrame;
+    calledFunctionMemory->setIsDynamicAllocation(false);
     while(inputFile)
     {
-        allocated += sizeofFrame;
-        FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
         get_line(inputFile, calledFunctionMemory->exp);
+        //reset so it is like we are executing a new frame with shared memory, and if/else flag state
+        calledFunctionMemory->index = 0;
+        calledFunctionMemory->level = 0;
+        calledFunctionMemory->memoPointer = 0;
+        calledFunctionMemory->setIsFirstRun(true);
+        calledFunctionMemory->setAugmented(false);
+        //finish reset
         lineCount++;
         try{
         	uint32_t i = 0;
@@ -839,15 +849,19 @@ void loadFile(const std::string &expr,int startIndex)
         		i++;
         	if(calledFunctionMemory->exp[i] != '#')
         	{
+        		//evaluate statement as an expression
         		calculateExpression<double>(calledFunctionMemory);
         	}
         }
+        //catch only ascal runtime exceptions, not exit signal exceptions, or anything from C++
         catch(std::string &exception)
         {
             std::cerr<<exception<<std::endl;
             lineCount = locLineCount;
         }
     }
+    deallocated += sizeofFrame;
+    delete calledFunctionMemory;
     inputFile.close();
     std::cin.rdbuf(cinrdbuf);
 }
@@ -1191,7 +1205,7 @@ double getNextDoubleS(const std::string &data,int &index)
 std::string plotAction(AscalFrame<double>* frame,bool saveLast)
 {
     const int plotKeyWordIndex = frame->exp.find("plot",frame->index);
-    const int endOfFun = frame->exp.find(",",frame->index);
+    const int endOfFun = frame->exp.find(",", plotKeyWordIndex);
     const int endOfDomain = frame->exp.find(",",endOfFun+1);
     std::vector<double> sumArea;
     sumArea.push_back(0);
@@ -1233,6 +1247,7 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
     double dy = yStepSize>0?yStepSize:1;
     double xi;
     Vect2D<double> outPuts(tableWidth,functions.size()-1);
+    std::stringstream exp;
     for(int j = 0;j<functions.size();j++)
     {
         std::string function = functions[j];
@@ -1243,7 +1258,9 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
             xi = xMin+dx*(i);
             allocated += sizeofFrame;
             FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
-            calledFunction->exp = function+'('+to_string(xi)+')';
+            exp << function << '(' << to_string(xi) << ')';
+            calledFunction->exp = exp.str();
+            exp.str(std::string());
             outPuts.push_back(
                     calculateExpression<double>(calledFunction));
             sumArea[j] += outPuts.get(i,j)*dx;
@@ -1362,11 +1379,14 @@ std::string approxIntAction(AscalFrame<double>* frame,bool saveLast)
     const int tableWidth = getNextDoubleS(frame->exp,index);
     index += 2;
     const char methodIdentifier = frame->exp[index];
+    if(methodIdentifier != 'l' && methodIdentifier != 't' && methodIdentifier != 'r')
+    	index -=2;
     const double xStepSize = (xMax-xMin)/(tableWidth>0?tableWidth:1);
     double dx = (xMax-xMin)/tableWidth;
     double xi;
     double thisIndex = 0;
     double lastIndex = 0;
+    std::stringstream exp;
     for(int j = 0;j<functions.size();j++)
     {
         std::string function = functions[j];
@@ -1375,7 +1395,9 @@ std::string approxIntAction(AscalFrame<double>* frame,bool saveLast)
             xi = xMin+dx*(i+1);
             allocated += sizeofFrame;
             FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
-            calledFunction->exp = function+'('+to_string(xi)+')';
+            exp << function << '(' << to_string(xi) << ')';
+            calledFunction->exp = exp.str();
+            exp.str(std::string());
             thisIndex = calculateExpression<double>(calledFunction);//outPuts.get(i,j)*dx;
 
             sumArea[j] +=
@@ -1411,7 +1433,7 @@ std::string approxIntAction(AscalFrame<double>* frame,bool saveLast)
         std::cout<<"Area Under Curve calculated with "<<calculationType<<" Reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
     }
 
-    return MAX;
+    return "a"+frame->exp.substr(index+1);
 }
 std::string existsAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -1488,6 +1510,26 @@ std::string getListElementAction(AscalFrame<double>* frame, Object &obj)
 	}
 	return obj.getChild(expIndex.data).getInstructions();
 }
+
+std::string fprimeAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "fprime");
+    Object data("","","");
+    data.setParams(exp.data);
+    if(data.params.size() < 2)
+    	throw std::string("Error missing params for fprime <function name> <value to evaluate at>");
+    std::string fn = data.params[0];
+    std::string x = data.params[1];
+    double functionValue = callOnFrame(frame,fn+"("+x+")");
+    double steppedFunctionValue = callOnFrame(frame,fn+"("+x+"+0.00001)");
+    frame->initialOperands.push((steppedFunctionValue-functionValue)/0.00001);
+    if(*boolsettings["o"])
+    {
+    	std::cout<<fn<<"("<<x<<"+0.00001) = "<<steppedFunctionValue<<" - "<<fn<<"("<<x<<") = "<<functionValue;
+    	std::cout<<fn<<"prime("<<exp.data<<") = "<<(steppedFunctionValue-functionValue)/0.00001<<'\n';
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
 std::string sinAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "sin");
@@ -1498,6 +1540,15 @@ std::string sinAction(AscalFrame<double>* frame,bool saveLast)
     	std::cout<<"sin("<<input<<") = "<<sin(input)<<'\n';
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+std::string flushOutAction(AscalFrame<double>* frame,bool saveLast)
+{
+    std::fflush(stdout);
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"Flushing std out"<<'\n';
+    }
+    return MAX;
 }
 std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -1741,11 +1792,7 @@ std::string elseAction(AscalFrame<double>* frame,bool saveLast)
     *boolsettings["t"] = false;
     while(frame->exp[index] == ' ')
         index++;
-    //std::cout<<"\nin Else ifFlag: "<<ifFlag<<" result flag for if: "<<ifResultFlag<<std::endl;
-    //std::cout<<"comingfromElse in Else: "<<comingfromElse<<std::endl;
-    SubStr codeBlock = getExpr(frame->exp,index);
-    //std::cout<<"else Originial Str: "<<expr.substr(index,expr.length())<<std::endl;
-    //std::cout<<"else Code Block: "<<codeBlock.data<<std::endl;
+    SubStr codeBlock = getCodeBlock(frame, index);
     if(frame->ifFlag() && !frame->ifResultFlag())
     {
         //if there is an if after the else this must be set
@@ -1756,7 +1803,6 @@ std::string elseAction(AscalFrame<double>* frame,bool saveLast)
                 std::cout<<"Executing else case:\n";
             }
             frame->setComingfromElse(true);
-            //std::cout<<" yigi: "<<expr.substr(index,expr.length())<<std::endl;
         }
         else
         {
@@ -1792,6 +1838,8 @@ std::string elseAction(AscalFrame<double>* frame,bool saveLast)
         //std::cout<<"Index: "<<index<<" end of cb: "<<codeBlock.end-1 <<" len: "<< expr.size()<<std::endl;
         if(index + codeBlock.end - 1 < frame->exp.size())
             index += codeBlock.end-1;
+        else
+        	index = frame->exp.size();
     }
     frame->setIfFlag(false);
     frame->index = 0;
@@ -1847,7 +1895,7 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
         {
             std::cout<<"Boolean expression evaluation complete result: "<<(boolExpValue?"true":"false")<<'\n';
         }
-        codeBlock = getExpr(frame->exp,startOfCodeBlock);
+        codeBlock = getCodeBlock(frame, startOfCodeBlock);
         //std::cout<<"CodeBlock in if: "<<codeBlock.data<<std::endl;
         index = startOfCodeBlock + codeBlock.end - 1;
         if(index > frame->exp.size())
@@ -1904,7 +1952,7 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
         *boolsettings["t"] = printTime;
         frame->exp = expBkp;
         frame->index = 0;
-        return "a"+frame->exp.substr(index-2,frame->exp.size());
+        return "a"+frame->exp.substr(index-1,frame->exp.size());
 }
 template <class t>
 t callOnFrame(AscalFrame<t>* callingFrame,std::string subExp)
@@ -1930,6 +1978,21 @@ t callOnFrameFormatted(AscalFrame<t>* callingFrame,std::string subExp)
     t data = calcWithOptions(&executionFrame);
     deallocated += sizeofFrame;
     return data;
+}
+SubStr getCodeBlock(AscalFrame<double> *frame, int index)
+{
+    SubStr codeBlock = getExpr(frame->exp,index);
+    if(codeBlock.data.size() == 0)
+    {
+        codeBlock.loadedNew = true;
+    	std::string nextLine;
+        while(std::cin && codeBlock.data.size() == 0)
+        {
+        	get_line(std::cin,nextLine);
+        	codeBlock = getExpr(nextLine, 0);
+        }
+    }
+    return codeBlock;
 }
 std::string whileAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -1982,7 +2045,7 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
         std::cout<<"Execution Complete. "<<(boolExpValue?"true":"false")<<"\n\n";
     }
     int preBodyLineCount = lineCount;
-    codeBlock = getExpr(expbkp,index);
+    codeBlock = getCodeBlock(frame, index);
     int postBodyLineCount = lineCount;
     lineCount = preBodyLineCount;
     if(boolExpValue != 0)
@@ -2045,21 +2108,21 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
         index++;
 
     SubStr itVar = getVarName(frame->exp, index);
-    const int postRangeIndex = frame->exp.find("in range")+8;
+    const int postRangeIndex = frame->exp.find("in range", index)+8;
     SubStr limitExpr = getExprInString(frame->exp, postRangeIndex, '(', ')', '{');
     Object limitParams("","","");
     limitParams.setParams(limitExpr.data);
     if(limitParams.params.empty())
     	throw std::string("Error no limit in for loop condition");
+    callOnFrame(frame, "loc "+itVar.data+" = 0");
     double limit = callOnFrame(frame, limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0]);
-    int startOfCodeBlock = index;
+    int startOfCodeBlock = limitExpr.start;
     SubStr codeBlock("",0,0);
 
     while(frame->exp[startOfCodeBlock] && frame->exp[startOfCodeBlock] != '{')
     {
         startOfCodeBlock++;
     }
-
     index = startOfCodeBlock;
 
 
@@ -2069,12 +2132,10 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
         *boolsettings["t"] = false;
     }
     int preBodyLineCount = lineCount;
-    codeBlock = getExpr(expbkp,index);
+    codeBlock = getCodeBlock(frame, index);
     int postBodyLineCount = lineCount;
     lineCount = preBodyLineCount;
-    callOnFrame(frame, "loc "+itVar.data+" = 0");
     double i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0]):0;
-    //(10,0,-1)
     if(i < limit)
         for(; i < limit;
         		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
@@ -2133,7 +2194,6 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     frame->index = 0;
     while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
         index++;
-    //std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
     return "a"+expbkp.substr((index-2<frame->exp.size()?index-2:frame->exp.size()),frame->exp.size());
 }
 std::string printMemory(std::map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
@@ -2616,6 +2676,7 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
     int count = 0;
     int openingCount = 0;
     int maxOpeningCount = 0;
+    SubStr block("",0,0);
     std::vector<char> result;
     if(data.length()<256)
         result.reserve(256);
@@ -2627,15 +2688,15 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
         while(line[index] && !isNumeric(line[index]) && !isalpha(line[index]) && !isOperator(line[index]) &&
                 line[index] != closing && line[index] != opening)
         {
-            openingCount = (openingCount + (line[index] == opening) - (line[index] == closing));
-            maxOpeningCount = (maxOpeningCount + (line[index] == opening));
+            openingCount += (line[index] == opening) - (line[index] == closing);
+            maxOpeningCount += (line[index] == opening);
             index++;
         }
         while(line[index + count] && (line[index + count] != lineBreak && line[index + count] != '\n')
                 && !(line[index+count] == closing && openingCount == 1))
         {
-            openingCount = (openingCount + (line[index+count] == opening) - (line[index+count] == closing));
-            maxOpeningCount = (maxOpeningCount + (line[index+count] == opening));
+            openingCount += (line[index+count] == opening) - (line[index+count] == closing);
+            maxOpeningCount += (line[index+count] == opening);
             count++;
         }
         openingCount -= (line[index+count] == closing);
@@ -2652,6 +2713,7 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
         }
         if(openingCount > 0 && line.length() <= index+count)
         {
+            block.loadedNew = true;
         	uint32_t i;
         	do{
         		lineCount++;
@@ -2666,16 +2728,17 @@ SubStr getExpr(const std::string &data,int index,char opening,char closing,char 
         }
         else
         {
-            index = index+count+1;
+            index += count+1;
         }
         count = 0;
     }while(openingCount > 0 && std::cin);
 
     if(maxOpeningCount > 0)
         result.push_back(closing);
-    result.push_back(0);
-
-    return SubStr(std::string(result.begin(),result.end()),index,result.size());
+    block.data = std::string(result.begin(),result.end());
+    block.start = index;
+	block. end = result.size();
+    return block;
 }
 SubStr getExprInString(const std::string &data,int index,char opening,char closing,char lineBreak)
 {
@@ -2938,7 +3001,7 @@ t calculateExpression(AscalFrame<double>* frame)
             while(!currentFrame->initialOperators.isEmpty())
                 currentFrame->initialOperators.pop();
          }
-         else if(isalpha(currentChar) && !isOperator(currentChar))
+         else if(isalpha(currentChar) && (isalpha(frame->exp[i+1]) || !isOperator(currentChar)))
          {
         	 //This needs to be updated, and simplified it makes conditional jumps very expensive
              SubStr varName(getVarName(currentFrame->exp,i));
@@ -3560,19 +3623,20 @@ t doubleModulus(t &and1,t &and2)
     t result;
       if(and2 != 0)
       {
-          double quotient = and1/and2;
-          double flooredQuotient;
-          modf(quotient,&flooredQuotient);
-          result = and1 - and2*flooredQuotient;
+        	  double quotient = and1/and2;
+        	  double flooredQuotient;
+        	  modf(quotient,&flooredQuotient);
+        	  result = and1 - and2*flooredQuotient;
 
-          if(and1*and2 < 0 && result >0)
-          {
-              result *= -1;
-          }
-          else if(and1*and2 > 0 && result <0)
-          {
-              result *= -1;
-          }
+        	  if(and1*and2 < 0 && result >0)
+        	  {
+        	      result *= -1;
+        	  }
+        	  else if(and1*and2 > 0 && result <0)
+              {
+        	        result *= -1;
+        	  }
+
       }
       else
       {
