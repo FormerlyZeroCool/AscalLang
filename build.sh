@@ -1,4 +1,4 @@
-echo "Building Ascal Interpreter with g++ -o22"
+echo "Building Ascal Interpreter with g++ -O2"
 g++ -c -O2 -std=c++17 AscalMain.cpp AscalFrame.hpp AscalParameters.cpp Object.cpp queue.hpp setting.hpp stack.hpp unsortedlist.hpp ObjectKey.cpp
 g++ -o ascal AscalMain.o Object.o AscalParameters.o ObjectKey.o
 rm AscalMain.o Object.o AscalParameters.o ObjectKey.o
