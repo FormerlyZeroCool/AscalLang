@@ -23,7 +23,9 @@
 #include <iostream>
 #include <fstream>
 #include <thread>
-
+//Currently only used for keyword in development comment this, and the call to fork out if you get any trouble
+//Commenting this, and the call to fork out won't currently cause any issue as of 2.02
+#include <unistd.h>
 #include "AscalFrame.hpp"
 #include "Object.hpp"
 #include "setting.hpp"
@@ -107,6 +109,8 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast);
+std::string derivefnAction(AscalFrame<double>* frame,bool saveLast);
 std::string tryAction(AscalFrame<double>* frame,bool saveLast);
 std::string flushOutAction(AscalFrame<double>* frame,bool saveLast);
 std::string fprimeAction(AscalFrame<double>* frame,bool saveLast);
@@ -247,6 +251,7 @@ static stack<std::string> lastExp;
 //list of previous undone expressions for r command in interpretParam fn
 static stack<std::string> undoneExp;
 /////////////////////////////
+Object& getObject(AscalFrame<double>* frame, std::string &functionName);
 
 static int lineCount = 1;
 void get_line(std::istream &in,std::string&data)
@@ -401,6 +406,8 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
+	inputMapper["derive"] = derivefnAction;
+	inputMapper["plotGUI"] = plotGUIAction;
 	inputMapper["flush"] = flushOutAction;
 	inputMapper["try"] = tryAction;
 	inputMapper["fprime"] = fprimeAction;
@@ -1214,6 +1221,72 @@ double getNextDoubleS(const std::string &data,int &index)
     num *= -1;
   return num;
 }
+std::vector<std::string> split(std::string &s, std::string &&delimiter)
+{
+	std::vector<std::string> result;
+	size_t pos = 0;
+	while ((pos = s.find(delimiter)) != std::string::npos) {
+	    result.push_back(s.substr(0, pos));
+	    s.erase(0, pos + delimiter.length());
+	}
+	result.push_back(s);
+	return result;
+}
+
+std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
+{
+	//Feel free to change anything, I've just added the boilerplate, and some conveniance code for you
+    SubStr exp = getFollowingExpr(frame, "derive");
+    std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
+    //you can change this, just getting some params for you
+    if(params.size()>3)
+    {
+    	Object function = getObject(frame, params[0]);
+
+    	std::string withRespectTo = params[1];
+    	uint16_t degree = (uint16_t) callOnFrame(frame, params[2]);
+    	//Your code here
+
+    	//end of your code is defining the string derivaative
+    	std::string derivative;
+    	std::stringstream call;
+    	call<<"let "<<function.id<<"prime"<<degree<<" = "<<function.getInstructions();
+    	//Saves function that when it is a first derivative of f looks like
+    	//fprime1 = first derivative of f
+    	callOnFrame(frame, call.str());
+    }
+    else
+    {
+    	throw std::string("derive <function name, variable to differentiate, derivative degree>");
+    }
+    return MAX;
+}
+std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "plotGUI");
+    std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
+    if(params.size() < 7)
+    	throw std::string("plotGUI <fun1|fun2...,x min, x max, y min, y max, delta x, delta y>");
+    std::vector<std::string> functions = split(params[0], "|");
+    double xMin = callOnFrame(frame, params[1]);
+    double xMax = callOnFrame(frame, params[1]);
+    double yMin = callOnFrame(frame, params[1]);
+    double yMax = callOnFrame(frame, params[1]);
+    double dx = callOnFrame(frame, params[1]);
+    double dy = callOnFrame(frame, params[1]);
+
+    int pid = fork();
+    if(!pid)
+    {
+    	//Your GUI code
+    	throw 0;
+    }
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"plotGUI\n";
+    }
+    return MAX;
+}
 //For plotGUI to use the y index of the Vect2D corresponds to the index of the function name in the functions vector
 //the x index in cartesian space is x*dx+xMin
 Vect2D<double> calcTable(const std::vector<std::string> &functions, double xMin, double xMax, double xStepSize, double yStepSize)
@@ -1241,6 +1314,7 @@ Vect2D<double> calcTable(const std::vector<std::string> &functions, double xMin,
 	    }
 	    return outPuts;
 }
+
 std::string plotAction(AscalFrame<double>* frame,bool saveLast)
 {
     const int plotKeyWordIndex = frame->exp.find("plot",frame->index);
@@ -1579,22 +1653,6 @@ std::string sinAction(AscalFrame<double>* frame,bool saveLast)
     	std::cout<<"sin("<<input<<") = "<<sin(input)<<'\n';
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
-}
-#include <unistd.h>
-std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
-{
-    SubStr exp = getFollowingExpr(frame, "plotGUI");
-    std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
-    int pid = fork();
-    if(!pid)
-    {
-    	//Your GUI code
-    }
-    if(*boolsettings["o"])
-    {
-    	std::cout<<"plotGUI\n";
-    }
-    return MAX;
 }
 std::string tryAction(AscalFrame<double>* frame,bool saveLast)
 {
