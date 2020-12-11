@@ -1236,6 +1236,7 @@ std::vector<std::string> split(std::string &s, std::string &&delimiter)
 std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "simplify");
+    Object function = getObject(frame, exp.data);
     //your code
 
     //end of your code is defining simplifiedfn
