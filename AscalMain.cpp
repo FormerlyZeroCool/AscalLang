@@ -22,14 +22,14 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-//if this causes compilation failure on windows feel free to comment this out
-#include <unistd.h>
+#include <thread>
 
 #include "AscalFrame.hpp"
 #include "Object.hpp"
 #include "setting.hpp"
 #include "stack.hpp"
 #include "Vect2D.hpp"
+#include "Calculator.hpp"
 
 #define DEBUG 1
 #define THROWERRORS 1
@@ -45,7 +45,7 @@ struct SubStr{
 static uint32_t frameCount = 1;
 static uint32_t varCount = 0;
 
-std::streambuf* stream_buffer_cin = std::cin.rdbuf();
+static std::streambuf* stream_buffer_cin = std::cin.rdbuf();
 /////////////////////////////
 //Program Global Memory Declaration
 static std::unordered_map<std::string,Object> memory;
@@ -62,8 +62,7 @@ static std::map
 <ObjectKey,
 std::string (*)(AscalFrame<double>*,Object&)> objectActionMapper;
 
-template <class t>
-static std::map<char,t (*)(t&,t&)> operations;
+static std::map<char, std::string> operations;
 static size_t rememberedFromMemoTableCount;
 //End Program Global Memory Declaration
 /////////////////////////////
@@ -467,7 +466,6 @@ struct {
 }commandLineParams;
 int main(int argc,char* argv[])
 {
-
 	commandLineParams.argc = argc;
 	commandLineParams.argv = argv;
 	commandLineParams.index = 1;
@@ -555,15 +553,25 @@ int main(int argc,char* argv[])
     //setting for main program loop makes use of overloaded operator = on setting class
     boolsettings["l"] = false;
 
-    for(commandLineParams.index = 1;commandLineParams.index<argc;commandLineParams.index++)
+    for(commandLineParams.index = 1; commandLineParams.index < argc; commandLineParams.index++)
     {
         arg = argv[commandLineParams.index];
+        //Auto execute if param specificies a .asl file
         if(arg.size() > 4)
         {
             if(arg[arg.size()-4] == '.' && toLower(arg[arg.size()-3]) == 'a' &&
                     toLower(arg[arg.size()-2]) == 's' && toLower(arg[arg.size()-1]) == 'l')
             {
+            	//Exec code in filepath specified in command line parameter
+            	try{
                 loadFile(arg,0);
+            	}catch(std::string &exception)
+            	{
+                    std::cerr<<"Function call stack trace.\n";
+                    std::cerr<<exception<<std::endl;
+                    std::cerr<<"End of function call stack trace.\n";
+                    std::cerr<<"Failed to exec: "<<arg<<std::endl;
+            	}
                 continue;
             }
         }
@@ -806,22 +814,21 @@ void loadFile(const std::string &expr,int startIndex)
     }
     if(!inputFile)
     {
-        int count = 0;
         std::vector<char> data;
         for(char &c:filePath)
         {
-
-            if(c == '.' && (count < filePath.size() - 4 || toLower(filePath[filePath.size()-3]) != 'a' ||
-                    toLower(filePath[filePath.size()-2]) != 's' || toLower(filePath[filePath.size()-1]) != 'l'))
+            if(c == '.')
                 c = (PATH_SEPARATOR);
-            count++;
         }
+        if(filePath.size() > 4 &&
+        		filePath[filePath.size()-4] == PATH_SEPARATOR && toLower(filePath[filePath.size()-3]) == 'a' &&
+                    toLower(filePath[filePath.size()-2]) == 's' && toLower(filePath[filePath.size()-1]) == 'l')
+			filePath[filePath.size()-4] = '.';
         inputFile.open(filePath);
         if(!inputFile)
         {
             inputFile.open(filePath+".asl");
         }
-
     }
     if(!inputFile)
     {
@@ -834,9 +841,11 @@ void loadFile(const std::string &expr,int startIndex)
     FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
     allocated += sizeofFrame;
     calledFunctionMemory->setIsDynamicAllocation(false);
-    while(inputFile)
+    while(true)
     {
         get_line(inputFile, calledFunctionMemory->exp);
+    	if(!inputFile)
+    		break;
         //reset so it is like we are executing a new frame with shared memory, and if/else flag state
         calledFunctionMemory->index = 0;
         calledFunctionMemory->level = 0;
@@ -847,7 +856,7 @@ void loadFile(const std::string &expr,int startIndex)
         lineCount++;
         try{
         	uint32_t i = 0;
-        	while(calledFunctionMemory->exp[i] == ' ' || calledFunctionMemory->exp[i] == ' ')
+        	while(calledFunctionMemory->exp[i] && calledFunctionMemory->exp[i] == ' ')
         		i++;
         	if(calledFunctionMemory->exp[i] != '#')
         	{
@@ -978,7 +987,8 @@ std::string deleteObject(AscalFrame<double>* frame,bool saveLast)
         memory.clear();
         frame->getLocalMemory()->clear();
         userDefinedFunctions.clear();
-        std::cout<<"All Memory cleared."<<std::endl;
+        if(*boolsettings["o"])
+        	std::cout<<"All Memory cleared."<<std::endl;
     }
     else
     {
@@ -992,7 +1002,8 @@ std::string deleteObject(AscalFrame<double>* frame,bool saveLast)
                 userDefinedFunctions.erase(position);
 
             memory.erase(name);
-            std::cout<<"Erased "<<name<<" from memory."<<std::endl;
+            if(*boolsettings["o"])
+            	std::cout<<"Erased "<<name<<" from memory."<<std::endl;
         }
         else if(frame->getLocalMemory()->count(name) != 0)
         {
@@ -1000,7 +1011,7 @@ std::string deleteObject(AscalFrame<double>* frame,bool saveLast)
         }
         else
         {
-            std::cout<<"    Error could not find "<<name<<" in memory to delete."<<std::endl;
+            throw std::string("Error could not find "+name+" in memory to delete.\n");
         }
     }
     return MAX;
@@ -1543,6 +1554,22 @@ std::string sinAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
+#include <unistd.h>
+std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "plotGUI");
+    std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
+    int pid = fork();
+    if(!pid)
+    {
+    	//Your GUI code
+    }
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"plotGUI\n";
+    }
+    return MAX;
+}
 std::string tryAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "try");
@@ -1552,8 +1579,8 @@ std::string tryAction(AscalFrame<double>* frame,bool saveLast)
     }
     catch(std::string &s)
     {
-    	callOnFrame(frame, "loc errorMessageLog = {"+s+"}");
-    	callOnFrame(frame, "loc hasErrorOccurred = 1");
+    	callOnFrame(frame, "loc errorMessageLog = {"+s+"};\nloc hasErrorOccurred = 1");
+    	frame->initialOperands.push(callOnFrame(frame, "null"));
     }
     if(*boolsettings["o"])
     {
@@ -1573,8 +1600,8 @@ std::string flushOutAction(AscalFrame<double>* frame,bool saveLast)
 std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "sleep");
-    double input = callOnFrame(frame,exp.data);
-    usleep(((int)input)*100);
+    double input = callOnFrame(frame, exp.data);
+    std::this_thread::sleep_for(std::chrono::microseconds(((int)input)*100));
     if(*boolsettings["o"])
     {
     	std::cout<<"sleeping for "<<input<<" tenths of a milli-second\n";
@@ -1609,7 +1636,7 @@ std::string srandomAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "srand");
     double input = callOnFrame(frame,exp.data);
-    double ib = input/1000000;
+    double ib = input/100000;
     input *= 100000;
     input += ib;
     if(exp.data.length() > 5)
@@ -1623,19 +1650,21 @@ std::string srandomAction(AscalFrame<double>* frame,bool saveLast)
     	hr2 = input;
     	hashRand = input;
     }
-	frame->initialOperands.push(ascalPRNG());
+    double hash = ascalPRNG();
+	frame->initialOperands.push(hash);
     if(*boolsettings["o"])
     {
-    	std::cout<<"srand("<<((long)input)<<") = "<<hashRand<<'\n';
+    	std::cout<<"srand("<<(input/100000)<<") = "<<to_string(hash)<<'\n';
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string randomAction(AscalFrame<double>* frame,bool saveLast)
 {
-	frame->initialOperands.push(ascalPRNG());
+	double hash = ascalPRNG();
+	frame->initialOperands.push(hash);
     if(*boolsettings["o"])
     {
-    	std::cout<<"rand = "<<hashRand<<"\n";
+    	std::cout<<"rand = "<<to_string(hash)<<"\n";
     }
     return 'a'+frame->exp.substr(frame->index+4,frame->exp.size());
 }
@@ -1709,6 +1738,7 @@ std::string fibrcppAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "fibrcpp");
     double input = callOnFrame(frame,exp.data);
+    Object paramsList("", "", exp.data);
     frame->initialOperands.push(fibr(input)*-1);
     if(*boolsettings["o"])
     {
@@ -2305,7 +2335,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
 
         if(*boolsettings["o"])
         {
-            std::cout<<"Executing Boolean Expression:\n";
+            std::cout<<"Executing Boolean Expression: "<<booleanExpression<<'\n';
         }
         try{
             boolExpValue = callOnFrame(frame,booleanExpression);
@@ -3082,26 +3112,24 @@ t calculateExpression(AscalFrame<double>* frame)
                  Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
                  Object localData = currentFrame->getLocalMemory()->count(varName.data)!=0?(*currentFrame->getLocalMemory())[varName.data]:Object();
 
+                 std::string params = currentFrame->exp[varName.end+1] =='('?
+                 currentFrame->exp.substr(varName.end+1):"";
+                 int endOfParams = data.setParams(params);
+                 data.setParams(params);
+                 if(data.params.size() == 0 && currentFrame->exp[varName.end+1] =='(')
+                	 throw std::string("Error no closing )");
                  //Variable handling section
                  if(localData.id.length() != 0)
                  {
-                     std::string params = currentFrame->exp[varName.end+1] == '('?currentFrame->exp.substr(varName.end+1):"";
-                     int endOfParams = localData.setParams(params);
-                     int startOfEnd = localData.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
-
-
+                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
                      i = endOfParams;
                      createFrame(executionStack, currentFrame,
-                            localData.params,localData.getInstructions(),localData.id,startOfEnd,hashFunctionCall(localData.id));
+                            data.params,localData.getInstructions(),localData.id,startOfEnd,hashFunctionCall(localData.id));
                      goto new_frame_execution;
                  }
                  else if(data.id.length() != 0)
                  {
-                     std::string params = currentFrame->exp[varName.end+1] =='('?
-                     currentFrame->exp.substr(varName.end+1):"";
-                     int endOfParams = data.setParams(params);
                      int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
-
                      //creates a new set of stack frames, one for the function/var and one for resolution,
                      //and calculation of each of it's parameters
                      //also returns function/var's value to this function's initialOperands stack
@@ -3115,10 +3143,6 @@ t calculateExpression(AscalFrame<double>* frame)
                      Object paramData =
                              currentFrame->getParamMemory()->count(varName.data)?(*currentFrame->getParamMemory())[varName.data]
                                                                                                             :Object();
-                     std::string params = currentFrame->exp[varName.end+1] == '('
-                     ?currentFrame->exp.substr(varName.end+1)
-                     :"";
-                     int endOfParams = paramData.setParams(params);
                      int startOfEnd = paramData.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
 
                      //creates a new set of stack frames, one for the function/var and one for resolution,
@@ -3126,7 +3150,7 @@ t calculateExpression(AscalFrame<double>* frame)
                      //also returns function/var's value to this function's initialOperands stack
 
                      createFrame(executionStack, currentFrame,
-                                 paramData.params,paramData.getInstructions(),varName.data,startOfEnd,hashFunctionCall(paramData.id));
+                                 data.params,paramData.getInstructions(),varName.data,startOfEnd,hashFunctionCall(paramData.id));
                                      goto new_frame_execution;
                  }
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
@@ -3134,14 +3158,10 @@ t calculateExpression(AscalFrame<double>* frame)
                      Object localVar(varName.data,(*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()],"");
                                       ++(*currentFrame->getParams());
                      (*currentFrame->getParamMemory())[localVar.id] = localVar;
-                     std::string params = currentFrame->exp[varName.end+1] == '('
-                     ?currentFrame->exp.substr(varName.end+1)
-                     :"";
-                     int endOfParams = localVar.setParams(params);
                      int startOfEnd = localVar.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
 
                      createFrame(executionStack, currentFrame,
-                            localVar.params,localVar.getInstructions(),localVar.id,startOfEnd,hashFunctionCall(localVar.id));
+                            data.params,localVar.getInstructions(),localVar.id,startOfEnd,hashFunctionCall(localVar.id));
                      goto new_frame_execution;
                  }
                  else
@@ -3201,13 +3221,6 @@ t calculateExpression(AscalFrame<double>* frame)
             }
             else if(isOperator(currentChar))
             {
-                currentFrame->initialOperators.push(currentChar);
-            }
-            //This is to support multiplication when expressions look like 2(4)
-            else if(currentChar == '(' && i > 0 && isNumeric(currentFrame->exp[i-1]))
-
-            {
-                currentFrame->initialOperators.push('*');
                 currentFrame->initialOperators.push(currentChar);
             }
             else if(currentChar == ';')
@@ -3392,7 +3405,6 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         }
     }
 }
-
 template <class t>
 t processStack(stack<t> &operands,stack<char> &operators)
 {
@@ -3448,7 +3460,11 @@ t processStack(stack<t> &operands,stack<char> &operators)
       } while(getPriority(nextOperator)>getPriority(firstOperator));
       //perform found operation, and remove remaining operand from stack
       operands.pop();
-      operands.push(calc(firstOperator,and1,and2));
+      static Calculator<t> c;
+      result = c.calc(firstOperator,and1,and2);
+      operands.push(result);
+      if(*boolsettings["o"])
+        std::cout<<and1<<firstOperator<<and2<<" = "<<result<<'\n';
       //add overridden operators back to original stack
       while(!savedOperators.isEmpty())
       {
@@ -3630,14 +3646,6 @@ int getPriority(char ator)
   return priority;
 }
 template <class t>
-t add(t &and1,t &and2){    return and1+and2;}
-template <class t>
-t subtract(t &and1,t &and2){return and1-and2;}
-template <class t>
-t multiply(t &and1,t &and2){return and1*and2;}
-template <class t>
-t divide(t &and1,t &and2){return and2!=0?and1/and2:throw std::string("Error division by zero.");}
-template <class t>
 t doubleModulus(t &and1,t &and2)
 {
     t result;
@@ -3665,64 +3673,21 @@ t doubleModulus(t &and1,t &and2)
       return result;
 }
 template <class t>
-t exponentiate(t &and1,t &and2){return std::pow(and1,and2);}
-template <class t>
-t permute(t &and1,t &and2){
-    t result = 1;
-
-    for(int i = 0;i<and2 && and1 - i > 1;i++)
-    {
-        result *= and1 - i;
-    }
-    return result;
-}
-template <class t>
-t combinations(t &and1,t &and2)
-{
-    t result = 1;
-    for(int i = 0;i<and2 && and1 - i > 1;i++)
-    {
-        result = (result*(and1 - i))/(and2-i);
-    }
-    return result;
-}
-template <class t>
-t log(t &and1,t &and2){return log(and2)/log(and1);}
-template <class t>
-t rootOp(t &and1,t &and2){return root(and2,and1);}
-template <class t>
-t equals(t &and1,t &and2){return and1==and2;}
-template <class t>
-t lessThan(t &and1,t &and2){return and1<and2;}
-template <class t>
-t greaterThan(t &and1,t &and2){    return and1>and2;}
-
-template <class t>
 void initOperations()
 {
-    operations<t>['+'] = add<t>;
-    operations<t>['-'] = subtract<t>;
-    operations<t>['*'] = multiply<t>;
-    operations<t>['/'] = divide<t>;
-    operations<t>['%'] = doubleModulus<t>;
-    operations<t>['^'] = exponentiate<t>;
-    operations<t>['P'] = permute<t>;
-    operations<t>['C'] = combinations<t>;
-    operations<t>['@'] = log<t>;
-    operations<t>['$'] = rootOp<t>;
-    operations<t>['='] = equals<t>;
-    operations<t>['<'] = lessThan<t>;
-    operations<t>['>'] = greaterThan<t>;
-}
-template <class t>
-t calc(char op,t and1,t and2)
-{
-    t result = 0;
-        result = operations<t>[op](and1,and2);
-
-    if(*boolsettings["o"])
-      std::cout<<and1<<op<<and2<<" = "<<result<<'\n';
-    return result;
+    operations['+'] = "Adds left operand to right";
+    operations['-'] = "Subtracts right operand from left";
+    operations['*'] = "";
+    operations['/'] = "";
+    operations['%'] = "";
+    operations['^'] = "";
+    operations['P'] = "";
+    operations['C'] = "";
+    operations['@'] = "";
+    operations['$'] = "";
+    operations['='] = "";
+    operations['<'] = "";
+    operations['>'] = "";
 }
 
 bool isOperator(char s)
@@ -3731,7 +3696,7 @@ bool isOperator(char s)
 }
 bool isNonParentheticalOperator(char s)
 {
-    return operations<double>.count(s);
+    return operations.count(s);
 }
 bool isNumeric(char c)
 {
