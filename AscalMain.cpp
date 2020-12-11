@@ -109,6 +109,7 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast);
 std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast);
 std::string derivefnAction(AscalFrame<double>* frame,bool saveLast);
 std::string tryAction(AscalFrame<double>* frame,bool saveLast);
@@ -406,6 +407,7 @@ std::string popandAction(AscalFrame<double>* frame,bool s)
 void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
+	inputMapper["simplify"] = simplifyfnAction;
 	inputMapper["derive"] = derivefnAction;
 	inputMapper["plotGUI"] = plotGUIAction;
 	inputMapper["flush"] = flushOutAction;
