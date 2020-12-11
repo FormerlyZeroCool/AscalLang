@@ -1238,6 +1238,8 @@ std::vector<std::string> split(std::string &s, std::string &&delimiter)
 std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "simplify");
+    if(exp.data.size() == 1)
+    	throw std::string("Error, no function supplied to simplify.");
     Object function;
     try{
     	function = getObject(frame, exp.data);
