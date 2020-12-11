@@ -3223,8 +3223,8 @@ t calculateExpression(AscalFrame<double>* frame)
                  currentFrame->exp.substr(varName.end+1):"";
                  int endOfParams = data.setParams(params);
                  data.setParams(params);
-                 if(data.params.size() == 0 && currentFrame->exp[varName.end+1] =='(')
-                	 throw std::string("Error no closing )");
+                 //if(data.params.size() == 0 && currentFrame->exp[varName.end+1] =='(')
+                //	 throw std::string("Error no closing )");
                  //Variable handling section
                  if(localData.id.length() != 0)
                  {
