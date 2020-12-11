@@ -1238,7 +1238,13 @@ std::vector<std::string> split(std::string &s, std::string &&delimiter)
 std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "simplify");
-    Object function = getObject(frame, exp.data);
+    Object function;
+    try{
+    	function = getObject(frame, exp.data);
+    }catch(std::string &objNotFoundErr)
+    {
+    	throw std::string("Error could not find function: " + exp.data + " to simplify.");
+    }
     //your code
 
     //end of your code is defining simplifiedfn
