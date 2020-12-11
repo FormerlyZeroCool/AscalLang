@@ -1239,7 +1239,7 @@ std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "simplify");
     if(exp.data.size() == 1)
-    	throw std::string("Error, no function supplied to simplify.");
+    	throw std::string("Simplify <function>");
     Object function;
     try{
     	function = getObject(frame, exp.data);
