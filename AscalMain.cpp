@@ -1239,26 +1239,23 @@ std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
     SubStr exp = getFollowingExpr(frame, "derive");
     std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
     //you can change this, just getting some params for you
-    if(params.size()>3)
-    {
-    	Object function = getObject(frame, params[0]);
-
-    	std::string withRespectTo = params[1];
-    	uint16_t degree = (uint16_t) callOnFrame(frame, params[2]);
-    	//Your code here
-
-    	//end of your code is defining the string derivaative
-    	std::string derivative;
-    	std::stringstream call;
-    	call<<"let "<<function.id<<"prime"<<degree<<" = "<<function.getInstructions();
-    	//Saves function that when it is a first derivative of f looks like
-    	//fprime1 = first derivative of f
-    	callOnFrame(frame, call.str());
-    }
-    else
-    {
+    if(params.size()<3)
     	throw std::string("derive <function name, variable to differentiate, derivative degree>");
-    }
+
+    Object function = getObject(frame, params[0]);
+
+    std::string withRespectTo = params[1];
+    uint16_t degree = (uint16_t) callOnFrame(frame, params[2]);
+    //Your code here
+
+    //end of your code is defining the string derivaative
+    std::string derivative;
+    std::stringstream call;
+    call<<"let "<<function.id<<"prime"<<degree<<" = "<<function.getInstructions();
+    //Saves function that when it is a first derivative of f looks like
+    //fprime1 = first derivative of f
+    callOnFrame(frame, call.str());
+    //Automatically moves to next expression after keyword execution because we return MAX
     return MAX;
 }
 //Rummy you'll probably want to use this function
@@ -1287,6 +1284,7 @@ std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
     {
     	std::cout<<"plotGUI\n";
     }
+    //Automatically moves to next expression after keyword execution because we return MAX
     return MAX;
 }
 //For plotGUI to use the y index of the Vect2D corresponds to the index of the function name in the functions vector
