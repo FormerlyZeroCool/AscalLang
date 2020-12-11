@@ -1261,6 +1261,8 @@ std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
     }
     return MAX;
 }
+//Rummy you'll probably want to use this function
+Vect2D<double> calcTable(const std::vector<std::string> &functions, double xMin, double xMax, double xStepSize, double yStepSize);
 std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "plotGUI");
