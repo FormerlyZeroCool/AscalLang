@@ -1233,6 +1233,18 @@ std::vector<std::string> split(std::string &s, std::string &&delimiter)
 	return result;
 }
 
+std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "simplify");
+    //your code
+
+    //end of your code is defining simplifiedfn
+    std::string simplifiedfn;
+    std::stringstream call;
+    call<<"set "<<exp.data<<" = "<<simplifiedfn;
+    callOnFrame(frame, call.str());
+	return MAX;
+}
 std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
 {
 	//Feel free to change anything, I've just added the boilerplate, and some conveniance code for you
@@ -1241,9 +1253,8 @@ std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
     //you can change this, just getting some params for you
     if(params.size()<3)
     	throw std::string("derive <function name, variable to differentiate, derivative degree>");
-
+    //id is the function name, getInstructions() will return a reference to the code saved for the function as a string
     Object function = getObject(frame, params[0]);
-
     std::string withRespectTo = params[1];
     uint16_t degree = (uint16_t) callOnFrame(frame, params[2]);
     //Your code here
