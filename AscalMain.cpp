@@ -1240,6 +1240,7 @@ std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
     SubStr exp = getFollowingExpr(frame, "simplify");
     if(exp.data.size() == 1)
     	throw std::string("simplify <function>");
+    //Get definition by calling function.getIntsructions(), or for formatted versioin getInstructionsFormated
     Object function;
     try{
     	function = getObject(frame, exp.data);
