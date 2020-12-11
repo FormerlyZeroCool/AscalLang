@@ -1214,7 +1214,33 @@ double getNextDoubleS(const std::string &data,int &index)
     num *= -1;
   return num;
 }
-
+//For plotGUI to use the y index of the Vect2D corresponds to the index of the function name in the functions vector
+//the x index in cartesian space is x*dx+xMin
+Vect2D<double> calcTable(const std::vector<std::string> &functions, double xMin, double xMax, double xStepSize, double yStepSize)
+{
+    int tableWidth = (xMax-xMin)/(xStepSize>0?xStepSize:1);
+	double dx = (xMax-xMin)/tableWidth;
+	    double dy = yStepSize>0?yStepSize:1;
+	    double xi;
+	    Vect2D<double> outPuts(tableWidth,functions.size()-1);
+	    std::stringstream exp;
+	    for(int j = 0;j<functions.size();j++)
+	    {
+	        std::string function = functions[j];
+	        for(int i = 0;i<tableWidth;i++)
+	        {
+	            xi = xMin+dx*(i);
+	            allocated += sizeofFrame;
+	            FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+	            exp << function << '(' << to_string(xi) << ')';
+	            calledFunction->exp = exp.str();
+	            exp.str(std::string());
+	            outPuts.push_back(
+	                    calculateExpression<double>(calledFunction));
+	        }
+	    }
+	    return outPuts;
+}
 std::string plotAction(AscalFrame<double>* frame,bool saveLast)
 {
     const int plotKeyWordIndex = frame->exp.find("plot",frame->index);
