@@ -1,7 +1,7 @@
 //============================================================================
 // Name        : Ascal.cpp
 // Author      : Andrew Rubinstein
-// Version     : v1
+// Version     : v2.02
 // Copyright   :
 // Description : An infix expression interpreter, and simple math programming language in C++
 // A.S.Cal.
@@ -56,7 +56,6 @@ std::vector<Object> systemDefinedFunctions;
 //Interpreter Settings HashMap for toggle flags, like show time, or operations
 static std::map<std::string,setting<bool> > boolsettings;
 //Interpreter hash map for system keywords
-//template <class t>
 static std::unordered_map
 <std::string,
 std::string (*)(AscalFrame<double>*,bool)> inputMapper;
@@ -87,10 +86,6 @@ short maxDepth = 0;
 #else
 #define LOG_DEBUG(x)
 #endif
-//Parallel reimann sums
-//thread count = number of partitions/20 + 1
-//dynamic array as long as thread count passed to each thread, along with thread index number to save result of calculation
-//when all threads are finished running sum up result in array, maybe use simd if
 
 std::string to_string(double input);
 const std::string MAX = std::to_string(std::numeric_limits<double>::max());
@@ -198,38 +193,6 @@ t calc(char op,t and1,t and2);
 template <class t>
 t processStack(stack<t> &operands,stack<char> &operators);
 
-template <class t>
-t root(t b,t p)
-{
-    t result = 100;
-    if(b>0)
-    {
-        t base = b,one = 1;
-        t newPow = p-one;
-        t den;
-        t num;
-        t delta =  1,prev;
-        int count = 0;
-        while(delta > 0.000001 && count < 10000)
-        {
-            num = pow(result,p) - base;
-            den = pow(result,newPow)*p;
-            prev = result;
-            result = result - num/den;
-            delta = result - prev;
-            if(delta < 0)
-                delta *= -1;
-
-            count++;
-        }
-    }
-    else if(b == 0)
-        result = 0;
-    else
-        throw std::string("Error cannot compute complex radicals, radicand should be a positive number.");
-    //std::cout<<"to do radical: "<<count<<std::endl;
-    return result;
-}
 //regular logic
 ////////////////////////////
 //string interpreters/Logic
@@ -355,11 +318,9 @@ void loadInitialFunctions()
     Object binProbDist("binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
     loadFn(binProbDist);
 
-    //Dietician Functions
+    //Dietitian Functions
     Object eKCal("ekcal","(0*male*kg*cm*age*activity+ true(male)*5+not(male)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
     loadFn(eKCal);
-    //Object desWeight("desw","(percent/100)*(usual-desired)+desired","");
-    //loadFn(desWeight);
 
     //Constants Definition
     loadFn(Object("pi","3.141592653589793238462643383279",""));
@@ -632,7 +593,6 @@ int main(int argc,char* argv[])
   }
   }
   catch(int exitCode){
-      //std::cerr<<"exit code: "<<exitCode<<std::endl;
       return exitCode;
   }
   return 0;
@@ -643,46 +603,6 @@ double floor(double input)
     return input - doubleModulus(input,one);
 }
 
-/*std::string to_string(double input)
-{
-
-    std::vector<char> output;
-    if(input > 0)
-    {
-        double integerPart;
-        double fractionalPart = modf(input,&integerPart);
-        double ten = 10;
-        while(integerPart >= 1)
-        {
-            //std::cout<<"Char Pushed: "<<48+floor(doubleModulus(integerPart,ten))<<std::endl;
-            output.insert(output.begin(),48+floor(doubleModulus(integerPart,ten)));
-            integerPart /= ten;
-        }
-        if(integerPart == 0)
-        {
-            output.push_back('0');
-        }
-        output.push_back('.');
-        if(fractionalPart == 0)
-        {
-            output.push_back('0');
-        }
-        int precisionCounter = 0;
-        while(fractionalPart > 0 && precisionCounter < ten)
-        {
-            fractionalPart *= ten;
-            int newData = floor(fractionalPart);
-            output.push_back(48+newData);
-            fractionalPart -= newData;
-            precisionCounter++;
-        }
-
-    }
-    else
-        output.push_back(48);
-    return std::string(output.begin(),output.end());
-//    return std::to_string(input);
-}*/
 #include <sstream>
 template <typename T>
 std::string to_string_with_precision(const T a_value, const int n = 20)
@@ -1083,14 +1003,6 @@ void printHelpMessage(const std::string &expr)
 }
 std::string letNewVar(AscalFrame<double>* frame,bool saveLast)
 {
-    //find index of first char that is alpha find index of last alpha before space or =
-
-                //ignore everything till the =
-
-                //use expr.substr(firstIndex,LastIndex) as var name and id and key in hash map use everything after = as expression
-
-                //set expr = expression part (everything after = ignoring spaces) of object and run calculation
-
                 SubStr exPart = getExpr(frame->exp,frame->exp.find('=',frame->index)+1);
                 SubStr newVarPart = getNewVarName(frame->exp);
                 Object var(newVarPart.data,exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1 ));
@@ -1240,7 +1152,7 @@ std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
     SubStr exp = getFollowingExpr(frame, "simplify");
     if(exp.data.size() == 1)
     	throw std::string("simplify <function>");
-    //Get definition by calling function.getIntsructions(), or for formatted versioin getInstructionsFormated
+    //Get definition by calling function.getIntsructions(), or for formatted version getInstructionsFormated
     Object function;
     try{
     	function = getObject(frame, exp.data);
@@ -1259,7 +1171,7 @@ std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
 {
-	//Feel free to change anything, I've just added the boilerplate, and some conveniance code for you
+	//Feel free to change anything, I've just added the boilerplate, and some convenience code for you
     SubStr exp = getFollowingExpr(frame, "derive");
     std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
     //you can change this, just getting some params for you
@@ -1271,7 +1183,7 @@ std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
     uint16_t degree = (uint16_t) callOnFrame(frame, params[2]);
     //Your code here
 
-    //end of your code is defining the string derivaative
+    //end of your code is defining the string derivative
     std::string derivative;
     std::stringstream call;
     call<<"let "<<function.id<<"prime"<<degree<<" = "<<function.getInstructions();
@@ -2120,7 +2032,15 @@ t callOnFrame(AscalFrame<t>* callingFrame,std::string subExp)
     ParamFrame<t> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
-    t data = calculateExpression<t>(&executionFrame);
+    t data;
+    try{
+    data = calculateExpression<t>(&executionFrame);
+    }catch(std::string &error)
+    {
+        lineCount = preCallLineCount;
+        deallocated += sizeofFrame;
+        throw error;
+    }
     lineCount = preCallLineCount;
     deallocated += sizeofFrame;
     return data;
@@ -3117,23 +3037,24 @@ t calculateExpression(AscalFrame<double>* frame)
             currentFrame->setIsFirstRun(false);
         	if(*boolsettings["memoize"])
         	{
-            currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
-            if(memoPad.count(currentFrame->memoPointer))
-            {
-            	data = memoPad[currentFrame->memoPointer];
-                currentFrame->returnResult(data, memory);
-                currentFrame->returnPointer = nullptr;
-                currentFrame->index = currentFrame->exp.length();
-                ++rememberedFromMemoTableCount;
+        		currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
+        		if(memoPad.count(currentFrame->memoPointer))
+        		{
+        			data = memoPad[currentFrame->memoPointer];
+        			currentFrame->returnResult(data, memory);
+        			currentFrame->returnPointer = nullptr;
+        			currentFrame->index = currentFrame->exp.length();
+        			++rememberedFromMemoTableCount;
 
-                if(*boolsettings["o"])
-                {
-                    if(std::to_string(data).length() != MAX.length()){
-                    	std::cout<<"retrieving return value from memo tables\n";
-                        std::cout<<"Returning value: "<<data<<'\n';
-                    }
-                }
-            }
+        			if(*boolsettings["o"])
+        			{
+        				if(std::to_string(data).length() != MAX.length())
+        				{
+        					std::cout<<"retrieving return value from memo tables\n";
+        					std::cout<<"Returning value: "<<data<<'\n';
+        				}
+        			}
+        		}
         	}
         	if(*boolsettings["d"])
            	{
@@ -3223,8 +3144,6 @@ t calculateExpression(AscalFrame<double>* frame)
                  currentFrame->exp.substr(varName.end+1):"";
                  int endOfParams = data.setParams(params);
                  data.setParams(params);
-                 //if(data.params.size() == 0 && currentFrame->exp[varName.end+1] =='(')
-                //	 throw std::string("Error no closing )");
                  //Variable handling section
                  if(localData.id.length() != 0)
                  {
@@ -3485,7 +3404,7 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         newFrame->returnPointer = currentFrame;
         //push new frame
         executionStack.push(newFrame);
-        for(int i = 0; i < params.size(); i++)
+        for(int i = params.size()-1; i >= 0; i--)
         {
             allocated += sizeofFrame;
             if(params[i][0] != '&')
@@ -3493,7 +3412,6 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
                 //create and set new frame expression
                 ParamFrame<t>* pFrame = new ParamFrame<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
                 pFrame->exp = params[i];
-                //pFrame->stackIndex = currentFrame->stackIndex+2+i;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //push new frame
@@ -3503,7 +3421,6 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
             {
                 ParamFrameFunctionPointer<t>* pFrame = new ParamFrameFunctionPointer<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
                 pFrame->functionName = params[i].substr(1);
-                //pFrame->stackIndex = currentFrame->stackIndex+2+i;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //push new frame
