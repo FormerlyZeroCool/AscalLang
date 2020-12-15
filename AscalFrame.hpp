@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 
+#include "AscalParameters.hpp"
 #include "Object.hpp"
 #include "stack.hpp"
 
@@ -27,6 +28,26 @@ protected:
     std::map<std::string,Object>* localMemory;
 
 public:
+    std::string memToString()
+    {
+    	std::stringstream s;
+    	s<<"Params stack:\n";
+    	for(auto &value:*params)
+    	{
+    		s<<value.toString()<<"\n";
+    	}
+    	s<<"Param memory:\n";
+    	for(auto &[key, value]:*paramMemory)
+    	{
+    		s<<value.toString()<<"\n";
+    	}
+    	s<<"Local Memory\n";
+    	for(auto &[key, value]:*localMemory)
+    	{
+    		s<<value.toString()<<"\n";
+    	}
+    	return s.str();
+    }
     AscalFrame* returnPointer = nullptr;
     uint8_t level = 0;
     uint32_t index = 0;
@@ -129,11 +150,8 @@ public:
     {
         if(this->returnPointer)
         {
-            this->returnPointer->getParams()->push_back(std::to_string(result));
-            /*std::cout<<"From Ascal PFrame "<<result<<" to params\n";
-            std::cout<<"    returned from index: "<<this->stackIndex<<" exp: "<<this->exp<<"\n";
-            std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
-        */}
+            this->returnPointer->getParams()->push_back(Object("",std::to_string(result),""));
+        }
     }
 	char getType() override
 	{
@@ -155,28 +173,21 @@ public:
     {
         if(this->returnPointer)
         {
-            std::string fnBody;
-            if(this->returnPointer->getLocalMemory()->count(functionName))
+            if(this->getLocalMemory()->count(functionName))
             {
-                fnBody = (*this->returnPointer->getLocalMemory())[functionName].getInstructions();
+            	this->returnPointer->getParams()->push_back((*this->getLocalMemory())[functionName]);
             }
-            else if(this->returnPointer->getParamMemory()->count(functionName))
+            else if(this->getParamMemory()->count(functionName))
             {
-                fnBody = (*this->returnPointer->getParamMemory())[functionName].getInstructions();
+            	this->returnPointer->getParams()->push_back(((*this->getParamMemory())[functionName]));
             }
             else if(globalMemory.count(functionName))
             {
-                fnBody = globalMemory[functionName].getInstructions();
+            	this->returnPointer->getParams()->push_back(globalMemory[functionName]);
             }
             else
-            {
-                fnBody = functionName;
-            }
-            this->returnPointer->getParams()->push_back(fnBody);
-            /*std::cout<<"From Ascal PFrame "<<fnBody<<" to params\n";
-            std::cout<<"    returned from index: "<<this->stackIndex<<" exp: "<<this->exp<<"\n";
-            std::cout<<"    returned to index: "<<this->returnPointer->stackIndex<<" exp: "<<this->returnPointer->exp<<"\n";
-       */ }
+            	throw std::string("Error cannot find function: "+functionName);
+        }
     }
 
 	char getType() override

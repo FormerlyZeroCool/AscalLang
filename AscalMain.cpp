@@ -104,6 +104,10 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+std::string printCharAction(AscalFrame<double>* frame,bool saveLast);
+std::string arrSetValAction(AscalFrame<double>* frame,bool saveLast);
+std::string getArrValAction(AscalFrame<double>* frame,bool saveLast);
+std::string pushValAction(AscalFrame<double>* frame,bool saveLast);
 std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast);
 std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast);
 std::string derivefnAction(AscalFrame<double>* frame,bool saveLast);
@@ -333,16 +337,17 @@ void printAllFunctions()
     std::cout<<"All Functions in Memory:"<<std::endl;
     for(auto &[key,value] : memory)
     {
-        std::cout<<std::endl<<"Function Name: "<<key<<"\nFunction Expression: "<<value.instructionsToFormattedString()<<std::endl;
+        std::cout<<std::endl<<"Function Name: "<<key<<"\nFunction Expression: "<<value.toString()<<std::endl;
     }
     std::cout<<std::endl<<"End of All Functions in Memory."<<std::endl;
 }
-void printAllUDF()
+void printAllUDF(AscalFrame<double> *frame)
 {
     std::cout<<"User Defined Functions:"<<std::endl;
     for(Object & data:userDefinedFunctions)
     {
-        std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<data.instructionsToFormattedString()<<std::endl;
+        std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<getObject(frame, data.id).toString()<<std::endl;
+
     }
     std::cout<<std::endl<<"End of User Defined Functions."<<std::endl;
 }
@@ -369,6 +374,10 @@ void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
 	inputMapper["simplify"] = simplifyfnAction;
+	inputMapper["printChar"] = printCharAction;
+	inputMapper["arrSet"] = arrSetValAction;
+	inputMapper["arrGet"] = getArrValAction;
+	inputMapper["arrPush"] = pushValAction;
 	inputMapper["derive"] = derivefnAction;
 	inputMapper["plotGUI"] = plotGUIAction;
 	inputMapper["flush"] = flushOutAction;
@@ -1578,6 +1587,80 @@ std::string fprimeAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
+std::string pushValAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "arrPush");
+    std::vector<std::string> params = Object("","",exp.data).params;
+    if(params.size() < 2)
+    	throw std::string("arrPush(<object/array>,<value as Ascal expression>)");
+    double valueToPush = callOnFrame(frame,params[1]);
+
+    getObject(frame, params[0]).pushList(Object("",to_string(valueToPush),""));
+    if(*boolsettings["o"])
+    {
+    	Object list = getObject(frame, params[0]);
+    	std::cout<<"pushed value "<<params[1]<<" to list "<<params[0]<<" at position: "<<(list.getListSize()-1)<<"\n";
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+std::string getArrValAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "arrGet");
+    std::vector<std::string> params = Object("","",exp.data).params;
+    if(params.size() < 2)
+    	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
+    double indexToGet = callOnFrame(frame,params[1]);
+    Object element = getObject(frame, params[0]).getListElement(indexToGet, memory);
+    SubStr paramsForListElementFn("", 0 , exp.end);
+    if(exp.data[exp.end] == '(')
+    {
+    	frame->index = exp.end;
+    	paramsForListElementFn = getFollowingExpr(frame, "");
+    }
+    std::stringstream fnDef;
+    fnDef<<"loc "<<element.id<<"="<<element.getInstructions()<<";\n"<<element.id<<'('<<paramsForListElementFn.data<<')';
+
+    frame->initialOperands.push(callOnFrame(frame,fnDef.str()));
+
+    callOnFrame(frame, "delete "+element.id);
+    if(*boolsettings["o"])
+    {
+    	double t;
+    	frame->initialOperands.top(t);
+    	std::cout<<"got element at index: "<<params[1]<<" from list "<<params[0]<<" value: "<<(t)<<"\n";
+    }
+    return 'a'+frame->exp.substr(paramsForListElementFn.end,frame->exp.size());
+}
+std::string arrSetValAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "arrSet");
+    std::vector<std::string> params = Object("","",exp.data).params;
+    if(params.size() < 3)
+    	throw std::string("arrGet(<array>,<Index as Ascal expression>,<value as expression>)");
+    double indexToSet = callOnFrame(frame,params[1]);
+    double value = callOnFrame(frame,params[2]);
+    Object newObj("",to_string(value),"");
+    getObject(frame, params[0]).setList(newObj, indexToSet);
+    memory["null"].getInstructions() = MAX;
+    if(*boolsettings["o"])
+    {
+    	double t;
+    	frame->initialOperands.top(t);
+    	std::cout<<"got element at index: "<<params[1]<<" from list "<<params[0]<<" value: "<<(t)<<"\n";
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
+std::string printCharAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "printChar");
+    char input = callOnFrame(frame,exp.data);
+    std::cout<<( input);
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"printChar("<<input<<") = "<<(char)(input)<<'\n';
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
 std::string sinAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "sin");
@@ -2177,6 +2260,13 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
     //std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
     return "a"+expbkp.substr((index-2<frame->exp.size()?index-2:frame->exp.size()),frame->exp.size());
 }
+bool firstChar(std::string &s, char c)
+{
+	static uint32_t it;
+	for(it = 0; s[it] == ' '; it++){}
+
+	return s[it] == c;
+}
 std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
 {
     std::string expbkp = frame->exp;
@@ -2192,7 +2282,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     if(limitParams.params.empty())
     	throw std::string("Error no limit in for loop condition");
     callOnFrame(frame, "loc "+itVar.data+" = 0");
-    double limit = callOnFrame(frame, limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0]);
+    std::string limitStr = limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0];
     int startOfCodeBlock = limitExpr.start;
     SubStr codeBlock("",0,0);
 
@@ -2212,57 +2302,118 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     codeBlock = getCodeBlock(frame, index);
     int postBodyLineCount = lineCount;
     lineCount = preBodyLineCount;
-    double i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0]):0;
-    if(i < limit)
-        for(; i < limit;
-        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
-        {
 
-            if(*boolsettings["o"])
-            {
-                std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
-            }
-            try{
-                (*frame->getLocalMemory())[itVar.data] = Object(itVar.data,to_string(i),"");
-                callOnFrame(frame,codeBlock.data);
-            }
-            catch(std::string &exception)
-            {
-                *boolsettings["t"] = printTime;
-                throw std::string(exception + "\nIn for body subexp: ");
-            }
-            if(*boolsettings["o"])
-            {
-                std::cout<<"for block Execution Complete.\n\n";
-                std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
-            }
-        }
+	double i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0]):0;
+    if(firstChar(limitStr,'&'))
+    {
+    	limitStr = limitStr.substr(limitStr.find("&")+1);
+    	Object list = getObject(frame, limitStr);
+    	if(limitParams.params.size()<3 || callOnFrame(frame,limitParams.params[2]) > 0)
+    	{
+        	for(;i < list.getListSize(); i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+        	{
+                if(*boolsettings["o"])
+                {
+                    std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
+                }
+                try{
+                    (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
+                    callOnFrame(frame,codeBlock.data);
+                }
+                catch(std::string &exception)
+                {
+                    *boolsettings["t"] = printTime;
+                    throw std::string(exception + "\nIn for body subexp: ");
+                }
+                if(*boolsettings["o"])
+                {
+                    std::cout<<"for block Execution Complete.\n\n";
+                    std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
+                }
+        	}
+    	}
+    	else
+    	{
+    		if(i == 0)
+    			i = list.getListSize()-1;
+        	for(;i >= 0; i += callOnFrame(frame,limitParams.params[2]))
+        	{
+                if(*boolsettings["o"])
+                {
+                    std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
+                }
+                try{
+                    (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
+                    callOnFrame(frame,codeBlock.data);
+                }
+                catch(std::string &exception)
+                {
+                    *boolsettings["t"] = printTime;
+                    throw std::string(exception + "\nIn for body subexp: ");
+                }
+                if(*boolsettings["o"])
+                {
+                    std::cout<<"for block Execution Complete.\n\n";
+                    std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
+                }
+        	}
+    	}
+    }
     else
-        for(; i > limit;
-        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
-        {
+    {
+        double limit = callOnFrame(frame, limitStr);
+    	    if(i < limit)
+    	        for(; i < limit;
+    	        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+    	        {
 
-            if(*boolsettings["o"])
-            {
-                std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
-            }
-            try{
-                (*frame->getLocalMemory())[itVar.data] = Object(itVar.data,to_string(i),"");
-                callOnFrame(frame,codeBlock.data);
-            }
-            catch(std::string &exception)
-            {
-                *boolsettings["t"] = printTime;
-                throw std::string(exception + "\nIn for body subexp: ");
-            }
-            if(*boolsettings["o"])
-            {
-                std::cout<<"for block Execution Complete.\n\n";
-                std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
-            }
-        }
+    	            if(*boolsettings["o"])
+    	            {
+    	                std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
+    	            }
+    	            try{
+    	                (*frame->getLocalMemory())[itVar.data] = Object(itVar.data,to_string(i),"");
+    	                callOnFrame(frame,codeBlock.data);
+    	            }
+    	            catch(std::string &exception)
+    	            {
+    	                *boolsettings["t"] = printTime;
+    	                throw std::string(exception + "\nIn for body subexp: ");
+    	            }
+    	            if(*boolsettings["o"])
+    	            {
+    	                std::cout<<"for block Execution Complete.\n\n";
+    	                std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
+    	            }
+    	        }
+    	    else
+    	        for(; i > limit;
+    	        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):-1)
+    	        {
 
-        callOnFrame(frame, "delete "+itVar.data);
+    	            if(*boolsettings["o"])
+    	            {
+    	                std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
+    	            }
+    	            try{
+    	                (*frame->getLocalMemory())[itVar.data] = Object(itVar.data,to_string(i),"");
+    	                callOnFrame(frame,codeBlock.data);
+    	            }
+    	            catch(std::string &exception)
+    	            {
+    	                *boolsettings["t"] = printTime;
+    	                throw std::string(exception + "\nIn for body subexp: ");
+    	            }
+    	            if(*boolsettings["o"])
+    	            {
+    	                std::cout<<"for block Execution Complete.\n\n";
+    	                std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
+    	            }
+    	        }
+
+    }
+
+     callOnFrame(frame, "delete "+itVar.data);
 
 
     lineCount = postBodyLineCount;
@@ -2469,7 +2620,7 @@ std::string printCommand(AscalFrame<double>* frame,bool saveLast)
             }
             else if(cmpstr(frame->exp.substr(start,3),"udf"))
             {
-                printAllUDF();
+                printAllUDF(frame);
             }
             else if(cmpstr(frame->exp.substr(start,3),"sdf"))
             {
@@ -2879,7 +3030,7 @@ SubStr getExprInString(const std::string &data,int index,char opening,char closi
 
 SubStr getNewVarName(const std::string &data)
 {
-    int index = data.find("let")<500 || data.find("const")<500?data.find("t ")+1:0;
+    int index = data.find("let")<5000 || data.find("const")<5000?data.find("t ")+1:0;
     return getVarName(data,index);
 }
 
@@ -2892,7 +3043,7 @@ SubStr getVarName(const std::string &s,int index)
         begin++;
         index++;
     }
-    while(s.length()>index && !isOperator(s[index]) && (isalpha(s[index]) || isNumeric(s[index])))
+    while(s.length()>index && (isalpha(s[index]) || isNumeric(s[index])))
     {
         index++;
         count++;
@@ -2959,7 +3110,7 @@ void printStack(stack<t> &operands)
 //which is an overloaded operator in the settings class
 
 template <typename t>
-void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp,std::string &varName, int i,uint64_t hash);
+void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, std::vector<std::string> &params,std::string &exp,std::string &varName, int i,uint64_t hash);
 
 static const std::hash<std::string> hashfn;
 uint64_t hashFunctionCall(std::string &exp)
@@ -2970,9 +3121,9 @@ static uint64_t h;
 uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
 	h = hash;
-    for(std::string &s:params)
+    for(Object &s:params)
     {
-        hash += hashfn(s);
+        hash += hashfn(s.getInstructions());
         hash ^= hash>>2;
         hash ^= hash<<5;
         hash ^= hash>>12;
@@ -3169,22 +3320,22 @@ t calculateExpression(AscalFrame<double>* frame)
                      Object paramData =
                              currentFrame->getParamMemory()->count(varName.data)?(*currentFrame->getParamMemory())[varName.data]
                                                                                                             :Object();
-                     int startOfEnd = paramData.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
+                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
 
                      //creates a new set of stack frames, one for the function/var and one for resolution,
                      //and calculation of each of it's parameters
                      //also returns function/var's value to this function's initialOperands stack
-
                      createFrame(executionStack, currentFrame,
                                  data.params,paramData.getInstructions(),varName.data,startOfEnd,hashFunctionCall(paramData.id));
                                      goto new_frame_execution;
                  }
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
                  {
-                     Object localVar(varName.data,(*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()],"");
+                     Object localVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
                                       ++(*currentFrame->getParams());
+                     localVar.id = varName.data;
                      (*currentFrame->getParamMemory())[localVar.id] = localVar;
-                     int startOfEnd = localVar.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
+                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
 
                      createFrame(executionStack, currentFrame,
                             data.params,localVar.getInstructions(),localVar.id,startOfEnd,hashFunctionCall(localVar.id));
@@ -3373,7 +3524,7 @@ bool isDouble(std::string &exp)
     return isADouble;
 }
 template <typename t>
-void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, AscalParameters &params,std::string &exp,std::string &varName, int i, uint64_t hash)
+void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, std::vector<std::string> &params,std::string &exp,std::string &varName, int i, uint64_t hash)
 {
     //save index
     currentFrame->index = i;
@@ -3390,7 +3541,13 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         frameCount++;
         if(*boolsettings["o"])
         {
-        	std::cout<<"Parsing params then executing: "<<varName<<'('<<params.toString()<<')'<<'\n';
+        	std::string data;
+        	for(std::string &s:params)
+        	{
+        		data += s+",";
+        	}
+        	data = data.substr(0,data.length()-1);
+        	std::cout<<"Parsing params then executing: "<<varName<<'('<<data<<')'<<'\n';
         }
         //create and set new frame expression
         FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
@@ -3404,13 +3561,14 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         newFrame->returnPointer = currentFrame;
         //push new frame
         executionStack.push(newFrame);
-        for(int i = params.size()-1; i >= 0; i--)
+        for(int i = 0; i < params.size(); i++)
         {
             allocated += sizeofFrame;
             if(params[i][0] != '&')
             {
                 //create and set new frame expression
                 ParamFrame<t>* pFrame = new ParamFrame<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
+               // std::cout<<"Param exec frame mem: "<<pFrame->memToString();
                 pFrame->exp = params[i];
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
@@ -3420,7 +3578,9 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
             else
             {
                 ParamFrameFunctionPointer<t>* pFrame = new ParamFrameFunctionPointer<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
-                pFrame->functionName = params[i].substr(1);
+               // std::cout<<"Param function ref frame mem: "<<pFrame->memToString();
+                int index = 0;
+                pFrame->functionName = getVarName(params[i].substr(1), index).data;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //push new frame

@@ -8,10 +8,10 @@
 #ifndef ASCALPARAMETERS_HPP_
 #define ASCALPARAMETERS_HPP_
 #include <vector>
-#include <string>
 #include <unordered_map>
+#include "Object.hpp"
 
-class AscalParameters: public std::vector<std::string> {
+class AscalParameters: public std::vector<Object> {
 private:
 	int useCount;
 public:

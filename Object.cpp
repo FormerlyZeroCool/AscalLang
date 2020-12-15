@@ -103,8 +103,36 @@ Object Object::getChild(std::string &id)
 	return this->objectMap.count(id)?this->objectMap[id]:throw std::string("Error finding "+this->id+"."+id);
 }
 
+bool Object::isList()
+{
+	return this->listSize;
+}
+size_t Object::getListSize()
+{
+	return this->listSize;
+}
+Object& Object::getListElement(size_t index,std::unordered_map<std::string,Object> &memory)
+{
+	if(index < this->listSize)
+		return this->objectMap["arz"+std::to_string(index)];
+	return memory["null"];
+}
 void Object::pushList(Object &data)
 {
+	data.id = "arz"+std::to_string(this->listSize++);
+	this->objectMap[data.id] = data;
+}
+void Object::setList(Object &data, size_t index)
+{
+	data.id = "arz"+std::to_string(index);
+	//std::cout<<data.id<<" ints: "<<data.instructions<<"\n";
+	if(this->listSize < index)
+		this->listSize = index+1;
+	this->objectMap[data.id] = data;
+}
+void Object::pushList(Object &&data)
+{
+	data.id = "arz"+std::to_string(this->listSize++);
 	this->objectMap[data.id] = data;
 }
 int Object::setParams(std::string &param)
@@ -146,6 +174,50 @@ int Object::setParams(std::string &param)
 	return ++end;
 }
 
+std::string Object::toString(uint16_t depth)
+{
+	std::stringstream s;
+	for(int i = 0; i < depth; i++)
+		s<<"    ";
+	s<<"{\n";
+	depth++;
+	for(int i = 0; i < depth; i++)
+		s<<"    ";
+	s<<"Obj Name: "<<this->id<<"\n";
+	for(int i = 0; i < depth; i++)
+		s<<"    ";
+	s<<"Instructions: "<<this->instructionsToFormattedString()<<"\n";
+	if(this->objectMap.size()>0)
+	{
+		depth++;
+		for(int i = 0; i < depth; i++)
+			s<<"    ";
+		s<<"data {\n";
+		for(int i = 0; i < depth; i++)
+			s<<"    ";
+
+		for(auto &[key,value]:this->objectMap)
+		{
+			for(int i = 0; i < depth; i++)
+				s<<"    ";
+			s<<value.toString(depth)<<"\n";
+		}
+		s<<"\n";
+		for(int i = 0; i < depth; i++)
+			s<<"    ";
+		s<<"}";
+		s<<"\n";
+		depth--;
+	}
+	for(int i = 0; i < depth; i++)
+		s<<"    ";
+	s<<"}";
+	return s.str();
+}
+std::string Object::toString()
+{
+	return toString(0);
+}
 Object::Object(std::string id,std::string expression,std::string param):id(id)
 {
 	setParams(param);
