@@ -817,20 +817,12 @@ void loadFile(const std::string &expr,int startIndex)
 
 std::string importAction(AscalFrame<double>* frame,bool s)
 {
-    bool print = *boolsettings["p"];
-    *boolsettings["p"] = false;
-    bool timeCalc = *boolsettings["t"];
-    *boolsettings["t"] = false;
     try{
         loadFile(frame->exp,7);
     }catch(std::string &exception)
     {
-        *boolsettings["p"] = print;
-        *boolsettings["t"] = timeCalc;
         throw std::string("while importing file\n"+exception);
     }
-    *boolsettings["p"] = print;
-    *boolsettings["t"] = timeCalc;
     return MAX;
 }
 std::string runAction(AscalFrame<double>* frame,bool s)
@@ -1035,9 +1027,7 @@ std::string constNewVar(AscalFrame<double>* frame,bool saveLast)
 {
 	SubStr exPart = getExpr(frame->exp,frame->exp.find('=',frame->index)+1);
 	    SubStr newVarPart = getVarName(frame->exp,frame->index+5);
-	    bool print = *boolsettings["p"];
 	    std::string value = to_string(callOnFrame(frame,exPart.data));
-	    *boolsettings["p"] = print;
 	    Object var(newVarPart.data,value,"");
 
 
@@ -1221,6 +1211,9 @@ std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
     int pid = fork();
     if(!pid)
     {
+    	//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
+    	//x addresses the x point xMin+dx*x, using xMin, and dx defined above
+    	Vect2D<double> points = calcTable(functions, xMin, xMax, dx, dy);
     	//Your GUI code
     	throw 0;
     }
@@ -1940,8 +1933,6 @@ void execExpList( std::vector<std::string> &expressions,std::map<std::string,Obj
 std::string elseAction(AscalFrame<double>* frame,bool saveLast)
 {
     int index = frame->exp.find("else",frame->index) + 4;
-    bool printTime = *boolsettings["t"];
-    *boolsettings["t"] = false;
     while(frame->exp[index] == ' ')
         index++;
     SubStr codeBlock = getCodeBlock(frame, index);
@@ -1975,7 +1966,6 @@ std::string elseAction(AscalFrame<double>* frame,bool saveLast)
             }
             catch(std::string &exception)
             {
-                *boolsettings["t"] = printTime;
                 throw std::string(exception + "\nIn else body subexp: ");
             }
 
@@ -1995,14 +1985,10 @@ std::string elseAction(AscalFrame<double>* frame,bool saveLast)
     }
     frame->setIfFlag(false);
     frame->index = 0;
-    *boolsettings["t"] = printTime;
     return "a"+frame->exp.substr(index,frame->exp.size());
 }
 std::string ifAction(AscalFrame<double>* frame,bool saveLast)
 {
-
-    std::string expBkp = frame->exp;
-    //std::cout<<"exp in if: "<<expr<<std::endl;
     int index = frame->exp.find("if",frame->index)!=-1?frame->exp.find("if",frame->index)+2:0;
     while(frame->exp[index] == ' ')
     {
@@ -2024,12 +2010,6 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
             throw std::string("Error no boolean expression provided in if.\n");
         }
         double boolExpValue;
-        //std::cout<<"BoolExpression: "<<booleanExpression;
-        bool printTime = *boolsettings["t"];
-        if(!*boolsettings["p"])
-        {
-            *boolsettings["t"] = false;
-        }
         if(*boolsettings["o"])
         {
             std::cout<<"Executing boolean expression in if: "<<booleanExpression<<'\n';
@@ -2039,7 +2019,6 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
         }
         catch(std::string &exception)
         {
-            *boolsettings["t"] = printTime;
             throw std::string(exception + "\nIn if boolean exp: " + booleanExpression);
         }
 
@@ -2048,7 +2027,7 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
             std::cout<<"Boolean expression evaluation complete result: "<<(boolExpValue?"true":"false")<<'\n';
         }
         codeBlock = getCodeBlock(frame, startOfCodeBlock);
-        //std::cout<<"CodeBlock in if: "<<codeBlock.data<<std::endl;
+
         index = startOfCodeBlock + codeBlock.end - 1;
         if(index > frame->exp.size())
             index = frame->exp.size();
@@ -2073,7 +2052,6 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
             }
             catch(std::string &exception)
             {
-                *boolsettings["t"] = printTime;
                 throw std::string(exception + "\nIn if body subexp: "+codeBlock.data);
             }
             if(*boolsettings["o"])
@@ -2101,8 +2079,7 @@ std::string ifAction(AscalFrame<double>* frame,bool saveLast)
             }
         }
         frame->setComingfromElse(false);
-        *boolsettings["t"] = printTime;
-        frame->exp = expBkp;
+
         frame->index = 0;
         return "a"+frame->exp.substr(index-1,frame->exp.size());
 }
@@ -2181,13 +2158,6 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
         throw std::string("Error no boolean expression provided in while.\n");
     }
     double boolExpValue;
-    bool printTime = *boolsettings["t"];
-    //*boolsettings["p"] = false;
-    if(!*boolsettings["p"])
-    {
-        *boolsettings["t"] = false;
-    }
-    //std::cout<<"bool expression Being Exec: "<<booleanExpression<<std::endl;
     try{
         if(*boolsettings["o"])
         {
@@ -2197,7 +2167,6 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
     }
     catch(std::string &exception)
     {
-        *boolsettings["t"] = printTime;
         throw std::string(exception +"\nIn While Boolean Expression");
     }
     if(*boolsettings["o"])
@@ -2222,7 +2191,6 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
             }
             catch(std::string &exception)
             {
-                *boolsettings["t"] = printTime;
                 throw std::string(exception + "\nIn While body subexp: ");
             }
             if(*boolsettings["o"])
@@ -2246,18 +2214,15 @@ std::string whileAction(AscalFrame<double>* frame,bool saveLast)
         }
         catch(std::string &exception)
         {
-            *boolsettings["t"] = printTime;
             throw std::string(exception  + "\nIn While Boolean Expression");
         }
         }
     }
     lineCount = postBodyLineCount;
-    *boolsettings["t"] = printTime;
     index = codeBlock.end + startOfCodeBlock-2;
     frame->index = 0;
     while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
         index++;
-    //std::cout<<"newExpIndeces length: "<<expr.size()<<" new start: "<<index<<" New Exp After While: "<<expr.substr(index,expr.size())<<std::endl;
     return "a"+expbkp.substr((index-2<frame->exp.size()?index-2:frame->exp.size()),frame->exp.size());
 }
 bool firstChar(std::string &s, char c)
@@ -2292,12 +2257,6 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     }
     index = startOfCodeBlock;
 
-
-    bool printTime = *boolsettings["t"];
-    if(!*boolsettings["p"])
-    {
-        *boolsettings["t"] = false;
-    }
     int preBodyLineCount = lineCount;
     codeBlock = getCodeBlock(frame, index);
     int postBodyLineCount = lineCount;
@@ -2308,54 +2267,56 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     {
     	limitStr = limitStr.substr(limitStr.find("&")+1);
     	Object list = getObject(frame, limitStr);
-    	if(limitParams.params.size()<3 || callOnFrame(frame,limitParams.params[2]) > 0)
+    	if(list.getListSize() > 0)
     	{
-        	for(;i < list.getListSize(); i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+
+        	if(limitParams.params.size()<3 || callOnFrame(frame,limitParams.params[2]) > 0)
         	{
-                if(*boolsettings["o"])
-                {
-                    std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
-                }
-                try{
-                    (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
-                    callOnFrame(frame,codeBlock.data);
-                }
-                catch(std::string &exception)
-                {
-                    *boolsettings["t"] = printTime;
-                    throw std::string(exception + "\nIn for body subexp: ");
-                }
-                if(*boolsettings["o"])
-                {
-                    std::cout<<"for block Execution Complete.\n\n";
-                    std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
-                }
+            	for(;i < list.getListSize(); i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+            	{
+                    if(*boolsettings["o"])
+                    {
+                        std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
+                    }
+                    try{
+                        (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
+                        callOnFrame(frame,codeBlock.data);
+                    }
+                    catch(std::string &exception)
+                    {
+                        throw std::string(exception + "\nIn for body subexp: ");
+                    }
+                    if(*boolsettings["o"])
+                    {
+                        std::cout<<"for block Execution Complete.\n\n";
+                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
+                    }
+            	}
         	}
-    	}
-    	else
-    	{
-    		if(i == 0)
-    			i = list.getListSize()-1;
-        	for(;i >= 0; i += callOnFrame(frame,limitParams.params[2]))
+        	else
         	{
-                if(*boolsettings["o"])
-                {
-                    std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
-                }
-                try{
-                    (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
-                    callOnFrame(frame,codeBlock.data);
-                }
-                catch(std::string &exception)
-                {
-                    *boolsettings["t"] = printTime;
-                    throw std::string(exception + "\nIn for body subexp: ");
-                }
-                if(*boolsettings["o"])
-                {
-                    std::cout<<"for block Execution Complete.\n\n";
-                    std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
-                }
+        		if(i == 0)
+        			i = list.getListSize()-1;
+            	for(;i >= 0; i += callOnFrame(frame,limitParams.params[2]))
+            	{
+                    if(*boolsettings["o"])
+                    {
+                        std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
+                    }
+                    try{
+                        (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
+                        callOnFrame(frame,codeBlock.data);
+                    }
+                    catch(std::string &exception)
+                    {
+                        throw std::string(exception + "\nIn for body subexp: ");
+                    }
+                    if(*boolsettings["o"])
+                    {
+                        std::cout<<"for block Execution Complete.\n\n";
+                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
+                    }
+            	}
         	}
     	}
     }
@@ -2377,7 +2338,6 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     	            }
     	            catch(std::string &exception)
     	            {
-    	                *boolsettings["t"] = printTime;
     	                throw std::string(exception + "\nIn for body subexp: ");
     	            }
     	            if(*boolsettings["o"])
@@ -2401,7 +2361,6 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     	            }
     	            catch(std::string &exception)
     	            {
-    	                *boolsettings["t"] = printTime;
     	                throw std::string(exception + "\nIn for body subexp: ");
     	            }
     	            if(*boolsettings["o"])
@@ -2417,7 +2376,6 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
 
 
     lineCount = postBodyLineCount;
-    *boolsettings["t"] = printTime;
     index = codeBlock.end + startOfCodeBlock-2;
     frame->index = 0;
     while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
@@ -2480,7 +2438,7 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     std::string endOfExp = frame->exp.substr(endIndex+3,frame->exp.length());
     std::string value;
     int index = startIndex + 4;
-    std::vector<char> exp;
+    std::stringstream exp;
     //should always start after when is finished to build boolean expression
 
     int thenIndex;
@@ -2489,27 +2447,22 @@ std::string whenAction(AscalFrame<double>* frame,bool saveLast)
     int elseIndex = frame->exp.find("else",frame->index);
     elseIndex = elseIndex==-1?invalidIndex:elseIndex;
     int lastThen = 0;
-    //std::cout<<"start: "<<startOfExp<<" End: "<<endOfExp<<"\n";
     do {
         thenIndex = frame->exp.find("then",index);
-        //std::cout<<"Starting of exp: "<<index<<":"<<expr[index]<<" thenIndex: "<<thenIndex<<":"<<expr[thenIndex]
-        //        <<" endIndex: "<<endIndex<<":"<<expr[endIndex]<<"\n";
+        //Parsing boolean expression
         while(frame->exp[index] == ' ' && index < endIndex && index < thenIndex)
             index++;
         while(frame->exp[index] && index < endIndex && index < thenIndex)
         {
-            exp.push_back(frame->exp[index]);
+            exp<<(frame->exp[index]);
             index++;
         }
-        //std::cout<<"\n";
-        std::string booleanExpression(exp.begin(),exp.end());
+        std::string booleanExpression = exp.str();
         if(booleanExpression.size() == 0)
         {
             throw std::string("Error no boolean expression provided in when.\n");
         }
-        exp.clear();
-        //bool showOp = *boolsettings["o"];
-        //*boolsettings["o"] = false;
+        exp.str("");
 
         if(*boolsettings["o"])
         {
@@ -2632,9 +2585,7 @@ std::string printCommand(AscalFrame<double>* frame,bool saveLast)
             }
             else
             {
-                bool print = *boolsettings["p"];
                 printCalculation(frame,saveLast);
-                *boolsettings["p"] = print;
             }
             return value;
 }
@@ -2690,14 +2641,10 @@ double interpretParam(AscalFrame<double>* frame,bool saveLast)
     double value = 0;
     SubStr firstWord = getVarName(frame->exp,frame->index);
 
-        bool print = *boolsettings["p"];
-
         if(saveLast && !cmpstr(firstWord.data,"u") && !cmpstr(firstWord.data,"r"))
             lastExp.push(frame->exp);
 
         value = calcWithOptions(frame);
-        if(firstWord.data.size() != 1 && firstWord.data[0] != 'p')
-        *boolsettings["p"] = print;
 
     return value;
 }
@@ -3207,11 +3154,6 @@ t calculateExpression(AscalFrame<double>* frame)
         			}
         		}
         	}
-        	if(*boolsettings["d"])
-           	{
-           	    std::cout<<"Beginning execution of frame id: ";
-           	    printf("%p\n",(void*) hash(currentFrame));
-           	}
 
         }
         for(int i = currentFrame->index;i <= currentFrame->exp.length();i++)
@@ -3426,14 +3368,6 @@ t calculateExpression(AscalFrame<double>* frame)
         }
         //process values in stacks, and return final solution
         data = processStack(processOperands, processOperators);
-        if(currentFrame->isFunction() && *boolsettings["d"])
-        {
-    	    std::chrono::system_clock::time_point end = std::chrono::system_clock::now();
-            std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-       	    std::cout<<"Finished execution of frame id: ";
-       	    printf("%p\n",(void*) hash(currentFrame));
-       	    std::cout<<std::ctime(&end_time);
-        }
         if(currentFrame->getReturnPointer())
         {
             if(currentFrame->isFunction())
@@ -3484,7 +3418,7 @@ void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFra
 	            while(!executionStack.isEmpty())
 	            {
 	                executionStack.top(currentFrame);
-	                data << "   ~:"<<currentFrame->exp<<'\n';
+	                data << "   "<<currentFrame->getType()	<<"~:"<<currentFrame->exp<<'\n';
 	                if(currentFrame->isDynamicAllocation()){
 	                    delete currentFrame;
 	                    deallocated += sizeofFrame;
