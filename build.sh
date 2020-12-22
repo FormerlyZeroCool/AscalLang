@@ -7,4 +7,4 @@ echo "Starting Ascal interpreter"
 echo "Running, awaiting input, try typing o;fibr(3)"
 echo "That will calculate the third fibonacci number in the sequence 2, and show all the calculations"
 echo "and branching paths it took to calculate the result."
-./ascal
+#./ascal

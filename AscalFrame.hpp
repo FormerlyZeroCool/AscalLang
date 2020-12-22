@@ -198,13 +198,16 @@ public:
 };
 template <typename t>
 class FunctionFrame: public AscalFrame<t> {
+private:
+	std::map<std::string,Object> paramMem;
+	std::map<std::string,Object> localMem;
+	AscalParameters param;
 public:
     FunctionFrame(AscalParameters* params, std::map<std::string,Object>* paramMemory, std::map<std::string,Object>* localMemory)
     {
-        this->params = new AscalParameters;
-        this->paramMemory = new std::map<std::string,Object>;
-        this->localMemory = new std::map<std::string,Object>;
-        //+1 sets if result flag to true, +8 sets isDynamicAllocation true
+        this->params = &param;
+        this->paramMemory = &paramMem;
+        this->localMemory = &localMem;
         //+32 sets isFunction true
         this->flagRegisters = this->flagRegisters&(255-32);
         this->flagRegisters = this->flagRegisters^32;
@@ -219,12 +222,7 @@ public:
 	{
 		return 'f';
 	}
-    ~FunctionFrame()
-    {
-        delete this->params;
-        delete this->paramMemory;
-        delete this->localMemory;
-    }
+    ~FunctionFrame(){}
 };
 
 #endif /* ASCALFRAME_HPP_ */

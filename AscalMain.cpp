@@ -104,6 +104,10 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
 SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+std::string printStrAction(AscalFrame<double>* frame,bool saveLast);
+std::string lenAction(AscalFrame<double>* frame,bool saveLast);
+std::string splitStrAction(AscalFrame<double>* frame,bool saveLast);
+std::string loadStrAction(AscalFrame<double>* frame,bool saveLast);
 std::string printCharAction(AscalFrame<double>* frame,bool saveLast);
 std::string arrSetValAction(AscalFrame<double>* frame,bool saveLast);
 std::string getArrValAction(AscalFrame<double>* frame,bool saveLast);
@@ -312,7 +316,7 @@ void loadInitialFunctions()
     loadFn(Object("dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
     loadFn(Object("toDeg","rad*180/pi",""));
     loadFn(Object("toRad","deg*pi/180",""));
-    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;printStr \"endl\";};null",""));
+    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;print \"endl\";};null",""));
     loadFn(Object("clear","println(150)",""));
     loadFn(Object("floor","x-x%1",""));
     loadFn(Object("ceiling","when x%1=0 then x else x+1-x%1 end",""));
@@ -374,6 +378,10 @@ void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
 	inputMapper["simplify"] = simplifyfnAction;
+	inputMapper["printStr"] = printStrAction;
+	inputMapper["arrLen"] = lenAction;
+	inputMapper["splitStr"] = splitStrAction;
+	inputMapper["loadStr"] = loadStrAction;
 	inputMapper["printChar"] = printCharAction;
 	inputMapper["arrSet"] = arrSetValAction;
 	inputMapper["arrGet"] = getArrValAction;
@@ -425,7 +433,7 @@ void initParamMapper()
     inputMapper["memoize"] = timeToRunBoolSetting;
     inputMapper["printc"] = printCommand;
     inputMapper["print"] = printDefaultAction;
-    inputMapper["printStr"] = printStringAction;
+    inputMapper["printTxt"] = printStringAction;
 #if DEBUG == 1
     inputMapper["d"] = debugBoolSetting;
 #endif
@@ -742,7 +750,7 @@ std::string inputAction(AscalFrame<double>* frame,bool s)
 void loadFile(const std::string &expr,int startIndex)
 {
     std::ifstream inputFile;
-    while(expr[startIndex] == ' ')
+    while(expr[startIndex] == ' ' || expr[startIndex] == ':')
         startIndex++;
     std::string filePath = expr.substr(startIndex,expr.find(';')-startIndex);
     inputFile.open(filePath);
@@ -767,10 +775,18 @@ void loadFile(const std::string &expr,int startIndex)
         {
             inputFile.open(filePath+".asl");
         }
+        if(!inputFile)
+        {
+        	inputFile.open(filePath.substr(0, filePath.size()-1)+".asl");
+        }
     }
     if(!inputFile)
     {
         throw std::string("Malformed path: "+filePath);
+    }
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"Loading file: "<<filePath<<"\n";
     }
     std::streambuf* cinrdbuf = std::cin.rdbuf();
     std::cin.rdbuf(inputFile.rdbuf());
@@ -813,12 +829,24 @@ void loadFile(const std::string &expr,int startIndex)
     delete calledFunctionMemory;
     inputFile.close();
     std::cin.rdbuf(cinrdbuf);
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"Finished loading file: "<<filePath<<"\n";
+    }
 }
 
 std::string importAction(AscalFrame<double>* frame,bool s)
 {
     try{
+        if(*boolsettings["o"])
+        {
+        	std::cout<<"Attempting to import file\n";
+        }
         loadFile(frame->exp,7);
+        if(*boolsettings["o"])
+        {
+        	std::cout<<"Finished importing file\n";
+        }
     }catch(std::string &exception)
     {
         throw std::string("while importing file\n"+exception);
@@ -828,7 +856,15 @@ std::string importAction(AscalFrame<double>* frame,bool s)
 std::string runAction(AscalFrame<double>* frame,bool s)
 {
     try{
+        if(*boolsettings["o"])
+        {
+        	std::cout<<"Attempting to run file\n";
+        }
         loadFile(frame->exp,4);
+        if(*boolsettings["o"])
+        {
+        	std::cout<<"Finished running file\n";
+        }
     }catch(std::string &exception)
     {
         throw std::string("while running file\n"+exception);
@@ -1495,9 +1531,11 @@ std::string existsAction(AscalFrame<double>* frame,bool saveLast)
 
     if(frame->getLocalMemory()->count(varName.data) || frame->getParamMemory()->count(varName.data) || memory.count(varName.data))
     {
-        return "a1;"+frame->exp.substr(index,frame->exp.size());
+    	frame->initialOperands.push(1);
+        return "a"+frame->exp.substr(index,frame->exp.size());
     }
-    return "a0;"+frame->exp.substr(index,frame->exp.size());
+	frame->initialOperands.push(0);
+    return "a"+frame->exp.substr(index,frame->exp.size());
 }
 
 SubStr getExprInString(const std::string &data,int index,char opening,char closing,char lineBreak);
@@ -1540,8 +1578,8 @@ std::string objectAction(AscalFrame<double>* frame,bool saveLast)
 	frame->index += varName.data.length();
 
 	ObjectKey key(frame->exp.substr(frame->index, frame->index), varName.data);
-	Object obj = getObject(frame, varName.data);
-	frame->initialOperands.push(callOnFrame(frame, objectActionMapper[key](frame, obj)));
+	Object *obj = &getObject(frame, varName.data);
+	frame->initialOperands.push(callOnFrame(frame, objectActionMapper[key](frame, *obj)));
 	return 'a'+frame->exp.substr(frame->index);
 }
 std::string getListElementAction(AscalFrame<double>* frame, Object &obj)
@@ -1591,8 +1629,8 @@ std::string pushValAction(AscalFrame<double>* frame,bool saveLast)
     getObject(frame, params[0]).pushList(Object("",to_string(valueToPush),""));
     if(*boolsettings["o"])
     {
-    	Object list = getObject(frame, params[0]);
-    	std::cout<<"pushed value "<<params[1]<<" to list "<<params[0]<<" at position: "<<(list.getListSize()-1)<<"\n";
+    	Object *list = &getObject(frame, params[0]);
+    	std::cout<<"pushed value "<<params[1]<<" to list "<<params[0]<<" at position: "<<(list->getListSize()-1)<<"\n";
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
@@ -1603,7 +1641,7 @@ std::string getArrValAction(AscalFrame<double>* frame,bool saveLast)
     if(params.size() < 2)
     	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
     double indexToGet = callOnFrame(frame,params[1]);
-    Object element = getObject(frame, params[0]).getListElement(indexToGet, memory);
+    Object *element = &getObject(frame, params[0]).getListElement(indexToGet, memory);
     SubStr paramsForListElementFn("", 0 , exp.end);
     if(exp.data[exp.end] == '(')
     {
@@ -1611,11 +1649,11 @@ std::string getArrValAction(AscalFrame<double>* frame,bool saveLast)
     	paramsForListElementFn = getFollowingExpr(frame, "");
     }
     std::stringstream fnDef;
-    fnDef<<"loc "<<element.id<<"="<<element.getInstructions()<<";\n"<<element.id<<'('<<paramsForListElementFn.data<<')';
+    fnDef<<"loc "<<element->id<<"="<<element->getInstructions()<<";\n"<<element->id<<'('<<paramsForListElementFn.data<<')';
 
     frame->initialOperands.push(callOnFrame(frame,fnDef.str()));
 
-    callOnFrame(frame, "delete "+element.id);
+    callOnFrame(frame, "delete "+element->id);
     if(*boolsettings["o"])
     {
     	double t;
@@ -1654,6 +1692,106 @@ std::string printCharAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
+std::string loadStrAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "loadStr");
+    std::vector<std::string > params = Object("","",exp.data).params;
+    if(params.size() < 2)
+    	throw std::string("loadStr (<function name>, <\"string in quotes\">");
+    Object *obj = &getObject(frame, params[0]);
+    obj->clearList();
+    //parse only text between quotes
+    size_t strStart = 0;
+    while(params[1][strStart] && params[1][strStart++] != '\"'){}
+    size_t strEnd = params[1].length()-1;
+    while(params[1][strEnd] && params[1][strEnd--] != '\"'){}
+    //at this point str start, and end point to the appropriate places in the parameter
+    obj->loadString(std::string_view(params[1].c_str()+strStart, strEnd-1));
+
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"loadstr("<<") = "<<(char)(65)<<'\n';
+    }
+    return MAX;
+}
+std::string printStrAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "printStr");
+    std::vector<std::string > params = Object("","",exp.data).params;
+    if(params.size() < 1)
+    	throw std::string("loadStr (<object name>)");
+    std::string objName = params[0][0] =='&'?params[0].c_str()+1:params[0].c_str();
+    Object *obj = &getObject(frame, objName);
+    std::string_view lastEl,element = obj->getListElement(0, memory).getInstructions();
+    for(size_t i = 1; i <= obj->getListSize(); i++)
+    {
+    	lastEl = element;
+    	element = obj->getListElement(i, memory).getInstructions();
+    	char last = atoi(&lastEl[0]),cur = atoi(&element[0]);
+    	if(last == '\\' && cur == 'n'){
+    		std::cout<<std::endl;
+    		//skip control char marked by previous char = '
+    		i++;
+    	}
+    	else
+    		std::cout<<last;
+    }
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"loadstr("<<") = "<<(char)(65)<<'\n';
+    }
+    return MAX;
+}
+std::string splitStrAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "splitStr");
+    std::vector<std::string > params = Object("","",exp.data).params;
+    if(params.size() < 2)
+    	throw std::string("splitStr (<object name>, <\"delimiter\">");
+    Object *obj = &getObject(frame, params[0]);
+    //parse only text between quotes
+    size_t strStart = 0;
+    while(params[1][strStart] && params[1][strStart++] != '\"'){}
+    size_t strEnd = params[1].length()-1;
+    while(params[1][strEnd] && params[1][strEnd--] != '\"'){}
+
+    std::string_view filter(params[1].c_str()+strStart, strEnd-1);
+    //at this point string start, and end point to the appropriate places in the parameter
+    Object arr = obj->splitString(filter, memory);
+    (*frame->getLocalMemory())[arr.id] = arr;
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"split string("<<arr.id<<") added to memory\n";
+    }
+    return MAX;
+}
+//Object& resolveNextObjectExpression(AscalFrame<double>* frame)
+//{
+	//getvarname
+
+	//if proceeding char is . then get object associated with varname before .
+	//increment index, and getVarName again one place after the period, and use lookup next varname
+	//in the previously gotten object's objectMap
+
+	//if next char is [ parse param between []
+		//if numberic access object gotten above and retrieve value at the numeric index supplied else lookup in hashmap
+		//if first char is & then try to lookup object using the operand's object map converted to a string
+		//if first char is " act like it was connected with a .
+
+	//if following char is not . or [ then return currently pointed to object otherwise loop
+//}
+std::string lenAction(AscalFrame<double>* frame,bool saveLast)
+{
+    SubStr exp = getFollowingExpr(frame, "arrLen");
+    std::string objname = getVarName(exp.data, 0).data;
+    Object *obj = &getObject(frame, objname);
+    frame->initialOperands.push(obj->getListSize());
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"arrLen(&"<<obj->id<<") = "<<obj->getListSize()<<'\n';
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
 std::string sinAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "sin");
@@ -1675,13 +1813,12 @@ std::string tryAction(AscalFrame<double>* frame,bool saveLast)
     catch(std::string &s)
     {
     	callOnFrame(frame, "loc errorMessageLog = {"+s+"};\nloc hasErrorOccurred = 1");
-    	frame->initialOperands.push(callOnFrame(frame, "null"));
     }
     if(*boolsettings["o"])
     {
     	std::cout<<"try("<<exp.data<<")\n";
     }
-    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+    return MAX;
 }
 std::string flushOutAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -2266,20 +2403,20 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     if(firstChar(limitStr,'&'))
     {
     	limitStr = limitStr.substr(limitStr.find("&")+1);
-    	Object list = getObject(frame, limitStr);
-    	if(list.getListSize() > 0)
+    	Object *list = &getObject(frame, limitStr);
+    	if(list->getListSize() > 0)
     	{
 
         	if(limitParams.params.size()<3 || callOnFrame(frame,limitParams.params[2]) > 0)
         	{
-            	for(;i < list.getListSize(); i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+            	for(;i < list->getListSize(); i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
             	{
                     if(*boolsettings["o"])
                     {
                         std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
                     }
                     try{
-                        (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
+                        (*frame->getLocalMemory())[itVar.data] = list->getListElement(i, memory);
                         callOnFrame(frame,codeBlock.data);
                     }
                     catch(std::string &exception)
@@ -2289,14 +2426,14 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
                     if(*boolsettings["o"])
                     {
                         std::cout<<"for block Execution Complete.\n\n";
-                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
+                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list->getListSize()<<"\n";
                     }
             	}
         	}
         	else
         	{
         		if(i == 0)
-        			i = list.getListSize()-1;
+        			i = list->getListSize()-1;
             	for(;i >= 0; i += callOnFrame(frame,limitParams.params[2]))
             	{
                     if(*boolsettings["o"])
@@ -2304,7 +2441,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
                         std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
                     }
                     try{
-                        (*frame->getLocalMemory())[itVar.data] = list.getListElement(i, memory);
+                        (*frame->getLocalMemory())[itVar.data] = list->getListElement(i, memory);
                         callOnFrame(frame,codeBlock.data);
                     }
                     catch(std::string &exception)
@@ -2314,7 +2451,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
                     if(*boolsettings["o"])
                     {
                         std::cout<<"for block Execution Complete.\n\n";
-                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list.getListSize()<<"\n";
+                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list->getListSize()<<"\n";
                     }
             	}
         	}
@@ -3418,7 +3555,7 @@ void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFra
 	            while(!executionStack.isEmpty())
 	            {
 	                executionStack.top(currentFrame);
-	                data << "   "<<currentFrame->getType()	<<"~:"<<currentFrame->exp<<'\n';
+	                	data << currentFrame->getType() << "   ~:"<<currentFrame->exp<<'\n';
 	                if(currentFrame->isDynamicAllocation()){
 	                    delete currentFrame;
 	                    deallocated += sizeofFrame;

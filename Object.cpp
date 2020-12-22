@@ -105,44 +105,95 @@ Object Object::getChild(std::string &id)
 
 bool Object::isList()
 {
-	return this->listSize;
+	return this->objectList.size();
 }
 size_t Object::getListSize()
 {
-	return this->listSize;
+	return this->objectList.size();
 }
 Object& Object::getListElement(size_t index,std::unordered_map<std::string,Object> &memory)
 {
 	if(index < this->listSize)
-		return this->objectMap["arz"+std::to_string(index)];
+		return this->objectList[index];
 	return memory["null"];
 }
 void Object::pushList(Object &data)
 {
-	data.id = "arz"+std::to_string(this->listSize++);
-	this->objectMap[data.id] = data;
-}
-void Object::setList(Object &data, size_t index)
-{
-	data.id = "arz"+std::to_string(index);
-	//std::cout<<data.id<<" ints: "<<data.instructions<<"\n";
-	if(this->listSize < index)
-		this->listSize = index+1;
-	this->objectMap[data.id] = data;
+	data.id = this->id+std::to_string(this->objectList.size());
+	this->objectList.push_back(data);
 }
 void Object::pushList(Object &&data)
 {
-	data.id = "arz"+std::to_string(this->listSize++);
-	this->objectMap[data.id] = data;
+	data.id = this->id+std::to_string(this->objectList.size());
+	this->objectList.push_back(data);
+}
+void Object::setList(Object &data, size_t index)
+{
+	if(this->objectList.size() < index)
+		throw std::string("Out of range in list: "+this->id);
+	else if(this->objectList.size() < index)
+		this->pushList(data);
+	else
+		this->objectList[index] = data;
+}
+
+void Object::clearList()
+{
+	this->objectList.clear();
+}
+void Object::printList(std::unordered_map<std::string,Object> &memory)
+{
+    for(size_t i = 0; i <= this->getListSize(); i++)
+    {
+    		std::cout<<(char) stoi(this->getListElement(i, memory).getInstructions());
+    }
+}
+void Object::loadString(std::string_view s)
+{
+	uint16_t last = s[0],cur = s[0];
+    for(size_t i = 1; i <= s.size()+1; i++)
+    {
+    	last = cur;
+    	cur = s[i];
+    	if(last == '\\' && cur == 'n'){
+    		this->pushList(Object("","10",""));
+    		i++;
+    	}
+    	else
+    		this->pushList(Object("", std::to_string(last), ""));
+    }
+}
+Object Object::splitString(std::string_view filter, std::unordered_map<std::string,Object> &memory)
+{
+	Object splitArr(id+"Split","","");
+	size_t start = 0, end = 0;
+	std::stringstream data;
+	for(size_t i = 0; i < this->getListSize(); i++)
+	{
+		data<<(char) stoi(this->getListElement(i, memory).instructions);
+	}
+	std::string datastr = data.str();
+	// search for regex
+	// set end to index returned -1
+	// load string
+	while(end < datastr.size())
+	{
+		end = datastr.find(filter, start)-1;
+		end = end<=datastr.size()?end:datastr.size();
+		Object element("","","");
+		element.loadString(std::string_view(datastr.c_str()+start, end));
+		splitArr.pushList(element);
+		start = end+filter.size();
+		end = start;
+	}
+	return splitArr;
 }
 int Object::setParams(std::string &param)
 {
-	//std::cout<<"Expression:"<<instructions<<" setParam in Object class input: "<<param<<std::endl;
     params.resize(0);
 	int start = 0,end = 0;
 	while(param[start] && param[start] != '(' && !isalpha(param[start]) && param[start] != '-' && param[start] != '&' && !(param[start] < 58 && param[start]> 47))
 	{
-		//std::cout<<"setParam in Object class in first while: "<<param.substr(start,param.length())<<std::endl;
 		++start;
 		++end;
 	}

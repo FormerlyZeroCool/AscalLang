@@ -19,6 +19,7 @@ private:
 	std::string instructions;
 	size_t listSize = 0;
 	std::map<std::string, Object> objectMap;
+	std::vector<Object> objectList;
 	std::string toString(uint16_t depth);
 public:
 	std::string id;
@@ -33,9 +34,13 @@ public:
 	std::string& getInstructions();
 	Object getChild(std::string &id);
 	bool isList();
+	void clearList();
 	void pushList(Object &data);
 	void pushList(Object &&data);
 	void setList(Object &data, size_t index);
+	Object splitString(std::string_view filter, std::unordered_map<std::string,Object> &);
+	void loadString(std::string_view s);
+	void printList(std::unordered_map<std::string,Object> &memory);
 	size_t getListSize();
 	Object& getListElement(size_t index,std::unordered_map<std::string,Object> &memory);
 	bool operator==(Object o);
