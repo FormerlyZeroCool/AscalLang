@@ -1723,19 +1723,7 @@ std::string printStrAction(AscalFrame<double>* frame,bool saveLast)
     std::string objName = params[0][0] =='&'?params[0].c_str()+1:params[0].c_str();
     Object *obj = &getObject(frame, objName);
     std::string_view lastEl,element = obj->getListElement(0, memory).getInstructions();
-    for(size_t i = 1; i <= obj->getListSize(); i++)
-    {
-    	lastEl = element;
-    	element = obj->getListElement(i, memory).getInstructions();
-    	char last = atoi(&lastEl[0]),cur = atoi(&element[0]);
-    	if(last == '\\' && cur == 'n'){
-    		std::cout<<std::endl;
-    		//skip control char marked by previous char = '
-    		i++;
-    	}
-    	else
-    		std::cout<<last;
-    }
+    obj->printList(memory);
     if(*boolsettings["o"])
     {
     	std::cout<<"loadstr("<<") = "<<(char)(65)<<'\n';

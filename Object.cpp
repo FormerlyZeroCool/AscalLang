@@ -113,7 +113,7 @@ size_t Object::getListSize()
 }
 Object& Object::getListElement(size_t index,std::unordered_map<std::string,Object> &memory)
 {
-	if(index < this->listSize)
+	if(index < this->getListSize())
 		return this->objectList[index];
 	return memory["null"];
 }
@@ -145,11 +145,12 @@ void Object::printList(std::unordered_map<std::string,Object> &memory)
 {
     for(size_t i = 0; i <= this->getListSize(); i++)
     {
-    		std::cout<<(char) stoi(this->getListElement(i, memory).getInstructions());
+    		std::cout<<(char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
     }
 }
 void Object::loadString(std::string_view s)
 {
+	clearList();
 	uint16_t last = s[0],cur = s[0];
     for(size_t i = 1; i <= s.size()+1; i++)
     {
