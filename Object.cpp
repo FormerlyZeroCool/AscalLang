@@ -158,7 +158,7 @@ void Object::loadString(std::string_view s)
     	cur = s[i];
     	if(last == '\\' && cur == 'n'){
     		this->pushList(Object("","10",""));
-    		i++;
+    		cur = s[++i];
     	}
     	else
     		this->pushList(Object("", std::to_string(last), ""));
