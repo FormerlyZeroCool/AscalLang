@@ -17,7 +17,6 @@
 class Object {
 private:
 	std::string instructions;
-	size_t listSize = 0;
 	std::map<std::string, Object> objectMap;
 	std::vector<Object> objectList;
 	std::string toString(uint16_t depth);
