@@ -6,9 +6,10 @@
 CC  = gcc
 CXX = g++
 
-INCLUDES = 
-CFLAGS   = -o2 -Wall $(INCLUDES)
-CXXFLAGS = -o2 -std=c++17 -Wall $(INCLUDES)
+INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp
+UTILINCLUDES = queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp
+CFLAGS   = -o2 -Wall
+CXXFLAGS = -o2 -std=c++17 -Wall
 
 LDFLAGS = 
 LDLIBS = 
@@ -18,7 +19,7 @@ default: AscalMain
 AscalMain:  AscalMain.o Object.o AscalParameters.o ObjectKey.o
 	g++ -o ascal AscalMain.o Object.o AscalParameters.o ObjectKey.o
 # header dependency
-AscalMain.o: AscalMain.cpp  Calculator.hpp queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp
+AscalMain.o: AscalMain.cpp $(INCLUDES)  $(UTILINCLUDES) 
 
 Object.o: Object.cpp Object.hpp
 AscalParameters.o: 
@@ -26,7 +27,9 @@ ObjectKey.o:
 .PHONY: clean
 clean:
 	rm -f *.o *~  ascal
-
+.PHONY: run
+run:
+	./run.sh
 .PHONY: all
 all: clean default
 
