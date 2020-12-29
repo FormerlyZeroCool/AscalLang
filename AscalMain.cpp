@@ -20,6 +20,7 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <sstream>
 #include <iostream>
 #include <fstream>
 #include <thread>
@@ -32,18 +33,14 @@
 #include "stack.hpp"
 #include "Vect2D.hpp"
 #include "Calculator.hpp"
+#include "SubStr.hpp"
 
 #define DEBUG 1
 #define THROWERRORS 1
 static const size_t sizeofFrame = sizeof(AscalFrame<double>);
 static size_t allocated = 0, deallocated = 0;;
 static const std::string VERSION = "2.01";
-struct SubStr{
-    std::string data;
-    int start,end;
-    bool loadedNew = false;
-    SubStr(std::string data,int start,int end):data(data),start(start),end(end){}
-};
+
 static uint32_t frameCount = 1;
 static uint32_t varCount = 0;
 
@@ -53,6 +50,7 @@ static std::streambuf* stream_buffer_cin = std::cin.rdbuf();
 static std::unordered_map<std::string,Object> memory;
 std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
+linkedStack<AscalFrame<double> *> *currentStack = nullptr;
 //Interpreter Settings HashMap for toggle flags, like show time, or operations
 static std::map<std::string,setting<bool> > boolsettings;
 //Interpreter hash map for system keywords
@@ -100,6 +98,8 @@ void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 void updateBoolSetting(AscalFrame<double>* frame);
 
+Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName);
+Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &varName, Object *o = nullptr);
 std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
@@ -378,6 +378,7 @@ void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
 	inputMapper["simplify"] = simplifyfnAction;
+	//inputMapper["this"] = thisAction;
 	inputMapper["printStr"] = printStrAction;
 	inputMapper["arrLen"] = lenAction;
 	inputMapper["splitStr"] = splitStrAction;
@@ -622,7 +623,7 @@ double floor(double input)
 
 #include <sstream>
 template <typename T>
-std::string to_string_with_precision(const T a_value, const int n = 20)
+std::string to_string_with_precision(const T a_value, const int n = 10)
 {
     std::ostringstream out;
     out.precision(n);
@@ -1038,13 +1039,21 @@ void printHelpMessage(const std::string &expr)
 
     std::cout<<"\nYou can print all variables, and their expressions by typing printall\n";
 }
+bool isDouble(std::string &exp);
 std::string letNewVar(AscalFrame<double>* frame,bool saveLast)
 {
                 SubStr exPart = getExpr(frame->exp,frame->exp.find('=',frame->index)+1);
                 SubStr newVarPart = getNewVarName(frame->exp);
+                Object *parent = resolveNextObjectExpressionPartial(frame, newVarPart);
                 Object var(newVarPart.data,exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1 ));
-
-                if(memory.count(var.id) != 0)
+                if(parent)
+                {
+                	if(isDouble(var.id))
+                		parent->setList(var, stoi(var.id));
+                	else
+                		parent->loadChild(var);
+                }
+                else if(memory.count(var.id) != 0)
                 {
                     std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
                     if(position != userDefinedFunctions.end())
@@ -1063,16 +1072,34 @@ std::string constNewVar(AscalFrame<double>* frame,bool saveLast)
 {
 	SubStr exPart = getExpr(frame->exp,frame->exp.find('=',frame->index)+1);
 	    SubStr newVarPart = getVarName(frame->exp,frame->index+5);
-	    std::string value = to_string(callOnFrame(frame,exPart.data));
-	    Object var(newVarPart.data,value,"");
+        Object *parent = resolveNextObjectExpressionPartial(frame, newVarPart, frame->getContext()->getThis());
+	    Object var(newVarPart.data,"","");
+	    Object *newObj = nullptr;
 
+        if(parent)
+        {
+        	if(isDouble(var.id))
+        		newObj = &parent->setList(var, stoi(var.id));
+        	else
+        		newObj = &parent->loadChild(var);
 
-	    std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
-	                            if(position != userDefinedFunctions.end())
-	                                userDefinedFunctions.erase(position);
-
-	    //set var defined's value in hash map
-	    loadUserDefinedFn(var, memory);
+        	Object *c = frame->getContext();
+        	frame->setContext(newObj);
+    	    std::string value = to_string(callOnFrame(frame, exPart.data));
+        	frame->setContext(c);
+    	    newObj->getInstructions() = value;
+        }
+        else
+        {
+    	    std::string value = to_string(callOnFrame(frame, exPart.data));
+    	    var.getInstructions() = value;
+        	//delete old  reference from list not really needed
+    	    std::vector<Object>::iterator position = std::find(userDefinedFunctions.begin(), userDefinedFunctions.end(), memory[var.id]);
+    	                            if(position != userDefinedFunctions.end())
+    	                                userDefinedFunctions.erase(position);
+    	    //set var defined's value in hash map
+    	    loadUserDefinedFn(var, memory);
+        }
 	    if(*boolsettings["o"])
 	    {
 	        std::cout<<std::endl<<"New global var: "<<newVarPart.data<< " = "
@@ -1188,9 +1215,9 @@ std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
     if(exp.data.size() == 1)
     	throw std::string("simplify <function>");
     //Get definition by calling function.getIntsructions(), or for formatted version getInstructionsFormated
-    Object function;
+    Object* function;
     try{
-    	function = getObject(frame, exp.data);
+    	function = resolveNextExprSafe(frame, exp);
     }catch(std::string &objNotFoundErr)
     {
     	throw std::string("Error could not find function: " + exp.data + " to simplify.");
@@ -1208,20 +1235,20 @@ std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
 {
 	//Feel free to change anything, I've just added the boilerplate, and some convenience code for you
     SubStr exp = getFollowingExpr(frame, "derive");
-    std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
+    std::vector<SubStr> params = Object("","",exp.data).params;
     //you can change this, just getting some params for you
     if(params.size()<3)
     	throw std::string("derive <function name, variable to differentiate, derivative degree>");
     //id is the function name, getInstructions() will return a reference to the code saved for the function as a string
-    Object function = getObject(frame, params[0]);
-    std::string withRespectTo = params[1];
-    uint16_t degree = (uint16_t) callOnFrame(frame, params[2]);
+    Object *function = resolveNextExprSafe(frame, params[0]);
+    std::string withRespectTo = params[1].data;
+    uint16_t degree = (uint16_t) callOnFrame(frame, params[2].data);
     //Your code here
 
     //end of your code is defining the string derivative
     std::string derivative;
     std::stringstream call;
-    call<<"let "<<function.id<<"prime"<<degree<<" = "<<function.getInstructions();
+    call<<"let "<<function->id<<"prime"<<degree<<" = "<<function->getInstructions();
     //Saves function that when it is a first derivative of f looks like
     //fprime1 = first derivative of f
     callOnFrame(frame, call.str());
@@ -1233,16 +1260,17 @@ Vect2D<double> calcTable(const std::vector<std::string> &functions, double xMin,
 std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "plotGUI");
-    std::vector<std::string> params = (std::vector<std::string> ) Object("","",exp.data).params;
+    std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 7)
     	throw std::string("plotGUI <fun1|fun2...,x min, x max, y min, y max, delta x, delta y>");
-    std::vector<std::string> functions = split(params[0], "|");
-    double xMin = callOnFrame(frame, params[1]);
-    double xMax = callOnFrame(frame, params[1]);
-    double yMin = callOnFrame(frame, params[1]);
-    double yMax = callOnFrame(frame, params[1]);
-    double dx = callOnFrame(frame, params[1]);
-    double dy = callOnFrame(frame, params[1]);
+    std::vector<std::string> functions = split(params[0].data, "|");
+    //Here to aid potential future development
+    double xMin = callOnFrame(frame, params[1].data);
+    double xMax = callOnFrame(frame, params[1].data);
+    double yMin = callOnFrame(frame, params[1].data);
+    double yMax = callOnFrame(frame, params[1].data);
+    double dx = callOnFrame(frame, params[1].data);
+    double dy = callOnFrame(frame, params[1].data);
 
     int pid = fork();
     if(!pid)
@@ -1379,7 +1407,7 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
         std::cout<<"|";
     }
     std::cout<<' '<<xMax<<'\n';
-    char symbols[10] = {'*','#','%','$','-','@','&','+','!','='};
+    char symbols[10] = {'*','#','%','@','$','&','=','+','-','!'};
     for(double y = tableHeight+1;y>=0;y--)
     {
 
@@ -1390,6 +1418,8 @@ std::string plotAction(AscalFrame<double>* frame,bool saveLast)
             {
                 const double roundedFunctionOutput = (std::round((outPuts.get(x,z) - yMin) / dy) * dy) + yMin;
                 bool drawFnValue = true;
+                //this inner loop is to check if another symbol would have been printed for this point
+                //runs n^2 where n is basically limited to between 1 and 10, but could def be optimized, and it's run a lot at once
                 for(int a =0;drawFnValue && a < z;a++)
                 {
                     drawFnValue = (roundedFunctionOutput != (std::round((outPuts.get(x,a) - yMin) / dy) * dy) + yMin);
@@ -1571,6 +1601,26 @@ Object& getObject(AscalFrame<double>* frame, std::string &functionName)
 	                throw std::string("Error locating object "+functionName+"\n");
 	            }
 }
+Object* getObjectNoError(AscalFrame<double>* frame, std::string &functionName)
+{
+
+	if(frame->getLocalMemory()->count(functionName))
+	            {
+	                return &(*frame->getLocalMemory())[functionName];
+	            }
+	            else if(frame->getParamMemory()->count(functionName))
+	            {
+	                return &(*frame->getParamMemory())[functionName];
+	            }
+	            else if(memory.count(functionName))
+	            {
+	                return &memory[functionName];
+	            }
+	            else
+	            {
+	                return nullptr;
+	            }
+}
 std::string objectAction(AscalFrame<double>* frame,bool saveLast)
 {
 	frame->index += 5;
@@ -1578,7 +1628,7 @@ std::string objectAction(AscalFrame<double>* frame,bool saveLast)
 	frame->index += varName.data.length();
 
 	ObjectKey key(frame->exp.substr(frame->index, frame->index), varName.data);
-	Object *obj = &getObject(frame, varName.data);
+	Object *obj = resolveNextExprSafe(frame, varName);
 	frame->initialOperands.push(callOnFrame(frame, objectActionMapper[key](frame, *obj)));
 	return 'a'+frame->exp.substr(frame->index);
 }
@@ -1596,7 +1646,7 @@ std::string getListElementAction(AscalFrame<double>* frame, Object &obj)
 		frame->index += params.data.length();
 
 	}
-	return obj.getChild(expIndex.data).getInstructions();
+	return obj[expIndex.data].getInstructions();
 }
 
 std::string fprimeAction(AscalFrame<double>* frame,bool saveLast)
@@ -1606,8 +1656,8 @@ std::string fprimeAction(AscalFrame<double>* frame,bool saveLast)
     data.setParams(exp.data);
     if(data.params.size() < 2)
     	throw std::string("Error missing params for fprime <function name> <value to evaluate at>");
-    std::string fn = data.params[0];
-    std::string x = data.params[1];
+    std::string fn = data.params[0].data;
+    std::string x = data.params[1].data;
     double functionValue = callOnFrame(frame,fn+"("+x+")");
     double steppedFunctionValue = callOnFrame(frame,fn+"("+x+"+0.00001)");
     frame->initialOperands.push((steppedFunctionValue-functionValue)/0.00001);
@@ -1621,27 +1671,26 @@ std::string fprimeAction(AscalFrame<double>* frame,bool saveLast)
 std::string pushValAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "arrPush");
-    std::vector<std::string> params = Object("","",exp.data).params;
+    std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 2)
     	throw std::string("arrPush(<object/array>,<value as Ascal expression>)");
-    double valueToPush = callOnFrame(frame,params[1]);
-
-    getObject(frame, params[0]).pushList(Object("",to_string(valueToPush),""));
+    double valueToPush = callOnFrame(frame,params[1].data);
+    resolveNextExprSafe(frame, params[0])->pushList(Object("",to_string(valueToPush),""));
     if(*boolsettings["o"])
     {
-    	Object *list = &getObject(frame, params[0]);
-    	std::cout<<"pushed value "<<params[1]<<" to list "<<params[0]<<" at position: "<<(list->getListSize()-1)<<"\n";
+    	Object *list = resolveNextExprSafe(frame, params[0]);
+    	std::cout<<"pushed value "<<params[1].data<<" to list "<<params[0].data<<" at position: "<<(list->getListSize()-1)<<"\n";
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string getArrValAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "arrGet");
-    std::vector<std::string> params = Object("","",exp.data).params;
+    std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 2)
     	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
-    double indexToGet = callOnFrame(frame,params[1]);
-    Object *element = &getObject(frame, params[0]).getListElement(indexToGet, memory);
+    double indexToGet = callOnFrame(frame,params[1].data);
+    Object *element = &resolveNextExprSafe(frame, params[0])->getListElement(indexToGet, memory);
     SubStr paramsForListElementFn("", 0 , exp.end);
     if(exp.data[exp.end] == '(')
     {
@@ -1658,26 +1707,26 @@ std::string getArrValAction(AscalFrame<double>* frame,bool saveLast)
     {
     	double t;
     	frame->initialOperands.top(t);
-    	std::cout<<"got element at index: "<<params[1]<<" from list "<<params[0]<<" value: "<<(t)<<"\n";
+    	std::cout<<"got element at index: "<<params[1].data<<" from list "<<params[0].data<<" value: "<<(t)<<"\n";
     }
     return 'a'+frame->exp.substr(paramsForListElementFn.end,frame->exp.size());
 }
 std::string arrSetValAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "arrSet");
-    std::vector<std::string> params = Object("","",exp.data).params;
+    std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 3)
     	throw std::string("arrGet(<array>,<Index as Ascal expression>,<value as expression>)");
-    double indexToSet = callOnFrame(frame,params[1]);
-    double value = callOnFrame(frame,params[2]);
+    double indexToSet = callOnFrame(frame,params[1].data);
+    double value = callOnFrame(frame,params[2].data);
     Object newObj("",to_string(value),"");
-    getObject(frame, params[0]).setList(newObj, indexToSet);
+    resolveNextExprSafe(frame, params[0])->setList(newObj, indexToSet);
     memory["null"].getInstructions() = MAX;
     if(*boolsettings["o"])
     {
     	double t;
     	frame->initialOperands.top(t);
-    	std::cout<<"got element at index: "<<params[1]<<" from list "<<params[0]<<" value: "<<(t)<<"\n";
+    	std::cout<<"got element at index: "<<params[1].data<<" from list "<<params[0].data<<" value: "<<(t)<<"\n";
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
@@ -1695,18 +1744,19 @@ std::string printCharAction(AscalFrame<double>* frame,bool saveLast)
 std::string loadStrAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "loadStr");
-    std::vector<std::string > params = Object("","",exp.data).params;
+    std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 2)
     	throw std::string("loadStr (<function name>, <\"string in quotes\">");
-    Object *obj = &getObject(frame, params[0]);
+    Object *obj = resolveNextExprSafe(frame, params[0]);
     obj->clearList();
     //parse only text between quotes
     size_t strStart = 0;
-    while(params[1][strStart] && params[1][strStart++] != '\"'){}
-    size_t strEnd = params[1].length()-1;
-    while(params[1][strEnd] && params[1][strEnd--] != '\"'){}
+    while(params[1].data[strStart] && params[1].data[strStart++] != '\"'){}
+    size_t strEnd = params[1].data.length()-1;
+    while(params[1].data[strEnd] && params[1].data[strEnd--] != '\"'){}
     //at this point str start, and end point to the appropriate places in the parameter
-    obj->loadString(std::string_view(params[1].c_str()+strStart, strEnd-1));
+    std::string_view s(params[1].data.c_str()+strStart, strEnd);
+    obj->loadString(s);
 
     if(*boolsettings["o"])
     {
@@ -1717,11 +1767,10 @@ std::string loadStrAction(AscalFrame<double>* frame,bool saveLast)
 std::string printStrAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "printStr");
-    std::vector<std::string > params = Object("","",exp.data).params;
+    std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 1)
     	throw std::string("loadStr (<object name>)");
-    std::string objName = params[0][0] =='&'?params[0].c_str()+1:params[0].c_str();
-    Object *obj = &getObject(frame, objName);
+    Object *obj = resolveNextExprSafe(frame, params[0]);
     std::string_view lastEl,element = obj->getListElement(0, memory).getInstructions();
     obj->printList(memory);
     if(*boolsettings["o"])
@@ -1733,17 +1782,17 @@ std::string printStrAction(AscalFrame<double>* frame,bool saveLast)
 std::string splitStrAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "splitStr");
-    std::vector<std::string > params = Object("","",exp.data).params;
+    std::vector<SubStr > params = Object("","",exp.data).params;
     if(params.size() < 2)
     	throw std::string("splitStr (<object name>, <\"delimiter\">");
-    Object *obj = &getObject(frame, params[0]);
+    Object *obj = resolveNextExprSafe(frame, params[0]);
     //parse only text between quotes
     size_t strStart = 0;
-    while(params[1][strStart] && params[1][strStart++] != '\"'){}
-    size_t strEnd = params[1].length()-1;
-    while(params[1][strEnd] && params[1][strEnd--] != '\"'){}
+    while(params[1].data[strStart] && params[1].data[strStart++] != '\"'){}
+    size_t strEnd = params[1].data.length()-1;
+    while(params[1].data[strEnd] && params[1].data[strEnd--] != '\"'){}
 
-    std::string_view filter(params[1].c_str()+strStart, strEnd-1);
+    std::string_view filter(params[1].data.c_str()+strStart, strEnd-1);
     //at this point string start, and end point to the appropriate places in the parameter
     Object arr = obj->splitString(filter, memory);
     (*frame->getLocalMemory())[arr.id] = arr;
@@ -1753,26 +1802,165 @@ std::string splitStrAction(AscalFrame<double>* frame,bool saveLast)
     }
     return MAX;
 }
-//Object& resolveNextObjectExpression(AscalFrame<double>* frame)
-//{
+Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, Object *obj = nullptr);
+Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName)
+{
+	while(varName.end < frame->exp.size() && !isalpha(frame->exp[++varName.end])){}
+	varName.end--;
+
+	if(size_t index = varName.data.find(".") < varName.data.size())
+		varName.data = varName.data.substr(0,index);
+	Object* obj = resolveNextObjectExpression(frame, varName);
+	if(!obj)
+		throw std::string("Error Resolving object expression near index: "+to_string(varName.start));
+	return obj;
+}
+//Desc of resolveNextObjectExpression algorithm
+//if proceeding char is . then get object associated with varname before .
+//increment index, and getVarName again one place after the period, and use lookup next varname
+//in the previously gotten object's objectMap
+
+//if next char is [ parse param between []
+	//if numberic access object gotten above and retrieve value at the numeric index supplied else lookup in hashmap
+	//if first char is & then try to lookup object using the operand's object map converted to a string
+	//if first char is " act like it was connected with a .
+
+//if following char is not . or [ then return currently pointed to object otherwise loop
+Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, Object *obj)
+{
 	//getvarname
+	frame->index = varName.end+1;
+	if(!obj)
+	{
+		obj = getObjectNoError(frame, varName.data);
+	}
+	if(frame->getContext() && (!obj &&
+			(varName.data.size() == 4 && varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's')))
+		obj = frame->getContext()->getThis();
+	bool parsing;
+	do {
+		parsing = frame->exp[frame->index] == '.';
+		while (obj && frame->exp.size() > frame->index && parsing)
+		{
+			varName = getVarName(frame->exp, frame->index);
+			parsing = frame->exp[varName.end+1] == '.';
+			frame->index = varName.end+1 + parsing;
+			obj = &(*obj)[varName.data];
+		}
+		if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
+		{
+			//if index in array lookup
+			if((isNumeric(frame->exp[++frame->index]) || isalpha(frame->exp[frame->index])) && frame->exp[frame->index])
+			{
+				int index = frame->index-1;
+				SubStr lStr = getExprInString(frame->exp, index, '[',']',';');
+				double lookup = callOnFrame(frame, lStr.data);
+				obj = &(*obj)[lookup];
+				frame->index = index+1;
+				varName.end = lStr.end+1;
+			}
+			//else dictionary based lookup by string
+			else if(frame->exp.size() > frame->index)
+			{
+				//By variable name representing string to lookup
+				if(frame->exp[frame->index] == '&')
+				{
+					varName = getVarName(frame->exp, ++frame->index);
+					frame->index = varName.start;
+					obj = &(*obj)[resolveNextObjectExpression(frame, varName)->listToString(memory)];
+					varName.end++;}
+				//By string literal
+				else if(frame->exp[frame->index] == '\"')
+				{
+					varName = getVarName(frame->exp, ++frame->index);
+					frame->index = varName.end+1;
+					while(frame->index < frame->exp.size() && frame->exp[frame->index++] == ']'){}
+					varName.end = frame->index ;
+					obj = &(*obj)[varName.data];
+				}
+				else
+				{
+					throw std::string("Error invalid lookup parameters supplied to map: "+obj->id);
+				}
+			}
+		}
+		parsing = frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[';
+	} while(obj && parsing);
+	return obj;
+}
+Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &varName, Object *obj)
+{
+	//getvarname
+	frame->index = varName.end+1;
+	if(!obj)
+		obj = getObjectNoError(frame, varName.data);
+	if((!obj && frame->getContext()) || (varName.data.size() == 4 && varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's'))
+		obj = frame->getContext()->getThis();
+	bool parsing = frame->exp[frame->index] == '.';
+	Object *possible = nullptr;
+	do {
+		parsing = frame->exp[frame->index] == '.';
+		while (obj && frame->exp.size() > frame->index && parsing)
+			{
+				varName = getVarName(frame->exp, frame->index);
+				parsing = frame->exp[varName.end+1] == '.';
+				frame->index = varName.end+1 + parsing;
+				if(parsing || frame->exp[varName.end+1] == '[')
+					obj = &(*obj)[varName.data];
+			}
+			if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
+			{
+				//if index in array lookup
+				if((isNumeric(frame->exp[++frame->index]) || isalpha(frame->exp[frame->index])) && frame->exp[frame->index])
+				{
+					int index = frame->index-1;
+					varName = getExprInString(frame->exp, index, '[',']',';');
+					varName.data = to_string(callOnFrame(frame, varName.data));
+					frame->index = index+1;
+				}
+				//else dictionary based lookup by string
+				else if(frame->exp.size() > frame->index)
+				{
+					//By variable name representing string to lookup
+					if(frame->exp[frame->index] == '&')
+					{
+						varName = getVarName(frame->exp, ++frame->index);
+						frame->index = varName.start;
+						varName.data = resolveNextObjectExpression(frame, varName)->listToString(memory);
+						frame->index = varName.end+1;
+						while(frame->index < frame->exp.size() && frame->exp[frame->index++]){}
+						possible = &obj->getMapUnsafe(varName.data);
+					}
+					//By string literal
+					else if(frame->exp[frame->index] == '\"')
+					{
+						varName = getVarName(frame->exp, ++frame->index);
+						frame->index = varName.end+1;
+						while(frame->index < frame->exp.size() && frame->exp[frame->index++] == ']'){}
+						varName.end = frame->index - 1;
+						possible = &obj->getMapUnsafe(varName.data);
+					}
+					else
+					{
+						throw std::string("Error invalid lookup parameters supplied to map: "+obj->id);
+					}
+				}
+			}
+			if(frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[')
+			{
+				parsing = true;
+				obj = possible;
+				possible = nullptr;
+			}
+	} while(obj && parsing);
 
-	//if proceeding char is . then get object associated with varname before .
-	//increment index, and getVarName again one place after the period, and use lookup next varname
-	//in the previously gotten object's objectMap
-
-	//if next char is [ parse param between []
-		//if numberic access object gotten above and retrieve value at the numeric index supplied else lookup in hashmap
-		//if first char is & then try to lookup object using the operand's object map converted to a string
-		//if first char is " act like it was connected with a .
-
-	//if following char is not . or [ then return currently pointed to object otherwise loop
-//}
+	return obj;
+}
 std::string lenAction(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr exp = getFollowingExpr(frame, "arrLen");
-    std::string objname = getVarName(exp.data, 0).data;
-    Object *obj = &getObject(frame, objname);
+    SubStr objname = getVarName(exp.data, 0);
+    Object *obj = resolveNextExprSafe(frame, objname);
     frame->initialOperands.push(obj->getListSize());
     if(*boolsettings["o"])
     {
@@ -1829,7 +2017,8 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 uint64_t lehmer64();
-static uint64_t hashRand = time(NULL), hr2 = 0;
+//can also use time(NULL) instead of clock()
+static uint64_t hashRand = clock(), hr2 = 0;
 long ascalPRNG()
 {
 	hashRand ^= lehmer64();
@@ -1866,7 +2055,8 @@ std::string srandomAction(AscalFrame<double>* frame,bool saveLast)
     }
     else
     {
-    	input = time(NULL) + hashRand;
+    	//can also use time(NULL) instead of clock()
+    	input = hashRand + clock();
     	hr2 = input;
     	hashRand = input;
     }
@@ -1985,7 +2175,10 @@ std::string setAction(AscalFrame<double>* frame,bool saveLast)
         startIndex++;
     SubStr subexp = getExpr(frame->exp,startIndex);
     std::string value = to_string(callOnFrame(frame,subexp.data));
-    if(frame->getLocalMemory()->count(varName.data))
+    Object *obj;
+    	obj = resolveNextExprSafe(frame, varName);
+    	*obj = Object(obj->id,value,"");
+    /*if(frame->getLocalMemory()->count(varName.data))
     {
         (*frame->getLocalMemory())[varName.data] = Object(varName.data,value,"");
         if(*boolsettings["o"])
@@ -2012,7 +2205,7 @@ std::string setAction(AscalFrame<double>* frame,bool saveLast)
     else
     {
         throw std::string("Error invalid variable name "+varName.data);
-    }
+    }*/
     return MAX;
 }
 std::vector<std::string> parseExpList(const SubStr &codeBlock)
@@ -2217,6 +2410,7 @@ t callOnFrame(AscalFrame<t>* callingFrame,std::string subExp)
     ParamFrame<t> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
+    executionFrame.setContext(callingFrame->getContext());
     t data;
     try{
     data = calculateExpression<t>(&executionFrame);
@@ -2372,7 +2566,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     if(limitParams.params.empty())
     	throw std::string("Error no limit in for loop condition");
     callOnFrame(frame, "loc "+itVar.data+" = 0");
-    std::string limitStr = limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0];
+    SubStr limitStr = limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0];
     int startOfCodeBlock = limitExpr.start;
     SubStr codeBlock("",0,0);
 
@@ -2387,17 +2581,19 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     int postBodyLineCount = lineCount;
     lineCount = preBodyLineCount;
 
-	double i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0]):0;
-    if(firstChar(limitStr,'&'))
+	double i = limitParams.params.size()>1?callOnFrame(frame,limitParams.params[0].data):0;
+    if(firstChar(limitStr.data,'&'))
     {
-    	limitStr = limitStr.substr(limitStr.find("&")+1);
-    	Object *list = &getObject(frame, limitStr);
+    	limitStr.start = limitStr.data.find("&")+1;
+    	limitStr.data = limitStr.data.substr(limitStr.start);
+
+    	Object *list = resolveNextExprSafe(frame, limitStr);
     	if(list->getListSize() > 0)
     	{
 
-        	if(limitParams.params.size()<3 || callOnFrame(frame,limitParams.params[2]) > 0)
+        	if(limitParams.params.size()<3 || callOnFrame(frame,limitParams.params[2].data) > 0)
         	{
-            	for(;i < list->getListSize(); i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+            	for(;i < list->getListSize(); i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2].data):1)
             	{
                     if(*boolsettings["o"])
                     {
@@ -2422,7 +2618,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
         	{
         		if(i == 0)
         			i = list->getListSize()-1;
-            	for(;i >= 0; i += callOnFrame(frame,limitParams.params[2]))
+            	for(;i >= 0; i += callOnFrame(frame,limitParams.params[2].data))
             	{
                     if(*boolsettings["o"])
                     {
@@ -2447,10 +2643,10 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     }
     else
     {
-        double limit = callOnFrame(frame, limitStr);
+        double limit = callOnFrame(frame, limitStr.data);
     	    if(i < limit)
     	        for(; i < limit;
-    	        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):1)
+    	        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2].data):1)
     	        {
 
     	            if(*boolsettings["o"])
@@ -2473,7 +2669,7 @@ std::string forRangeAction(AscalFrame<double>* frame,bool saveLast)
     	        }
     	    else
     	        for(; i > limit;
-    	        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2]):-1)
+    	        		i += limitParams.params.size()>2?callOnFrame(frame,limitParams.params[2].data):-1)
     	        {
 
     	            if(*boolsettings["o"])
@@ -2647,24 +2843,9 @@ std::string printCalculation(AscalFrame<double>* frame,bool saveLast)
 void printVar(AscalFrame<double>* frame,bool saveLast)
 {
 	std::string data;
-
-	if(frame->getLocalMemory()->count(getVarName(frame->exp, frame->index+10).data))
-	{
-		data = (*frame->getLocalMemory())[getVarName(frame->exp, frame->index+10).data].instructionsToFormattedString();
-	}
-	else if(memory.count(getVarName(frame->exp, frame->index+10).data))
-	{
-		data = memory[getVarName(frame->exp, frame->index+10).data].instructionsToFormattedString();
-	}
-	else if(frame->getParamMemory()->count(getVarName(frame->exp, frame->index+10).data))
-	{
-		data = (*frame->getParamMemory())[getVarName(frame->exp, frame->index+10).data].instructionsToFormattedString();
-	}
-	else
-	{
-		throw std::string("Error invalid variable");
-	}
-    std::cout<<getVarName(frame->exp, frame->index+10).data<<" = "<<data<<"\n";
+	SubStr varName = getVarName(frame->exp, frame->index+10);
+	SubStr exp = getFollowingExpr(frame, "print var");
+    std::cout<<exp.data<<" = "<<resolveNextExprSafe(frame, varName)->toString()<<"\n";
 }
 
 std::string printDefaultAction(AscalFrame<double>* frame,bool saveLast)
@@ -3109,7 +3290,6 @@ SubStr getNewVarName(const std::string &data)
 SubStr getVarName(const std::string &s,int index)
 {
     int begin = index;
-    int count = 0;
     while(s[index] && !isalpha(s[index]))
     {
         begin++;
@@ -3118,10 +3298,9 @@ SubStr getVarName(const std::string &s,int index)
     while(s.length()>index && (isalpha(s[index]) || isNumeric(s[index])))
     {
         index++;
-        count++;
     }
+    std::string result = s.substr(begin>s.length()?s.length():begin,index - begin);
     index--;
-    std::string result = s.substr(begin>s.length()?s.length():begin,count);
     return SubStr(result,begin,begin + result.length()-1);
 }
 std::string replace(std::string &original,std::string &replace,std::string &replacement)
@@ -3182,7 +3361,7 @@ void printStack(stack<t> &operands)
 //which is an overloaded operator in the settings class
 
 template <typename t>
-void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, std::vector<std::string> &params,std::string &exp,std::string &varName, int i,uint64_t hash);
+void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, Object *obj, int i,uint64_t hash);
 
 static const std::hash<std::string> hashfn;
 uint64_t hashFunctionCall(std::string &exp)
@@ -3248,6 +3427,7 @@ t calculateExpression(AscalFrame<double>* frame)
     //This loop handles parsing the numbers, and adding the data from the expression
     //to the stacks
     linkedStack<AscalFrame<t>* > executionStack;
+    currentStack = &executionStack;
     AscalFrame<t>* currentFrame = frame;
     executionStack.push(currentFrame);
     try{
@@ -3281,6 +3461,21 @@ t calculateExpression(AscalFrame<double>* frame)
         	}
 
         }
+        //If complex object return register is set on frame
+        //we should internally have a pointer to an object that exists on the heap
+        //so at the end of the process this needs to be cleaned
+        //functioncall(&object.functioncall()) to handle this we need to be aware we are in a pfp frame
+        //we need to alter the return value previously specified in pfp frame inside of a return keyword,
+        //and set it equal to the obj returned which should be copied to the heap just in case it is
+        //locally scoped in the function call
+        //should be resolved in the return with the normal resolveNextObjectSafe return keyword must set rtn flag in parent frme
+
+        //object.functioncall().fieldFromObjectReturnedByFnCall
+        //object.functioncall().fieldThatIsAnFnFromObjectReturnedByFnCall()
+        //object.functioncall[lookup]().fieldFromObjectReturnedByFnCall
+        //object.functioncall[lookup]().fieldThatIsAnFnFromObjectReturnedByFnCall()
+        //remainder after initial will be
+        //.fieldFromObjectReturnedByFnCall or .fieldThatIsAnFnFromObjectReturnedByFnCall()
         for(int i = currentFrame->index;i <= currentFrame->exp.length();i++)
         {
          currentFrame->index = i;
@@ -3304,6 +3499,7 @@ t calculateExpression(AscalFrame<double>* frame)
 
              //Keyword handling only one keyword at the beginning of each statement allowed,
              //including statements defined in variables
+
              if(inputMapper.count(varName.data) != 0)
              {
 
@@ -3355,57 +3551,53 @@ t calculateExpression(AscalFrame<double>* frame)
              }
              else
              {
-                 Object data = memory.count(varName.data)!=0?memory[varName.data]:Object();
-                 Object localData = currentFrame->getLocalMemory()->count(varName.data)!=0?(*currentFrame->getLocalMemory())[varName.data]:Object();
-
-                 std::string params = currentFrame->exp[varName.end+1] =='('?
-                 currentFrame->exp.substr(varName.end+1):"";
-                 int endOfParams = data.setParams(params);
-                 data.setParams(params);
+            	 uint32_t startOfparams = currentFrame->exp[varName.end+1] =='('?
+                 varName.end+1:currentFrame->exp.size();
                  //Variable handling section
-                 if(localData.id.length() != 0)
+            	 currentFrame->index = varName.start;
+            	 if(Object *data = resolveNextObjectExpression(currentFrame, varName))
                  {
-                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
-                     i = endOfParams;
-                     createFrame(executionStack, currentFrame,
-                            data.params,localData.getInstructions(),localData.id,startOfEnd,hashFunctionCall(localData.id));
-                     goto new_frame_execution;
-                 }
-                 else if(data.id.length() != 0)
-                 {
-                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
-                     //creates a new set of stack frames, one for the function/var and one for resolution,
-                     //and calculation of each of it's parameters
-                     //also returns function/var's value to this function's initialOperands stack
-                     createFrame(executionStack, currentFrame,
-                                    data.params,data.getInstructions(),data.id,startOfEnd,hashFunctionCall(data.id));
-                     goto new_frame_execution;
-
-                  }
-                 else if(currentFrame->getParamMemory()->count(varName.data))
-                 {
-                     Object paramData =
-                             currentFrame->getParamMemory()->count(varName.data)?(*currentFrame->getParamMemory())[varName.data]
-                                                                                                            :Object();
-                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
-
-                     //creates a new set of stack frames, one for the function/var and one for resolution,
-                     //and calculation of each of it's parameters
-                     //also returns function/var's value to this function's initialOperands stack
-                     createFrame(executionStack, currentFrame,
-                                 data.params,paramData.getInstructions(),varName.data,startOfEnd,hashFunctionCall(paramData.id));
-                                     goto new_frame_execution;
+                	 startOfparams = currentFrame->exp[varName.end+1] =='('?
+                     varName.end+1:currentFrame->exp.size();
+                     uint32_t endOfParams = data->setParams(currentFrame->exp, startOfparams);
+                     uint32_t startOfEnd = data->params.size()==0?varName.end+1:varName.end+1+endOfParams;
+            		 //std::cout<<varName.data<<" end: "<<varName.end<<"\n"<<"SOP: "<<startOfparams<<"\n"<<"EOP: "<<endOfParams<<"\n"
+            			//	 <<"\n"<<"start of end: "<<startOfEnd<<"\n";
+                 //creates a new set of stack frames, one for the function/var and one for resolution,
+                 //and calculation of each of it's parameters
+                 //also returns function/var's value to this function's initialOperands stack
+                	 createFrame(executionStack, currentFrame,
+                                data,startOfEnd,hashFunctionCall(data->id));
+                	 goto new_frame_execution;
                  }
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
                  {
-                     Object localVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
-                                      ++(*currentFrame->getParams());
-                     localVar.id = varName.data;
-                     (*currentFrame->getParamMemory())[localVar.id] = localVar;
-                     int startOfEnd = data.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
 
+                	 if(currentFrame->exp[varName.end+1] == '.' || currentFrame->exp[varName.end+1] == '[')
+                	 {
+                		 std::stringstream error;
+                		 error<<"Error while attempting to resolve parameter "<<varName.data<<" at position "<<to_string(varName.start)<<
+                				 "\nfunction parameters must be defined when passing an object as parameter.\nTry wrapping the function in (";
+
+                		 for(int i = 0;  i < currentFrame->getParams()->size();i++)
+                			 error<<"<param"<<i+currentFrame->getParams()->getUseCount()+0<<">,";
+
+                		 if(currentFrame->getParams()->size())
+                			 error.seekp(-1,error.cur);
+                		 error<<"){<original function body>}";
+                		 error<<" to declare the function parameters";
+                		 throw error.str();
+                	 }
+                     Object paramVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
+                                      ++(*currentFrame->getParams());
+
+                     paramVar.id = varName.data;
+                     Object *obj = &((*currentFrame->getParamMemory())[paramVar.id] = paramVar);
+
+                     uint32_t endOfParams = paramVar.setParams(currentFrame->exp, startOfparams);
+                     uint32_t startOfEnd = paramVar.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
                      createFrame(executionStack, currentFrame,
-                            data.params,localVar.getInstructions(),localVar.id,startOfEnd,hashFunctionCall(localVar.id));
+                    		 obj,startOfEnd,hashFunctionCall(paramVar.id));
                      goto new_frame_execution;
                  }
                  else
@@ -3413,6 +3605,8 @@ t calculateExpression(AscalFrame<double>* frame)
                     #if THROWERRORS == 1
                      if(cmpstr(varName.data,"inf"))
                          throw std::string("Arithmetic Overflow in column: "+to_string(i));
+                     else if(cmpstr(varName.data,"nan"))
+                         throw std::string("Error Undefined result calculated");
                      else
                          throw std::string("Invalid reference: "+varName.data+" in column: "+to_string(i));
                     #endif
@@ -3527,6 +3721,7 @@ t calculateExpression(AscalFrame<double>* frame)
     	clearStackOnError(false, frame->exp, executionStack, currentFrame, frame, rtnFrame);
     	throw exitCode;
     }
+    currentStack = nullptr;
     return data;
 }
 #include <sstream>
@@ -3583,54 +3778,57 @@ bool isDouble(std::string &exp)
     return isADouble;
 }
 template <typename t>
-void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, std::vector<std::string> &params,std::string &exp,std::string &varName, int i, uint64_t hash)
+void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* currentFrame, Object *obj, int i,uint64_t hash)
 {
     //save index
     currentFrame->index = i;
-    if(isDouble(exp))
+    if(isDouble(obj->getInstructions()))
     {
         int ib = 0;
-        currentFrame->initialOperands.push(getNextDoubleS(exp, ib));
+        currentFrame->initialOperands.push(getNextDoubleS(obj->getInstructions(), ib));
         varCount++;
         if(*boolsettings["o"])
-        	std::cout<<"Reading variable: "<<varName<<" = "<<exp<<'\n';
+        	std::cout<<"Reading variable: "<<obj->id<<" = "<<obj->getInstructions()<<'\n';
     }
     else
     {
         frameCount++;
         if(*boolsettings["o"])
         {
-        	std::string data;
-        	for(std::string &s:params)
+        	std::stringstream data;
+        	for(SubStr &s:obj->params)
         	{
-        		data += s+",";
+        		data << s.data << ",";
         	}
-        	data = data.substr(0,data.length()-1);
-        	std::cout<<"Parsing params then executing: "<<varName<<'('<<data<<')'<<'\n';
+        	std::cout<<"Parsing params then executing: "<<obj->id<<'('<<data.str()<<')'<<'\n';
         }
         //create and set new frame expression
         FunctionFrame<t> *newFrame = new FunctionFrame<t>(nullptr,nullptr,nullptr);
         allocated += sizeofFrame;
         //newFrame->stackIndex = currentFrame->stackIndex+1;
-        newFrame->exp = exp;
-        if(memory.count(varName) == 0)
-        	(*newFrame->getLocalMemory())[varName] = Object(varName,exp,"");
+        newFrame->exp = obj->getInstructions();
+        if(memory.count(obj->id) == 0)
+        	(*newFrame->getLocalMemory())[obj->id] = Object(obj->id,obj->getInstructions(),"");
         newFrame->memoPointer = hash;
         //Create new frame, and set return pointer
         newFrame->returnPointer = currentFrame;
+        //Context object ptr for this keyword resolution
+        newFrame->setContext(obj);
         //push new frame
         executionStack.push(newFrame);
-        for(int i = 0; i < params.size(); i++)
+        for(int i = 0; i < obj->params.size(); i++)
         {
             allocated += sizeofFrame;
-            if(params[i][0] != '&')
+            if(obj->params[i].data[0] != '&')
             {
                 //create and set new frame expression
                 ParamFrame<t>* pFrame = new ParamFrame<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
                // std::cout<<"Param exec frame mem: "<<pFrame->memToString();
-                pFrame->exp = params[i];
+                pFrame->exp = obj->params[i].data;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
+                //Context object ptr for this keyword resolution
+                pFrame->setContext(currentFrame->getContext());
                 //push new frame
                 executionStack.push(pFrame);
             }
@@ -3639,7 +3837,7 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
                 ParamFrameFunctionPointer<t>* pFrame = new ParamFrameFunctionPointer<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
                // std::cout<<"Param function ref frame mem: "<<pFrame->memToString();
                 int index = 0;
-                pFrame->functionName = getVarName(params[i].substr(1), index).data;
+                pFrame->functionName = getVarName(obj->params[i].data.substr(1), index).data;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //push new frame

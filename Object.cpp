@@ -98,11 +98,6 @@ bool Object::operator==(Object o)
 	return equal;
 }
 
-Object Object::getChild(std::string &id)
-{
-	return this->objectMap.count(id)?this->objectMap[id]:throw std::string("Error finding "+this->id+"."+id);
-}
-
 bool Object::isList()
 {
 	return this->objectList.size();
@@ -120,14 +115,16 @@ Object& Object::getListElement(size_t index,std::unordered_map<std::string,Objec
 void Object::pushList(Object &data)
 {
 	data.id = this->id+std::to_string(this->objectList.size());
+	data.parent = this;
 	this->objectList.push_back(data);
 }
 void Object::pushList(Object &&data)
 {
 	data.id = this->id+std::to_string(this->objectList.size());
+	data.parent = this;
 	this->objectList.push_back(data);
 }
-void Object::setList(Object &data, size_t index)
+Object& Object::setList(Object &data, size_t index)
 {
 	if(this->objectList.size() < index)
 		throw std::string("Out of range in list: "+this->id);
@@ -135,11 +132,49 @@ void Object::setList(Object &data, size_t index)
 		this->pushList(data);
 	else
 		this->objectList[index] = data;
+	return data;
 }
 
 void Object::clearList()
 {
 	this->objectList.clear();
+}
+
+Object& Object::getMapUnsafe(std::string &id)
+{
+	return this->objectMap[id];
+}
+Object& Object::operator[](std::string &id)
+{
+	if(this->objectMap.count(id) > 0)
+		return this->objectMap[id];
+	else
+		throw std::string("Error invalid field ("+id+") in object "+this->id);
+}
+Object& Object::operator[](std::string &&id)
+{
+	if(this->objectMap.count(id) > 0)
+		return this->objectMap[id];
+	else
+		throw std::string("Error invalid field ("+id+") in object "+this->id);
+}
+Object& Object::operator[](size_t index)
+{
+	if(this->objectList.size() > index)
+		return this->objectList[index];
+	else
+		throw std::string("Invalid index: "+std::to_string(index));
+}
+std::string Object::listToString(std::unordered_map<std::string,Object> &memory)
+{
+	std::stringstream str;
+    for(size_t i = 0; i <= this->getListSize(); i++)
+    {
+    	char letter = (char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
+    	if(isprint(letter))
+    		str<<letter;
+    }
+    return str.str();
 }
 void Object::printList(std::unordered_map<std::string,Object> &memory)
 {
@@ -152,17 +187,21 @@ void Object::loadString(std::string_view s)
 {
 	clearList();
 	uint16_t last = s[0],cur = s[0];
-    for(size_t i = 1; i <= s.size()+1; i++)
+    for(size_t i = 1; i < s.size(); i++)
     {
     	last = cur;
     	cur = s[i];
     	if(last == '\\' && cur == 'n'){
     		this->pushList(Object("","10",""));
-    		cur = s[++i];
+    		if(i+1<s.size())
+    			cur = s[++i];
     	}
     	else
     		this->pushList(Object("", std::to_string(last), ""));
     }
+    if(cur != '\"' && (last != '\\' || cur != 'n'))
+		this->pushList(Object("", std::to_string(cur), ""));
+
 }
 Object Object::splitString(std::string_view filter, std::unordered_map<std::string,Object> &memory)
 {
@@ -189,20 +228,22 @@ Object Object::splitString(std::string_view filter, std::unordered_map<std::stri
 	}
 	return splitArr;
 }
-int Object::setParams(std::string &param)
+
+int Object::setParams(std::string &param, uint32_t start)
 {
-    params.resize(0);
-	int start = 0,end = 0;
-	while(param[start] && param[start] != '(' && !isalpha(param[start]) && param[start] != '-' && param[start] != '&' && !(param[start] < 58 && param[start]> 47))
+    params.clear();
+    uint32_t end = start,startBackup = start;
+	while(param.size() > start && param[start] != '(' && !isalpha(param[start]) && param[start] != '-' && param[start] != '&' && !(param[start] < 58 && param[start]> 47))
 	{
 		++start;
 		++end;
 	}
+
     start += param[start] != 0;
     end += param[start] != 0;
 	int pCount = 1;
 	bool foundClosing = false;
-	while(!foundClosing && param[end])
+	while(!foundClosing && param.size() > end)
 	{
         pCount += (param[end] == '(') - (param[end] == ')');
         if(pCount == 0)
@@ -211,7 +252,7 @@ int Object::setParams(std::string &param)
         }
 		if((param[end] == ',' || foundClosing) && end > start && (pCount == 1 || (pCount == 0 && foundClosing)))
 		{
-			params.push_back(param.substr(start,end-start));
+			params.push_back(SubStr(param.substr(start,end-start),start, end));
                 start = end;
                 while(param[start] == ',' || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
                 {
@@ -223,9 +264,19 @@ int Object::setParams(std::string &param)
 
 		end++;
 	}
-	return ++end;
+	return ++end-startBackup;
+}
+Object& Object::loadChild(Object &data)
+{
+	data.parent = this;
+	this->objectMap[data.id] = data;
+	return data;
 }
 
+Object* Object::getThis()
+{
+	return this->parent;
+}
 std::string Object::toString(uint16_t depth)
 {
 	std::stringstream s;
@@ -235,7 +286,7 @@ std::string Object::toString(uint16_t depth)
 	depth++;
 	for(int i = 0; i < depth; i++)
 		s<<"    ";
-	s<<"Obj Name: "<<this->id<<"\n";
+	s<<"Obj Name: ("<<this->id<<")\n";
 	for(int i = 0; i < depth; i++)
 		s<<"    ";
 	s<<"Instructions: "<<this->instructionsToFormattedString()<<"\n";
@@ -270,20 +321,35 @@ std::string Object::toString()
 {
 	return toString(0);
 }
-Object::Object(std::string id,std::string expression,std::string param):id(id)
+Object::Object(std::string &&id,std::string &&expression,std::string &param):id(id)
 {
 	setParams(param);
 	instructions = expression;
-	//std::cout<<expression<<std::endl;
-	/*for(int i = 0;i < expression.length();i++)
-	{
-		if(expression[i] == '\n')
-		{
-			instructions.push_back(expression.substr(start,i-start));
-			start = ++i;
-		}
-	}*/
-
+}
+Object::Object(std::string &&id,const std::string &expression,std::string &&param):id(id)
+{
+	setParams(param);
+	instructions = expression;
+}
+Object::Object(std::string &id,std::string &expression,std::string &param):id(id)
+{
+	setParams(param);
+	instructions = expression;
+}
+Object::Object(std::string &id,std::string &expression,std::string &&param):id(id)
+{
+	setParams(param);
+	instructions = expression;
+}
+Object::Object(std::string &&id,std::string &&expression,std::string &&param):id(id)
+{
+	setParams(param);
+	instructions = expression;
+}
+Object::Object(std::string &id,std::string &&expression,std::string &&param):id(id)
+{
+	setParams(param);
+	instructions = expression;
 }
 Object::Object()
 {

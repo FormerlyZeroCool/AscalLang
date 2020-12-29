@@ -26,8 +26,17 @@ protected:
     AscalParameters* params;
     std::map<std::string,Object>* paramMemory;
     std::map<std::string,Object>* localMemory;
+    Object *contextObj = nullptr;
 
 public:
+    Object* getContext()
+    {
+    	return contextObj;
+    }
+    void setContext(Object *obj)
+    {
+    	this->contextObj = obj;
+    }
     std::string memToString()
     {
     	std::stringstream s;
@@ -223,6 +232,32 @@ public:
 		return 'f';
 	}
     ~FunctionFrame(){}
+};
+
+template <typename t>
+class FunctionFrameSharedMemory: public AscalFrame<t> {
+private:
+public:
+	FunctionFrameSharedMemory(AscalParameters* params, std::map<std::string,Object>* paramMemory, std::map<std::string,Object>* localMemory)
+    {
+        this->params = params;
+        this->paramMemory = paramMemory;
+        this->localMemory = localMemory;
+        //+32 sets isFunction true
+        this->flagRegisters = this->flagRegisters&(255-32);
+        this->flagRegisters = this->flagRegisters^32;
+    }
+    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
+    {
+        if(this->returnPointer)
+        {
+            this->returnPointer->initialOperands.push_back(result);}
+    }
+	char getType() override
+	{
+		return 's';
+	}
+    ~FunctionFrameSharedMemory(){}
 };
 
 #endif /* ASCALFRAME_HPP_ */
