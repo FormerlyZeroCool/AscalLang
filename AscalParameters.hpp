@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include "Object.hpp"
 
-class AscalParameters: public std::vector<Object> {
+class AscalParameters: public std::vector<Object*> {
 private:
 	int useCount;
 public:

@@ -24,7 +24,7 @@ protected:
 	//+64 designates the frame as never run
     uint8_t flagRegisters = 1 + 8 + 64;
     AscalParameters* params;
-    std::map<std::string,Object>* paramMemory;
+    std::map<std::string,Object* >* paramMemory;
     std::map<std::string,Object>* localMemory;
     Object *contextObj = nullptr;
 
@@ -43,12 +43,12 @@ public:
     	s<<"Params stack:\n";
     	for(auto &value:*params)
     	{
-    		s<<value.toString()<<"\n";
+    		s<<value->toString()<<"\n";
     	}
     	s<<"Param memory:\n";
     	for(auto &[key, value]:*paramMemory)
     	{
-    		s<<value.toString()<<"\n";
+    		s<<value->toString()<<"\n";
     	}
     	s<<"Local Memory\n";
     	for(auto &[key, value]:*localMemory)
@@ -113,7 +113,7 @@ public:
         flagRegisters = flagRegisters&(uint8_t)(255-128);
         flagRegisters = flagRegisters^(uint8_t)(128*value);
     };
-    std::map<std::string,Object>* getParamMemory(){ return paramMemory; };
+    std::map<std::string,Object*>* getParamMemory(){ return paramMemory; };
     std::map<std::string,Object>* getLocalMemory(){ return localMemory; };
     AscalParameters* getParams(){ return params; };
     virtual
@@ -149,7 +149,7 @@ public:
 template <typename t>
 class ParamFrame: public AscalFrame<t> {
 public:
-    ParamFrame(AscalParameters* params, std::map<std::string,Object>* paramMemory, std::map<std::string,Object>* localMemory)
+    ParamFrame(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
     {
         this->params = params;
         this->paramMemory = paramMemory;
@@ -159,7 +159,8 @@ public:
     {
         if(this->returnPointer)
         {
-            this->returnPointer->getParams()->push_back(Object("",std::to_string(result),""));
+        	Object *obj = &((*this->localMemory)[std::to_string(this->returnPointer->getParams()->getUseCount())] = Object("",std::to_string(result),""));
+            this->returnPointer->getParams()->push_back(obj);
         }
     }
 	char getType() override
@@ -172,7 +173,7 @@ template <typename t>
 class ParamFrameFunctionPointer: public AscalFrame<t> {
 public:
     std::string functionName;
-    ParamFrameFunctionPointer(AscalParameters* params, std::map<std::string,Object>* paramMemory, std::map<std::string,Object>* localMemory)
+    ParamFrameFunctionPointer(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
     {
         this->params = params;
         this->paramMemory = paramMemory;
@@ -184,7 +185,7 @@ public:
         {
             if(this->getLocalMemory()->count(functionName))
             {
-            	this->returnPointer->getParams()->push_back((*this->getLocalMemory())[functionName]);
+            	this->returnPointer->getParams()->push_back(&(*this->getLocalMemory())[functionName]);
             }
             else if(this->getParamMemory()->count(functionName))
             {
@@ -192,7 +193,7 @@ public:
             }
             else if(globalMemory.count(functionName))
             {
-            	this->returnPointer->getParams()->push_back(globalMemory[functionName]);
+            	this->returnPointer->getParams()->push_back(&globalMemory[functionName]);
             }
             else
             	throw std::string("Error cannot find function: "+functionName);
@@ -208,11 +209,11 @@ public:
 template <typename t>
 class FunctionFrame: public AscalFrame<t> {
 private:
-	std::map<std::string,Object> paramMem;
+	std::map<std::string,Object*> paramMem;
 	std::map<std::string,Object> localMem;
 	AscalParameters param;
 public:
-    FunctionFrame(AscalParameters* params, std::map<std::string,Object>* paramMemory, std::map<std::string,Object>* localMemory)
+    FunctionFrame(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
     {
         this->params = &param;
         this->paramMemory = &paramMem;
@@ -232,32 +233,6 @@ public:
 		return 'f';
 	}
     ~FunctionFrame(){}
-};
-
-template <typename t>
-class FunctionFrameSharedMemory: public AscalFrame<t> {
-private:
-public:
-	FunctionFrameSharedMemory(AscalParameters* params, std::map<std::string,Object>* paramMemory, std::map<std::string,Object>* localMemory)
-    {
-        this->params = params;
-        this->paramMemory = paramMemory;
-        this->localMemory = localMemory;
-        //+32 sets isFunction true
-        this->flagRegisters = this->flagRegisters&(255-32);
-        this->flagRegisters = this->flagRegisters^32;
-    }
-    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
-    {
-        if(this->returnPointer)
-        {
-            this->returnPointer->initialOperands.push_back(result);}
-    }
-	char getType() override
-	{
-		return 's';
-	}
-    ~FunctionFrameSharedMemory(){}
 };
 
 #endif /* ASCALFRAME_HPP_ */

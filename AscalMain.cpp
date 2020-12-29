@@ -1590,7 +1590,7 @@ Object& getObject(AscalFrame<double>* frame, std::string &functionName)
 	            }
 	            else if(frame->getParamMemory()->count(functionName))
 	            {
-	                return (*frame->getParamMemory())[functionName];
+	                return *(*frame->getParamMemory())[functionName];
 	            }
 	            else if(memory.count(functionName))
 	            {
@@ -1610,7 +1610,7 @@ Object* getObjectNoError(AscalFrame<double>* frame, std::string &functionName)
 	            }
 	            else if(frame->getParamMemory()->count(functionName))
 	            {
-	                return &(*frame->getParamMemory())[functionName];
+	                return (*frame->getParamMemory())[functionName];
 	            }
 	            else if(memory.count(functionName))
 	            {
@@ -2718,6 +2718,18 @@ std::string printMemory(std::map<std::string,Object> &memory,std::string delimit
             s+=key+delimiter+value.instructionsToString()+secondDelimiter;
     return s.substr(0,s.size()-secondDelimiter.size());
 }
+std::string printMemory(std::map<std::string,Object*> &memory,std::string delimiter,bool justKey = true,
+        std::string secondDelimiter = "\n")
+{
+    std::string s;
+    if(justKey)
+        for(auto &[key,value]:memory)
+            s+=key+delimiter;
+    else
+        for(auto &[key,value]:memory)
+            s+=key+delimiter+value->instructionsToString()+secondDelimiter;
+    return s.substr(0,s.size()-secondDelimiter.size());
+}
 std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
         std::string secondDelimiter = "\n")
 {
@@ -3375,9 +3387,9 @@ static uint64_t h;
 uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
 	h = hash;
-    for(Object &s:params)
+    for(Object *s:params)
     {
-        hash += hashfn(s.getInstructions());
+        hash += hashfn(s->getInstructions());
         hash ^= hash>>2;
         hash ^= hash<<5;
         hash ^= hash>>12;
@@ -3591,16 +3603,16 @@ t calculateExpression(AscalFrame<double>* frame)
                 		 error<<" to declare the function parameters";
                 		 throw error.str();
                 	 }
-                     Object paramVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
+                     Object *paramVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
                                       ++(*currentFrame->getParams());
 
-                     paramVar.id = varName.data;
-                     Object *obj = &((*currentFrame->getParamMemory())[paramVar.id] = paramVar);
+                     paramVar->id = varName.data;
+                     Object *obj = ((*currentFrame->getParamMemory())[paramVar->id] = paramVar);
 
-                     uint32_t endOfParams = paramVar.setParams(currentFrame->exp, startOfparams);
-                     uint32_t startOfEnd = paramVar.params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
+                     uint32_t endOfParams = paramVar->setParams(currentFrame->exp, startOfparams);
+                     uint32_t startOfEnd = paramVar->params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
                      createFrame(executionStack, currentFrame,
-                    		 obj,startOfEnd,hashFunctionCall(paramVar.id));
+                    		 obj,startOfEnd,hashFunctionCall(paramVar->id));
                      goto new_frame_execution;
                  }
                  else
