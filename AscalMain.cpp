@@ -1854,10 +1854,11 @@ Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, 
 			{
 				int index = frame->index-1;
 				SubStr lStr = getExprInString(frame->exp, index, '[',']',';');
+				varName.data = lStr.data;
 				double lookup = callOnFrame(frame, lStr.data);
 				obj = &(*obj)[lookup];
 				frame->index = index+1;
-				varName.end = lStr.end+1;
+				varName.end = frame->index;
 			}
 			//else dictionary based lookup by string
 			else if(frame->exp.size() > frame->index)
@@ -1868,7 +1869,8 @@ Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, 
 					varName = getVarName(frame->exp, ++frame->index);
 					frame->index = varName.start;
 					obj = &(*obj)[resolveNextObjectExpression(frame, varName)->listToString(memory)];
-					varName.end++;}
+					varName.end++;
+				}
 				//By string literal
 				else if(frame->exp[frame->index] == '\"')
 				{
@@ -1886,6 +1888,7 @@ Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, 
 		}
 		parsing = frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[';
 	} while(obj && parsing);
+	varName.start = varName.end - varName.data.size() + 1;
 	return obj;
 }
 Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &varName, Object *obj)
@@ -3560,9 +3563,9 @@ t calculateExpression(AscalFrame<double>* frame)
                 	 startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
                      uint32_t endOfParams = data->setParams(currentFrame->exp, startOfparams);
-                     uint32_t startOfEnd = data->params.size()==0?varName.end+1:varName.end+1+endOfParams;
-            		 //std::cout<<varName.data<<" end: "<<varName.end<<"\n"<<"SOP: "<<startOfparams<<"\n"<<"EOP: "<<endOfParams<<"\n"
-            			//	 <<"\n"<<"start of end: "<<startOfEnd<<"\n";
+                     uint32_t startOfEnd = data->params.size()==0?varName.end+1:varName.start+varName.data.size()-1+endOfParams;
+            		//std::cout<<"Exp: "<<frame->exp<<"\nParsed vn: "<<varName.data<<" start: "<<varName.start<<" end: "<<varName.end<<"\n"<<"SOP: "<<startOfparams<<"\n"<<"EOP: "<<endOfParams<<"\n"
+            		//		 <<"\n"<<"start of end: "<<startOfEnd<<"\n";
                  //creates a new set of stack frames, one for the function/var and one for resolution,
                  //and calculation of each of it's parameters
                  //also returns function/var's value to this function's initialOperands stack
