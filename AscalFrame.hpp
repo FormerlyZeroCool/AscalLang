@@ -146,8 +146,10 @@ public:
     	}
     }
 };
+static uint64_t runningNumber = 1;
 template <typename t>
 class ParamFrame: public AscalFrame<t> {
+private:
 public:
     ParamFrame(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
     {
@@ -159,7 +161,7 @@ public:
     {
         if(this->returnPointer)
         {
-        	Object *obj = &((*this->localMemory)[std::to_string(this->returnPointer->getParams()->getUseCount())] = Object("",std::to_string(result),""));
+        	Object *obj = &((*this->localMemory)[std::to_string(runningNumber++)] = Object("",std::to_string(result),""));
             this->returnPointer->getParams()->push_back(obj);
         }
     }
@@ -226,7 +228,8 @@ public:
     {
         if(this->returnPointer)
         {
-            this->returnPointer->initialOperands.push_back(result);}
+            this->returnPointer->initialOperands.push_back(result);
+        }
     }
 	char getType() override
 	{
