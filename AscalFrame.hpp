@@ -161,7 +161,7 @@ public:
     {
         if(this->returnPointer)
         {
-        	Object *obj = &((*this->localMemory)[std::to_string(runningNumber++)] = Object("",std::to_string(result),""));
+        	Object *obj = &((*this->localMemory)[std::to_string(this->returnPointer->getParams()->size())] = Object("",std::to_string(result),""));
             this->returnPointer->getParams()->push_back(obj);
         }
     }
@@ -174,7 +174,7 @@ public:
 template <typename t>
 class ParamFrameFunctionPointer: public AscalFrame<t> {
 public:
-    std::string functionName;
+    Object *obj;
     ParamFrameFunctionPointer(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
     {
         this->params = params;
@@ -183,23 +183,13 @@ public:
     }
     void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
     {
-        if(this->returnPointer)
-        {
-            if(this->getLocalMemory()->count(functionName))
-            {
-            	this->returnPointer->getParams()->push_back(&(*this->getLocalMemory())[functionName]);
-            }
-            else if(this->getParamMemory()->count(functionName))
-            {
-            	this->returnPointer->getParams()->push_back(((*this->getParamMemory())[functionName]));
-            }
-            else if(globalMemory.count(functionName))
-            {
-            	this->returnPointer->getParams()->push_back(&globalMemory[functionName]);
-            }
-            else
-            	throw std::string("Error cannot find function: "+functionName);
-        }
+    	if(this->returnPointer && obj)
+    	{
+    		this->returnPointer->getParams()->push_back(obj);
+    	}
+        else
+        	throw std::string("Error cannot find Object passed as reference param.");
+
     }
 
 	char getType() override

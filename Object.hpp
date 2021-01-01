@@ -38,6 +38,7 @@ public:
 	void addInstruction(std::string expression);
 	std::string instructionsToString();
 	std::string instructionsToFormattedString();
+	std::string instructionsToFormattedString(uint16_t depth);
 	std::string& getInstructions();
 	std::string listToString(std::unordered_map<std::string,Object> &memory);
 	Object& getMapUnsafe(std::string &id);

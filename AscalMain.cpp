@@ -103,7 +103,7 @@ Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &va
 std::string getListElementAction(AscalFrame<double>* frame, Object&);
 
 
-SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start = '(', char end = ')');
+SubStr getFollowingExpr(AscalFrame<double>* frame,const std::string &id, char start = '(', char end = ')');
 std::string printStrAction(AscalFrame<double>* frame,bool saveLast);
 std::string lenAction(AscalFrame<double>* frame,bool saveLast);
 std::string splitStrAction(AscalFrame<double>* frame,bool saveLast);
@@ -1211,13 +1211,15 @@ std::vector<std::string> split(std::string &s, std::string &&delimiter)
 
 std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "simplify");
+	static const std::string keyWord = "simplify";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     if(exp.data.size() == 1)
     	throw std::string("simplify <function>");
     //Get definition by calling function.getIntsructions(), or for formatted version getInstructionsFormated
     Object* function;
     try{
-    	function = resolveNextExprSafe(frame, exp);
+        SubStr vns = getVarName(frame->exp, frame->index+keyWord.size());
+    	function = resolveNextExprSafe(frame, vns);
     }catch(std::string &objNotFoundErr)
     {
     	throw std::string("Error could not find function: " + exp.data + " to simplify.");
@@ -1234,13 +1236,15 @@ std::string simplifyfnAction(AscalFrame<double>* frame,bool saveLast)
 std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
 {
 	//Feel free to change anything, I've just added the boilerplate, and some convenience code for you
-    SubStr exp = getFollowingExpr(frame, "derive");
+	static const std::string keyWord = "derive";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     std::vector<SubStr> params = Object("","",exp.data).params;
     //you can change this, just getting some params for you
     if(params.size()<3)
     	throw std::string("derive <function name, variable to differentiate, derivative degree>");
     //id is the function name, getInstructions() will return a reference to the code saved for the function as a string
-    Object *function = resolveNextExprSafe(frame, params[0]);
+    SubStr vns = getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+    Object *function = resolveNextExprSafe(frame, vns);
     std::string withRespectTo = params[1].data;
     uint16_t degree = (uint16_t) callOnFrame(frame, params[2].data);
     //Your code here
@@ -1259,10 +1263,11 @@ std::string derivefnAction(AscalFrame<double>* frame,bool saveLast)
 Vect2D<double> calcTable(const std::vector<std::string> &functions, double xMin, double xMax, double xStepSize, double yStepSize);
 std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "plotGUI");
+	static const std::string keyWord = "plotGUI";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 7)
-    	throw std::string("plotGUI <fun1|fun2...,x min, x max, y min, y max, delta x, delta y>");
+    	throw std::string("plotGUI <fun1|fun2...>,<x lower bound>, <x upper bound>, <y upper bound>, <y lower bound>, <delta x, delta y>");
     std::vector<std::string> functions = split(params[0].data, "|");
     //Here to aid potential future development
     double xMin = callOnFrame(frame, params[1].data);
@@ -1283,7 +1288,7 @@ std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
     }
     if(*boolsettings["o"])
     {
-    	std::cout<<"plotGUI\n";
+    	std::cout<<"plotGUI"+exp.data.substr(0,exp.data.size()-2)+"\n";
     }
     //Automatically moves to next expression after keyword execution because we return MAX
     return MAX;
@@ -1570,7 +1575,7 @@ std::string existsAction(AscalFrame<double>* frame,bool saveLast)
 
 SubStr getExprInString(const std::string &data,int index,char opening,char closing,char lineBreak);
 
-SubStr getFollowingExpr(AscalFrame<double>* frame, std::string &&id, char start, char end)
+SubStr getFollowingExpr(AscalFrame<double>* frame,const std::string &id, char start, char end)
 {
 	int index = frame->index+id.length();
 	while(frame->exp[index] == ' ')
@@ -1651,7 +1656,8 @@ std::string getListElementAction(AscalFrame<double>* frame, Object &obj)
 
 std::string fprimeAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "fprime");
+	static const std::string keyWord = "fprime";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     Object data("","","");
     data.setParams(exp.data);
     if(data.params.size() < 2)
@@ -1670,27 +1676,31 @@ std::string fprimeAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string pushValAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "arrPush");
+	static const std::string keyWord = "arrPush";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 2)
     	throw std::string("arrPush(<object/array>,<value as Ascal expression>)");
     double valueToPush = callOnFrame(frame,params[1].data);
-    resolveNextExprSafe(frame, params[0])->pushList(Object("",to_string(valueToPush),""));
+    SubStr vns = getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+    Object *list = resolveNextExprSafe(frame, vns);
+    list->pushList(Object("",to_string(valueToPush),""));
     if(*boolsettings["o"])
     {
-    	Object *list = resolveNextExprSafe(frame, params[0]);
-    	std::cout<<"pushed value "<<params[1].data<<" to list "<<params[0].data<<" at position: "<<(list->getListSize()-1)<<"\n";
+    	std::cout<<"pushed value "<<params[1].data<<" to list "<<params[0].data<<" at position: "<<(list->getListSize())<<"\n";
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
 std::string getArrValAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "arrGet");
+	static const std::string keyWord = "arrGet";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 2)
     	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
     double indexToGet = callOnFrame(frame,params[1].data);
-    Object *element = &resolveNextExprSafe(frame, params[0])->getListElement(indexToGet, memory);
+    SubStr vns = getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+    Object *element = &resolveNextExprSafe(frame, vns)->getListElement(indexToGet, memory);
     SubStr paramsForListElementFn("", 0 , exp.end);
     if(exp.data[exp.end] == '(')
     {
@@ -1713,14 +1723,16 @@ std::string getArrValAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string arrSetValAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "arrSet");
+	static const std::string keyWord = "arrSet";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 3)
     	throw std::string("arrGet(<array>,<Index as Ascal expression>,<value as expression>)");
     double indexToSet = callOnFrame(frame,params[1].data);
     double value = callOnFrame(frame,params[2].data);
     Object newObj("",to_string(value),"");
-    resolveNextExprSafe(frame, params[0])->setList(newObj, indexToSet);
+    SubStr vns = getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+    resolveNextExprSafe(frame, vns)->setList(newObj, indexToSet);
     memory["null"].getInstructions() = MAX;
     if(*boolsettings["o"])
     {
@@ -1743,11 +1755,13 @@ std::string printCharAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string loadStrAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "loadStr");
+	static const std::string keyWordName = "loadStr";
+    SubStr exp = getFollowingExpr(frame, keyWordName);
     std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 2)
-    	throw std::string("loadStr (<function name>, <\"string in quotes\">");
-    Object *obj = resolveNextExprSafe(frame, params[0]);
+    	throw std::string("loadStr (<Object name>, <\"string in quotes\">");
+    SubStr vns = getVarName(frame->exp, frame->index+keyWordName.size()+params[0].start);
+    Object *obj = resolveNextExprSafe(frame, vns);
     obj->clearList();
     //parse only text between quotes
     size_t strStart = 0;
@@ -1766,12 +1780,13 @@ std::string loadStrAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string printStrAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "printStr");
+	static const std::string keyWord = "printStr";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     std::vector<SubStr> params = Object("","",exp.data).params;
     if(params.size() < 1)
     	throw std::string("loadStr (<object name>)");
-    Object *obj = resolveNextExprSafe(frame, params[0]);
-    std::string_view lastEl,element = obj->getListElement(0, memory).getInstructions();
+    SubStr vns = getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+    Object *obj = resolveNextExprSafe(frame, vns);
     obj->printList(memory);
     if(*boolsettings["o"])
     {
@@ -1781,11 +1796,13 @@ std::string printStrAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string splitStrAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "splitStr");
+	static const std::string keyWord = "splitStr";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     std::vector<SubStr > params = Object("","",exp.data).params;
     if(params.size() < 2)
     	throw std::string("splitStr (<object name>, <\"delimiter\">");
-    Object *obj = resolveNextExprSafe(frame, params[0]);
+    SubStr vns = getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+    Object *obj = resolveNextExprSafe(frame, vns);
     //parse only text between quotes
     size_t strStart = 0;
     while(params[1].data[strStart] && params[1].data[strStart++] != '\"'){}
@@ -1805,14 +1822,11 @@ std::string splitStrAction(AscalFrame<double>* frame,bool saveLast)
 Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, Object *obj = nullptr);
 Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName)
 {
-	while(varName.end < frame->exp.size() && !isalpha(frame->exp[++varName.end])){}
-	varName.end--;
-
-	if(size_t index = varName.data.find(".") < varName.data.size())
-		varName.data = varName.data.substr(0,index);
 	Object* obj = resolveNextObjectExpression(frame, varName);
 	if(!obj)
-		throw std::string("Error Resolving object expression near index: "+to_string(varName.start));
+	{
+		throw std::string("Error Resolving object expression near index: "+to_string(varName.start)+" last parsed var name: "+varName.data);
+	}
 	return obj;
 }
 //Desc of resolveNextObjectExpression algorithm
@@ -1858,7 +1872,7 @@ Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, 
 				double lookup = callOnFrame(frame, lStr.data);
 				obj = &(*obj)[lookup];
 				frame->index = index+1;
-				varName.end = frame->index;
+				varName.end = index+lStr.data.size()-4;
 			}
 			//else dictionary based lookup by string
 			else if(frame->exp.size() > frame->index)
@@ -1961,9 +1975,11 @@ Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &va
 }
 std::string lenAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "arrLen");
+	static const std::string keyWord = "arrLen";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     SubStr objname = getVarName(exp.data, 0);
-    Object *obj = resolveNextExprSafe(frame, objname);
+    SubStr vns = getVarName(frame->exp, frame->index+keyWord.size());
+    Object *obj = resolveNextExprSafe(frame, vns);
     frame->initialOperands.push(obj->getListSize());
     if(*boolsettings["o"])
     {
@@ -1971,9 +1987,26 @@ std::string lenAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
+std::string returnAction(AscalFrame<double>* frame,bool saveLast)
+{
+	static const std::string keyWord = "return";
+    SubStr exp = getFollowingExpr(frame, keyWord);
+    SubStr objname = getVarName(exp.data, 0);
+    Object *obj = resolveNextExprSafe(frame, objname);
+    if(frame->returnPointer)
+    {
+    	(*frame->returnPointer->getLocalMemory())["1return"] = *obj;
+    }
+    if(*boolsettings["o"])
+    {
+    	std::cout<<"return("<<obj->id<<") = "<<obj->toString()<<'\n';
+    }
+    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+}
 std::string sinAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "sin");
+	static const std::string keyWord = "sin";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(sin(input));
     if(*boolsettings["o"])
@@ -1984,7 +2017,8 @@ std::string sinAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string tryAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "try");
+	static const std::string keyWord = "try";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     try{
     	double input = callOnFrame(frame,exp.data);
     	frame->initialOperands.push(input);
@@ -2010,7 +2044,8 @@ std::string flushOutAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "sleep");
+	static const std::string keyWord = "sleep";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame, exp.data);
     std::this_thread::sleep_for(std::chrono::microseconds(((int)input)*100));
     if(*boolsettings["o"])
@@ -2046,7 +2081,8 @@ uint64_t lehmer64()
 }
 std::string srandomAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "srand");
+	static const std::string keyWord = "srand";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     double ib = input/100000;
     input *= 100000;
@@ -2094,7 +2130,8 @@ std::string pauseAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string cosAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "cos");
+	static const std::string keyWord = "cos";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(cos(input));
     if(*boolsettings["o"])
@@ -2105,7 +2142,8 @@ std::string cosAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string tanAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "tan");
+	static const std::string keyWord = "tan";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(tan(input));
     if(*boolsettings["o"])
@@ -2116,7 +2154,8 @@ std::string tanAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "arctan");
+	static const std::string keyWord = "arctan";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(atan(input));
     if(*boolsettings["o"])
@@ -2127,7 +2166,8 @@ std::string arctanAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string arcsinAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "arcsin");
+	static const std::string keyWord = "arcsin";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(asin(input));
     if(*boolsettings["o"])
@@ -2149,7 +2189,8 @@ double fibr(double x)
 }
 std::string fibrcppAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "fibrcpp");
+	static const std::string keyWord = "fibrcpp";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     Object paramsList("", "", exp.data);
     frame->initialOperands.push(fibr(input)*-1);
@@ -2161,7 +2202,8 @@ std::string fibrcppAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr exp = getFollowingExpr(frame, "arccos");
+	static const std::string keyWord = "arccos";
+    SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame,exp.data);
     frame->initialOperands.push(acos(input));
     if(*boolsettings["o"])
@@ -2172,7 +2214,9 @@ std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
 }
 std::string setAction(AscalFrame<double>* frame,bool saveLast)
 {
-    SubStr varName = getVarName(frame->exp,frame->exp.find("set",frame->index)+4);
+
+	static const std::string keyWord = "set";
+    SubStr varName = getVarName(frame->exp,frame->exp.find(keyWord,frame->index)+4);
     int startIndex = frame->exp.find("=",varName.end)+1;
     while(frame->exp[startIndex] && frame->exp[startIndex] == ' ')
         startIndex++;
@@ -2858,8 +2902,9 @@ std::string printCalculation(AscalFrame<double>* frame,bool saveLast)
 void printVar(AscalFrame<double>* frame,bool saveLast)
 {
 	std::string data;
-	SubStr varName = getVarName(frame->exp, frame->index+10);
-	SubStr exp = getFollowingExpr(frame, "print var");
+	static const std::string keyWord = "print var";
+    SubStr exp = getFollowingExpr(frame, keyWord);
+	SubStr varName = getVarName(frame->exp, frame->index+keyWord.size());
     std::cout<<exp.data<<" = "<<resolveNextExprSafe(frame, varName)->toString()<<"\n";
 }
 
@@ -3572,12 +3617,12 @@ t calculateExpression(AscalFrame<double>* frame)
             	 currentFrame->index = varName.start;
             	 if(Object *data = resolveNextObjectExpression(currentFrame, varName))
                  {
+
                 	 startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
                      uint32_t endOfParams = data->setParams(currentFrame->exp, startOfparams);
                      uint32_t startOfEnd = data->params.size()==0?varName.end+1:varName.start+varName.data.size()-1+endOfParams;
-            		//std::cout<<"Exp: "<<frame->exp<<"\nParsed vn: "<<varName.data<<" start: "<<varName.start<<" end: "<<varName.end<<"\n"<<"SOP: "<<startOfparams<<"\n"<<"EOP: "<<endOfParams<<"\n"
-            		//		 <<"\n"<<"start of end: "<<startOfEnd<<"\n";
+                     //std::cout<<"parsed obj: "<<data->toString()<<"\nsoe: "<<startOfEnd<<"\n";
                  //creates a new set of stack frames, one for the function/var and one for resolution,
                  //and calculation of each of it's parameters
                  //also returns function/var's value to this function's initialOperands stack
@@ -3592,7 +3637,7 @@ t calculateExpression(AscalFrame<double>* frame)
                 	 {
                 		 std::stringstream error;
                 		 error<<"Error while attempting to resolve parameter "<<varName.data<<" at position "<<to_string(varName.start)<<
-                				 "\nfunction parameters must be defined when passing an object as parameter.\nTry wrapping the function in (";
+                				 "\nfunction parameters must be defined when passing a reference to an object as parameter.\nTry wrapping the function in (";
 
                 		 for(int i = 0;  i < currentFrame->getParams()->size();i++)
                 			 error<<"<param"<<i+currentFrame->getParams()->getUseCount()+0<<">,";
@@ -3606,11 +3651,13 @@ t calculateExpression(AscalFrame<double>* frame)
                      Object *paramVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
                                       ++(*currentFrame->getParams());
 
-                     paramVar->id = varName.data;
-                     Object *obj = ((*currentFrame->getParamMemory())[paramVar->id] = paramVar);
+
+                     //paramVar->id = varName.data;
+                     Object *obj = ((*currentFrame->getParamMemory())[varName.data] = paramVar);
 
                      uint32_t endOfParams = paramVar->setParams(currentFrame->exp, startOfparams);
                      uint32_t startOfEnd = paramVar->params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
+                     //std::cout<<"\nsoe: "<<startOfEnd<<" exp: "<<currentFrame->exp<<"\n";
                      createFrame(executionStack, currentFrame,
                     		 obj,startOfEnd,hashFunctionCall(paramVar->id));
                      goto new_frame_execution;
@@ -3833,8 +3880,11 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
         executionStack.push(newFrame);
         for(int i = 0; i < obj->params.size(); i++)
         {
+        	uint8_t startingIndex = 0;
+        	while(obj->params[i].data[startingIndex++] == ' '){};
+        	//std::cout<<"Loading param: "<<obj->params[i].data.substr(startingIndex-1)<<"\n";
             allocated += sizeofFrame;
-            if(obj->params[i].data[0] != '&')
+            if(obj->params[i].data[--startingIndex] != '&')
             {
                 //create and set new frame expression
                 ParamFrame<t>* pFrame = new ParamFrame<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
@@ -3850,9 +3900,13 @@ void createFrame(linkedStack<AscalFrame<t>* > &executionStack, AscalFrame<t>* cu
             else
             {
                 ParamFrameFunctionPointer<t>* pFrame = new ParamFrameFunctionPointer<t>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
-               // std::cout<<"Param function ref frame mem: "<<pFrame->memToString();
-                int index = 0;
-                pFrame->functionName = getVarName(obj->params[i].data.substr(1), index).data;
+                uint32_t frameIndexBackup = currentFrame->index;
+                SubStr startOfParam = getVarName(obj->params[i].data.substr(startingIndex), startingIndex);
+                startOfParam.end = obj->params[i].start+startOfParam.data.size();
+                //std::cout<<"pars: "<<startOfParam.data<<"\nstart: "<<startOfParam.start<<" end: "<<startOfParam.end<<"\n";
+                pFrame->obj = resolveNextObjectExpression(currentFrame, startOfParam);
+                //std::cout<<"Object getting ref passed to it: "<<obj->id<<"\nParam ref passed obj: "<<pFrame->obj->toString();
+                currentFrame->index = frameIndexBackup;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //push new frame

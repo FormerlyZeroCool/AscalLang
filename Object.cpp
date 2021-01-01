@@ -7,21 +7,23 @@
 
 #include "Object.hpp"
 
-void newLine(std::vector<char> &data,int indentationLevel)
+void newLine(std::stringstream &data,int indentationLevel)
 {
-	data.push_back('\n');
+	data<<('\n');
 	for(int i = 0;i < indentationLevel;i++)
 	{
-		data.push_back(' ');
-		data.push_back(' ');
+		data<<(' ');
+		data<<(' ');
 	}
 }
 std::string Object::instructionsToFormattedString()
 {
-	std::vector<char> data;
-	data.reserve(256);
+	return instructionsToFormattedString(1);
+}
+std::string Object::instructionsToFormattedString(uint16_t indentationLevel)
+{
+	std::stringstream data;
 
-	int indentationLevel = 1;
 	//newLine(data,indentationLevel);
 	//indentationLevel++;
 
@@ -38,17 +40,67 @@ std::string Object::instructionsToFormattedString()
 
 			if(c == ';')
 			{
-				data.push_back(c);
+				data<<(c);
 				newLine(data,indentationLevel);
 			}
 			else
-				data.push_back(c);
+				data<<(c);
 			if(c == '{')
 				newLine(data,indentationLevel);
 		}
 		newLine(data,indentationLevel);
 
-	return std::string(data.begin(),data.end());
+	return data.str();
+}
+std::string Object::toString(uint16_t depth)
+{
+	std::stringstream s;
+	newLine(s, depth);
+	s<<"{";
+	depth++;
+	newLine(s, depth);
+	s<<"Obj Name: ("<<this->id<<")"<<this;
+	newLine(s, depth);
+	s<<"Instructions: "<<this->instructionsToFormattedString(depth);
+	if(this->objectList.size())
+	{
+		depth++;
+		newLine(s, depth);
+		s<<"List len: "<<this->getListSize();
+		s<<" data: [";
+		depth++;
+		for(auto &obj:this->objectList)
+		{
+			newLine(s, depth);
+			s<<obj.toString(depth);
+		}
+		depth--;
+		newLine(s, depth);
+		s<<"]";
+		depth--;
+		newLine(s, depth);
+	}
+	if(this->objectMap.size()>0)
+	{
+		depth++;
+		newLine(s, depth);
+		s<<"Mapped data: {";
+		depth++;
+		for(auto &[key,value]:this->objectMap)
+		{
+			newLine(s, depth);
+			s<<value.toString(depth);
+		}
+		depth--;
+		newLine(s, depth);
+		s<<"}";
+		depth--;
+		newLine(s, depth);
+	}
+	depth--;
+	newLine(s, depth);
+	s<<"}";
+	return s.str();
 }
 std::string Object::instructionsToString()
 {
@@ -163,7 +215,7 @@ Object& Object::operator[](size_t index)
 	if(this->objectList.size() > index)
 		return this->objectList[index];
 	else
-		throw std::string("Invalid index: "+std::to_string(index));
+		throw std::string("Invalid index: "+std::to_string(index)+" in object: "+this->toString());
 }
 std::string Object::listToString(std::unordered_map<std::string,Object> &memory)
 {
@@ -276,46 +328,6 @@ Object& Object::loadChild(Object &data)
 Object* Object::getThis()
 {
 	return this->parent;
-}
-std::string Object::toString(uint16_t depth)
-{
-	std::stringstream s;
-	for(int i = 0; i < depth; i++)
-		s<<"    ";
-	s<<"{\n";
-	depth++;
-	for(int i = 0; i < depth; i++)
-		s<<"    ";
-	s<<"Obj Name: ("<<this->id<<")\n";
-	for(int i = 0; i < depth; i++)
-		s<<"    ";
-	s<<"Instructions: "<<this->instructionsToFormattedString()<<"\n";
-	if(this->objectMap.size()>0)
-	{
-		depth++;
-		for(int i = 0; i < depth; i++)
-			s<<"    ";
-		s<<"data {\n";
-		for(int i = 0; i < depth; i++)
-			s<<"    ";
-
-		for(auto &[key,value]:this->objectMap)
-		{
-			for(int i = 0; i < depth; i++)
-				s<<"    ";
-			s<<value.toString(depth)<<"\n";
-		}
-		s<<"\n";
-		for(int i = 0; i < depth; i++)
-			s<<"    ";
-		s<<"}";
-		s<<"\n";
-		depth--;
-	}
-	for(int i = 0; i < depth; i++)
-		s<<"    ";
-	s<<"}";
-	return s.str();
 }
 std::string Object::toString()
 {
