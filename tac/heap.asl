@@ -5,13 +5,9 @@ for x in range(&list){
 }
 }
 
+import tac.utils
 let heap = {}
 let heap.data = []
-let swap = (x,y){
-    cloc z = x;
-    set x = y;
-    set y = z;
-}
 let cloneArr = (a,b){
     for x in range(&b){
         arrPush(a,x);
@@ -59,5 +55,10 @@ let heap.down = (start,end){
         }
 	}
 }
+let heap.rdown = (start,end){
+	cloc c = end;
+	when exists 
+}
 let heap.clear = let this.data = []
+
 
