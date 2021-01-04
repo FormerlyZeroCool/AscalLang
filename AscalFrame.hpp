@@ -146,7 +146,7 @@ public:
     	}
     }
 };
-static uint64_t runningNumber = 1;
+static uint8_t runningNumber = 1;
 template <typename t>
 class ParamFrame: public AscalFrame<t> {
 private:
@@ -161,7 +161,7 @@ public:
     {
         if(this->returnPointer)
         {
-        	Object *obj = &((*this->localMemory)[std::to_string(this->returnPointer->getParams()->size())] = Object("",std::to_string(result),""));
+        	Object *obj = &((*this->localMemory)[std::to_string(runningNumber++)] = Object("",std::to_string(result),""));
             this->returnPointer->getParams()->push_back(obj);
         }
     }
