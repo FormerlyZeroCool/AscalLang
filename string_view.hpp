@@ -8,6 +8,11 @@
 #ifndef STRINGVIEW_HPP_
 #define STRINGVIEW_HPP_
 #include <string>
+#if defined(WIN32) || defined(_WIN32)
+#include <cstring>
+#else
+#include <string.h>
+#endif
 class string_view {
 private:
 	char *ptr = nullptr;
