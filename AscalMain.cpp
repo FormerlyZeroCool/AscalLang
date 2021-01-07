@@ -85,8 +85,6 @@ void usleep(__int64 usec)
 }
 #else
 #define PATH_SEPARATOR '/'
-//Currently only used for keyword in development comment this, and the call to fork out if you get any trouble
-//Commenting this, and the call to fork out won't currently cause any issue as of 2.02
 #include <unistd.h>
 #endif
 
