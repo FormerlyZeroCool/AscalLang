@@ -1,7 +1,7 @@
 echo "Building Ascal Interpreter with g++"
-g++ -c -std=c++17 AscalMain.cpp AscalFrame.hpp AscalParameters.cpp Object.cpp ObjectKey.cpp
-g++ -o ascal AscalMain.o Object.o AscalParameters.o ObjectKey.o 
-rm AscalMain.o Object.o AscalParameters.o ObjectKey.o
+g++ -c -std=c++17 AscalMain.cpp AscalFrame.hpp AscalParameters.cpp Object.cpp ObjectKey.cpp string_view.cpp
+g++ -o ascal AscalMain.o Object.o AscalParameters.o ObjectKey.o string_view.o
+rm AscalMain.o Object.o AscalParameters.o ObjectKey.o string_view.o
 clear
 echo "Starting Ascal interpreter"
 echo "Running, awaiting input, try typing o;fibr(3)"

@@ -235,7 +235,7 @@ void Object::printList(std::unordered_map<std::string,Object> &memory)
     		std::cout<<(char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
     }
 }
-void Object::loadString(std::string_view s)
+void Object::loadString(string_view s)
 {
 	clearList();
 	uint16_t last = s[0],cur = s[0];
@@ -255,7 +255,7 @@ void Object::loadString(std::string_view s)
 		this->pushList(Object("", std::to_string(cur), ""));
 
 }
-Object Object::splitString(std::string_view filter, std::unordered_map<std::string,Object> &memory)
+Object Object::splitString(string_view filter, std::unordered_map<std::string,Object> &memory)
 {
 	Object splitArr(id+"Split","","");
 	size_t start = 0, end = 0;
@@ -265,15 +265,16 @@ Object Object::splitString(std::string_view filter, std::unordered_map<std::stri
 		data<<(char) stoi(this->getListElement(i, memory).instructions);
 	}
 	std::string datastr = data.str();
+	string_view dataAsSV(datastr);
 	// search for regex
 	// set end to index returned -1
 	// load string
 	while(end < datastr.size())
 	{
-		end = datastr.find(filter, start)-1;
+		end = dataAsSV.find(filter, start)-1;
 		end = end<=datastr.size()?end:datastr.size();
 		Object element("","","");
-		element.loadString(std::string_view(datastr.c_str()+start, end));
+		element.loadString(string_view((char*)datastr.c_str()+start, end));
 		splitArr.pushList(element);
 		start = end+filter.size();
 		end = start;

@@ -97,6 +97,8 @@ void printVar(const std::string &expr,bool saveLast);
 void printHelpMessage(const std::string &expr);
 void updateBoolSetting(AscalFrame<double>* frame);
 Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName);
+template <typename string_type>
+bool isObj(string_type &s);
 
 Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &varName, Object *o = nullptr);
 std::string getListElementAction(AscalFrame<double>* frame, Object&);
@@ -238,15 +240,14 @@ void printLoadedMemMessage(Object function)
 		std::cout<<"Loaded Function: "<<function.id<<"\nexpression: "<<function.instructionsToFormattedString()<<std::endl<<std::endl;
 	}
 }
+
 bool containsOperator(std::string s)
 {
     bool contains = false;
     int i = 0;
     while(!contains && s[i])
     {
-        if(isOperator(s[i])){
-            contains = true;
-        }
+        contains = isOperator(s[i]);
         i++;
     }
     return contains;
@@ -1044,7 +1045,7 @@ bool isDouble(std::string &exp);
 std::string letNewVar(AscalFrame<double>* frame,bool saveLast)
 {
                 SubStr exPart = getExpr(frame->exp,frame->exp.find('=',frame->index)+1);
-                SubStr newVarPart = getNewVarName(frame->exp);
+                SubStr newVarPart = getVarName(frame->exp, frame->index+4);
                 Object *parent = resolveNextObjectExpressionPartial(frame, newVarPart);
                 Object var(newVarPart.data,exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1 ));
                 if(parent)
@@ -1111,14 +1112,28 @@ std::string constNewVar(AscalFrame<double>* frame,bool saveLast)
 std::string locNewVar(AscalFrame<double>* frame,bool saveLast)
 {
     SubStr localName = getVarName(frame->exp,frame->exp.find("loc",frame->index)+4);
-    SubStr subexp = getExpr(frame->exp,frame->exp.find('=')+1);
-
-    Object newLocalVar(localName.data,subexp.data,"");
-    if(*boolsettings["o"])
+    static uint32_t startOfExp;
+    startOfExp = frame->exp.find('=')+1;
+    SubStr subexp = getExpr(frame->exp,startOfExp);
+    if(!isObj(subexp.data))
     {
-        std::cout<<std::endl<<"New Local function: "<<localName.data<< " exp: "<<newLocalVar.instructionsToFormattedString()<<std::endl;
+    	Object newLocal = Object(localName.data,subexp.data,"");
+        loadUserDefinedFn(newLocal, (*frame->getLocalMemory()));
+        if(*boolsettings["o"])
+        {
+            std::cout<<std::endl<<"New Local function: "<<localName.data<< " exp: "<<newLocal.instructionsToFormattedString()<<std::endl;
+        }
     }
-    loadUserDefinedFn(newLocalVar, (*frame->getLocalMemory()));
+    else
+    {
+    	SubStr rightVarStart = getVarName(frame->exp,startOfExp);
+    	Object *newVar = resolveNextExprSafe(frame, rightVarStart);
+        loadUserDefinedFn(*newVar, (*frame->getLocalMemory()));
+        if(*boolsettings["o"])
+        {
+            std::cout<<std::endl<<"New Local function: "<<localName.data<< " exp: "<<newVar->toString()<<std::endl;
+        }
+    }
     return MAX;
 }
 std::string clocNewVar(AscalFrame<double>* frame,bool saveLast)
@@ -1769,7 +1784,7 @@ std::string loadStrAction(AscalFrame<double>* frame,bool saveLast)
     size_t strEnd = params[1].data.length()-1;
     while(params[1].data[strEnd] && params[1].data[strEnd--] != '\"'){}
     //at this point str start, and end point to the appropriate places in the parameter
-    std::string_view s(params[1].data.c_str()+strStart, strEnd);
+    string_view s((char*)params[1].data.c_str()+strStart, strEnd);
     obj->loadString(s);
 
     if(*boolsettings["o"])
@@ -1809,7 +1824,7 @@ std::string splitStrAction(AscalFrame<double>* frame,bool saveLast)
     size_t strEnd = params[1].data.length()-1;
     while(params[1].data[strEnd] && params[1].data[strEnd--] != '\"'){}
 
-    std::string_view filter(params[1].data.c_str()+strStart, strEnd-1);
+    string_view filter((char*) params[1].data.c_str()+strStart, strEnd-1);
     //at this point string start, and end point to the appropriate places in the parameter
     Object arr = obj->splitString(filter, memory);
     (*frame->getLocalMemory())[arr.id] = arr;
@@ -2213,19 +2228,40 @@ std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
 }
+template <typename string_type>
+bool isObj(string_type &s)
+{
+	uint32_t i = 0;
+	while(s[i] && s[i++] == ' '){}
+	bool obj = isalpha(s[i]);
+	for(;obj && i < s.size(); i++)
+	{
+		obj = (isalpha(s[i]) || isNumeric(s[i]) || s[i] == '.' || s[i] == '[' || s[i] == ']' || s[i] == '"' || s[i] == ';');
+	}
+	return obj;
+}
 std::string setAction(AscalFrame<double>* frame,bool saveLast)
 {
 
 	static const std::string keyWord = "set";
-    SubStr varName = getVarName(frame->exp,frame->exp.find(keyWord,frame->index)+4);
+    SubStr varName = getVarName(frame->exp,frame->exp.find(keyWord,frame->index)+keyWord.size());
     int startIndex = frame->exp.find("=",varName.end)+1;
     while(frame->exp[startIndex] && frame->exp[startIndex] == ' ')
         startIndex++;
     SubStr subexp = getExpr(frame->exp,startIndex);
     std::string value = to_string(callOnFrame(frame,subexp.data));
-    Object *obj;
-    	obj = resolveNextExprSafe(frame, varName);
-    	*obj = Object(obj->id,value,"");
+    Object *obj = resolveNextExprSafe(frame, varName);
+    if(!isObj(subexp.data))
+    {
+        std::string value = to_string(callOnFrame(frame,subexp.data));
+        *obj = Object(obj->id,value,"");
+    }
+    else
+    {
+    	SubStr rightHandObjectLookup = getVarName(frame->exp, startIndex);
+    	Object *rightObj = resolveNextExprSafe(frame, rightHandObjectLookup);
+    	*obj = *rightObj;
+    }
     /*if(frame->getLocalMemory()->count(varName.data))
     {
         (*frame->getLocalMemory())[varName.data] = Object(varName.data,value,"");

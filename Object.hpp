@@ -15,6 +15,7 @@
 #include <sstream>
 #include "ObjectKey.hpp"
 #include "SubStr.hpp"
+#include "string_view.hpp"
 class Object {
 private:
 	std::string instructions;
@@ -51,8 +52,8 @@ public:
 	void pushList(Object &data);
 	void pushList(Object &&data);
 	Object& setList(Object &data, size_t index);
-	Object splitString(std::string_view filter, std::unordered_map<std::string,Object> &);
-	void loadString(std::string_view s);
+	Object splitString(string_view filter, std::unordered_map<std::string,Object> &);
+	void loadString(string_view s);
 	void printList(std::unordered_map<std::string,Object> &memory);
 	size_t getListSize();
 	Object& getListElement(size_t index,std::unordered_map<std::string,Object> &memory);
