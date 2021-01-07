@@ -2076,7 +2076,7 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
     double input = callOnFrame(frame, exp.data);
 
 #if defined(WIN32) || defined(_WIN32)
-    usleep(((int)input)*100));
+    usleep(((int)input)*100);
 #else
     std::this_thread::sleep_for(std::chrono::microseconds(((int)input)*100));
 #endif
