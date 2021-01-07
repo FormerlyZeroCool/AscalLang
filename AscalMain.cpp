@@ -70,7 +70,6 @@ static size_t rememberedFromMemoTableCount;
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR '\\'
 #include <windows.h>
-#include <cstring>
 void usleep(__int64 usec)
 {
     HANDLE timer;
