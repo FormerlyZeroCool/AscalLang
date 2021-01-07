@@ -73,6 +73,19 @@ static size_t rememberedFromMemoTableCount;
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR '\\'
 #include <windows.h>
+
+void usleep(__int64 usec)
+{
+    HANDLE timer;
+    LARGE_INTEGER ft;
+
+    ft.QuadPart = -(10*usec); // Convert to 100 nanosecond interval, negative value indicates relative time
+
+    timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
+    WaitForSingleObject(timer, INFINITE);
+    CloseHandle(timer);
+}
 #else
 #define PATH_SEPARATOR '/'
 #endif
@@ -1293,14 +1306,14 @@ std::string plotGUIAction(AscalFrame<double>* frame,bool saveLast)
     double dx = callOnFrame(frame, params[1].data);
     double dy = callOnFrame(frame, params[1].data);
 
-    int pid = fork();
-    if(!pid)
+    //int pid = fork();
+    //if(!pid)
     {
     	//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
     	//x addresses the x point xMin+dx*x, using xMin, and dx defined above
     	Vect2D<double> points = calcTable(functions, xMin, xMax, dx, dy);
     	//Your GUI code
-    	throw 0;
+    	//throw 0;
     }
     if(*boolsettings["o"])
     {
@@ -2063,7 +2076,12 @@ std::string sleepAction(AscalFrame<double>* frame,bool saveLast)
 	static const std::string keyWord = "sleep";
     SubStr exp = getFollowingExpr(frame, keyWord);
     double input = callOnFrame(frame, exp.data);
+
+#if defined(WIN32) || defined(_WIN32)
+    usleep(((int)input)*100));
+#else
     std::this_thread::sleep_for(std::chrono::microseconds(((int)input)*100));
+#endif
     if(*boolsettings["o"])
     {
     	std::cout<<"sleeping for "<<input<<" tenths of a milli-second\n";
