@@ -26,14 +26,6 @@ string_view::string_view(char *s, uint32_t len)
 	ptr = s;
 	this->len = len;
 }
-uint32_t string_view::size()
-{
-	return this->len;
-}
-uint32_t string_view::length()
-{
-	return this->size();
-}
 uint32_t findText(char *original, uint32_t olen, char *lookup, uint32_t llen)
 {
     if(!llen)
@@ -46,10 +38,11 @@ uint32_t findText(char *original, uint32_t olen, char *lookup, uint32_t llen)
         {
             while(intRes && llen > j && olen > i+j)
             {
-                if(original[i+j] != lookup[j])
-                    intRes = 0;
+                intRes = original[i+j] == lookup[j];
                 j++;
             }
+            //j ^= j sets j = 0;
+            j ^= j;
             result = intRes;
             intRes = !intRes;
         }
@@ -75,10 +68,7 @@ uint32_t string_view::find(string_view s, uint32_t start, uint32_t size)
 		size = s.size();
 	return findText(ptr, len, s.ptr+start, size);
 }
-char& string_view::operator[](uint32_t index)
-{
-	return ptr[index];
-}
+#include <iostream>
 std::string string_view::str()
 {
 	return std::string(ptr, len);

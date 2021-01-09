@@ -116,6 +116,8 @@ std::string getListElementAction(AscalFrame<double>* frame, Object&);
 //Start Ascal System Defined  Keyword functionality Executed by lookup in inputMapper unordered_map
 
 SubStr getFollowingExpr(AscalFrame<double>* frame,const std::string &id, char start = '(', char end = ')');
+
+std::string returnAction(AscalFrame<double>* frame,bool saveLast);
 std::string printStrAction(AscalFrame<double>* frame,bool saveLast);
 std::string lenAction(AscalFrame<double>* frame,bool saveLast);
 std::string splitStrAction(AscalFrame<double>* frame,bool saveLast);
@@ -389,7 +391,7 @@ void initParamMapper()
 {
 	objectActionMapper[ObjectKey("[","")] = getListElementAction;
 	inputMapper["simplify"] = simplifyfnAction;
-	//inputMapper["this"] = thisAction;
+	inputMapper["return"] = returnAction;
 	inputMapper["printStr"] = printStrAction;
 	inputMapper["arrLen"] = lenAction;
 	inputMapper["splitStr"] = splitStrAction;
@@ -1872,9 +1874,12 @@ Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, 
 	{
 		obj = getObjectNoError(frame, varName.data);
 	}
-	if(frame->getContext() && (!obj &&
-			(varName.data.size() == 4 && varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's')))
+	if(frame->getContext() && !obj &&
+			varName.data.size() == 4 &&
+					varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's')
+	{
 		obj = frame->getContext()->getThis();
+	}
 	bool parsing;
 	do {
 		parsing = frame->exp[frame->index] == '.';
@@ -2014,18 +2019,48 @@ std::string lenAction(AscalFrame<double>* frame,bool saveLast)
 std::string returnAction(AscalFrame<double>* frame,bool saveLast)
 {
 	static const std::string keyWord = "return";
-    SubStr exp = getFollowingExpr(frame, keyWord);
-    SubStr objname = getVarName(exp.data, 0);
-    Object *obj = resolveNextExprSafe(frame, objname);
+	frame->index += keyWord.length();
+	uint32_t index = frame->index;
+    SubStr objname = getVarName(frame->exp, frame->index);
+    Object *obj;
     if(frame->returnPointer)
     {
-    	(*frame->returnPointer->getLocalMemory())["1return"] = *obj;
+    	uint32_t endIndex = frame->index;
+    	while(frame->exp[endIndex] && frame->exp[++endIndex] != ';') {}
+    	string_view rtnVal(frame->exp, index, endIndex);
+    	if(isObj(rtnVal))
+    	{
+    	    obj = resolveNextExprSafe(frame, objname);
+    		frame->returnPointer->setObjectReturnRegister(obj);
+    	}
+    	else
+    	{
+    		frame->returnPointer->setReturnFlag(true);
+    		frame->returnPointer->initialOperands.push_back(callOnFrame(frame, rtnVal.str()));
+    	}
+        if(*boolsettings["o"])
+        {
+            std::cout<<"Returning "<<(obj?"object":"value of expression")<<": "<<(obj?obj->toString():rtnVal.str())<<'\n';
+        }
     }
-    if(*boolsettings["o"])
-    {
-    	std::cout<<"return("<<obj->id<<") = "<<obj->toString()<<'\n';
-    }
-    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+    while(!frame->initialOperands.isEmpty())
+    	frame->initialOperands.pop();
+    while(!frame->initialOperators.isEmpty())
+    	frame->initialOperators.pop();
+    return "a";
+}
+template <typename string_type>
+bool isObj(string_type &s)
+{
+	uint32_t i = 0;
+	while(s[i] && s[++i] == ' '){}
+	bool obj = isalpha(s[i]);
+	for(;obj && i < s.size(); i++)
+	{
+		obj = (isalpha(s[i]) || isNumeric(s[i]) || s[i] == '.' ||
+				s[i] == '[' || s[i] == ']' || s[i] == '"' || s[i] == ';');
+	}
+	return obj;
 }
 std::string sinAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -2241,18 +2276,6 @@ std::string arccosAction(AscalFrame<double>* frame,bool saveLast)
     	std::cout<<"arccos("<<input<<") = "<<acos(input)<<'\n';
     }
     return 'a'+frame->exp.substr(exp.end,frame->exp.size());
-}
-template <typename string_type>
-bool isObj(string_type &s)
-{
-	uint32_t i = 0;
-	while(s[i] && s[i++] == ' '){}
-	bool obj = isalpha(s[i]);
-	for(;obj && i < s.size(); i++)
-	{
-		obj = (isalpha(s[i]) || isNumeric(s[i]) || s[i] == '.' || s[i] == '[' || s[i] == ']' || s[i] == '"' || s[i] == ';');
-	}
-	return obj;
 }
 std::string setAction(AscalFrame<double>* frame,bool saveLast)
 {
@@ -3574,6 +3597,41 @@ t calculateExpression(AscalFrame<double>* frame)
         	}
 
         }
+        else if(currentFrame->isReturnFlagSet())
+        {
+    		if(currentFrame->isReturnObjectFlagSet())
+        	{
+        		Object *returnedObj = currentFrame->getReturnObject();
+        		//accessing field in returned object
+        		if(currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index] == '[')
+        		{
+        			SubStr ptr("",0,currentFrame->index-1);
+        			bool adjust = currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index+1] == '&';
+        			Object *objectResolved = resolveNextObjectExpression(currentFrame, ptr, returnedObj);
+        			if(!returnedObj)
+        				throw std::string("could not resolve field in returned object: "+returnedObj->id);
+        			else
+        				returnedObj = objectResolved;
+        			currentFrame->index -= adjust;
+        		}
+
+        		uint32_t startOfparams = currentFrame->exp[currentFrame->index] =='('?
+        			currentFrame->index:currentFrame->exp.size();
+        		uint32_t endOfParams = returnedObj->setParams(currentFrame->exp, startOfparams);
+                uint32_t startOfEnd = returnedObj->params.size()==0?currentFrame->index:currentFrame->index+endOfParams-1;
+                //creates a new set of stack frames, one for the returned function/var and one for resolution,
+                //and calculation of each of it's parameters
+                //also returns function/var's value to this function's initialOperands stack
+                createFrame(executionStack, currentFrame,
+                    		returnedObj,startOfEnd,hashFunctionCall(returnedObj->id));
+               	goto new_frame_execution;
+
+        	}
+        	else
+        	{
+        		currentFrame->setReturnFlag(false);
+        	}
+        }
         //If complex object return register is set on frame
         //we should internally have a pointer to an object that exists on the heap
         //so at the end of the process this needs to be cleaned
@@ -3668,21 +3726,16 @@ t calculateExpression(AscalFrame<double>* frame)
                  varName.end+1:currentFrame->exp.size();
                  //Variable handling section
             	 currentFrame->index = varName.start;
-                 {
-                	// std::cout<<"cframe exp: "<<currentFrame->exp<<"\nP use count: "<<currentFrame->getParams()->getUseCount()<<"\n";
-                 }
             	 if(Object *data = resolveNextObjectExpression(currentFrame, varName))
                  {
 
                 	 startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
                      uint32_t endOfParams = data->setParams(currentFrame->exp, startOfparams);
-                     uint32_t startOfEnd = data->params.size()==0?varName.end+1:varName.start+varName.data.size()-1+endOfParams;
-                    // std::cout<<"parsed obj: "<<data->toString()<<"\nsoe: "<<startOfEnd<<"\n";
+                     uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
                  //creates a new set of stack frames, one for the function/var and one for resolution,
                  //and calculation of each of it's parameters
                  //also returns function/var's value to this function's initialOperands stack
-                	 //std::cout<<"\nexiisting obj loaded: "<<data->id<<"\n";
                 	 createFrame(executionStack, currentFrame,
                                 data,startOfEnd,hashFunctionCall(data->id));
                 	 goto new_frame_execution;
@@ -3708,19 +3761,13 @@ t calculateExpression(AscalFrame<double>* frame)
                      Object *paramVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
                      ++(*currentFrame->getParams());
 
-
-                     //paramVar->id = varName.data;
                      Object *obj = ((*currentFrame->getParamMemory())[varName.data] = paramVar);
                      if(obj->id.size() == 0)
                      {
                     	 obj->id = varName.data;
                      }
-                     {
-                    //	 std::cout<<"\nnew param loaded as objid: "<<obj->id<<"\n";
-                     }
                      uint32_t endOfParams = paramVar->setParams(currentFrame->exp, startOfparams);
-                     uint32_t startOfEnd = paramVar->params.size()==0?varName.end+1:varName.start+varName.data.length()-1+endOfParams;
-                     //std::cout<<"\nsoe: "<<startOfEnd<<" exp: "<<currentFrame->exp<<"\n";
+                     uint32_t startOfEnd = varName.start+varName.data.length()-1+endOfParams;
                      createFrame(executionStack, currentFrame,
                     		 obj,startOfEnd,hashFunctionCall(paramVar->id));
                      goto new_frame_execution;
@@ -3812,7 +3859,7 @@ t calculateExpression(AscalFrame<double>* frame)
         }
         //process values in stacks, and return final solution
         data = processStack(processOperands, processOperators);
-        if(currentFrame->getReturnPointer())
+        if(currentFrame->getReturnPointer() && !currentFrame->getReturnPointer()->isReturnFlagSet())
         {
             if(currentFrame->isFunction())
             {
