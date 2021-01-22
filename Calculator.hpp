@@ -65,7 +65,7 @@ private:
 	    return result;
 	}
 	t log(t &and1,t &and2){return std::log(and2)/std::log(and1);}
-	t rootOp(t &and1,t &and2){return std::pow(1/and2,and1);}
+	t rootOp(t &and1,t &and2){return std::pow(and2,1/and1);}
 	t equals(t &and1,t &and2){return and1==and2;}
 	t lessThan(t &and1,t &and2){return and1<and2;}
 	t greaterThan(t &and1,t &and2){    return and1>and2;}
@@ -91,8 +91,84 @@ public:
 	       case '<': result = lessThan(and1,and2); break;
 	       case '>': result = greaterThan(and1,and2); break;
 	    }
-
 	    return result;
+	}
+	static bool isNonParentheticalOperator(char op)
+	{
+
+	    switch (op) {
+	       case '+': return true;
+	       case '-': return true;
+	       case '*': return true;
+	       case '/': return true;
+	       case '%': return true;
+	       case '^': return true;
+	       case 'P': return true;
+	       case 'C': return true;
+	       case '@': return true;
+	       case '$': return true;
+	       case '=': return true;
+	       case '<': return true;
+	       case '>': return true;
+	    }
+	    return false;
+	}
+	static bool isOperator(char op)
+	{
+		if(op == '(' || op == ')')
+			return true;
+		else
+			return isNonParentheticalOperator(op);
+	}
+	static char getPriority(char ator)
+	{
+	  int priority = -1;
+	  switch (ator){
+	  case '(':
+		  priority = 0;
+		  break;
+	  case ')':
+		  priority = 0;
+		  break;
+	  case '^':
+		  priority = 90;
+		  break;
+	  case '*':
+		  priority = 80;
+		  break;
+	  case '/':
+		  priority = 80;
+		  break;
+	  case '%':
+		  priority = 80;
+		  break;
+	  case '$':
+		  priority = 80;
+		  break;
+	  case 'P':
+		  priority = 80;
+		  break;
+	  case 'C':
+		  priority = 80;
+		  break;
+	  case '+':
+		  priority = 70;
+		  break;
+	  case '-':
+		  priority = 70;
+		  break;
+	  case '=':
+		  priority = 60;
+		  break;
+	  case '>':
+		  priority = 60;
+		  break;
+	  case '<':
+		  priority = 60;
+		  break;
+
+	  }
+	  return priority;
 	}
 	virtual ~Calculator(){}
 };

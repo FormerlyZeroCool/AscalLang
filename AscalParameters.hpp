@@ -13,7 +13,7 @@
 
 class AscalParameters: public std::vector<Object*> {
 private:
-	int useCount;
+	uint16_t useCount;
 public:
 	AscalParameters();
 	AscalParameters& operator++();

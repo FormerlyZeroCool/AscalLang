@@ -6,7 +6,7 @@ let merge = (dat,start,mid,end){
     cloc counter = 0;
     cloc rindex = mid+1
     cloc lindex = start
-    while not(lindex>mid) * not(rindex>end){
+    while (lindex>mid=0) * (rindex>end=0){
         if(dat[lindex]>dat[rindex]=0){
             set this.intdata[counter] = dat[lindex]
             set lindex = lindex+1
@@ -17,12 +17,12 @@ let merge = (dat,start,mid,end){
         }
         set counter = counter+1
     }
-    while not(lindex>mid){
+    while (lindex>mid=0){
         set this.intdata[counter] = dat[lindex]
         set counter = counter+1;
         set lindex = lindex+1;
     }
-    while not(rindex>end){
+    while (rindex>end=0){
         set this.intdata[counter] = dat[rindex]
         set counter = counter+1;
         set rindex = rindex+1;

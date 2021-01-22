@@ -166,13 +166,13 @@ Object& Object::getListElement(size_t index,std::unordered_map<std::string,Objec
 }
 void Object::pushList(Object &data)
 {
-	data.id = this->id+std::to_string(this->objectList.size());
+	data.id = std::to_string(this->objectList.size())+this->id;
 	data.parent = this;
 	this->objectList.push_back(data);
 }
 void Object::pushList(Object &&data)
 {
-	data.id = this->id+std::to_string(this->objectList.size());
+	data.id = std::to_string(this->objectList.size())+this->id;
 	data.parent = this;
 	this->objectList.push_back(data);
 }

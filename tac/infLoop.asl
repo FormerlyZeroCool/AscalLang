@@ -1,6 +1,5 @@
 let f = {
-
-    loc n = {
+    loc n = (x){
       loc c = 0;
       while c<x{
         print " ";
@@ -9,8 +8,8 @@ let f = {
       };
       
     };
-    loc quitl = {
-      if(inputx < 1){
+    loc quitl = (x){
+      if(x < 1){
         print "Take careendl";
         quit;
         
@@ -35,15 +34,14 @@ let f = {
         set iterations = input "How many lines should I print? ";
         quitl(iterations);
         set max = input "Enter an amplitude: ";
+        quitl(max);
         
       };
       set x = (x+1)%max;
       n(max+cos(x/(max/(2*pi)))* max);
       print "Hello!endl";
-      sleep(220);
+      sleep(20);
       
     };
     
  };
-f
-

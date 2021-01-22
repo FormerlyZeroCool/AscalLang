@@ -37,6 +37,7 @@ public:
 	uint32_t find(std::string &s);
 	uint32_t find(char *s, uint32_t start = 0, uint32_t size = -1);
 	uint32_t find(string_view, uint32_t start = 0, uint32_t size = -1);
+	string_view substr(uint32_t start, uint32_t end = -1);
 	std::string str();
 	virtual ~string_view();
 };

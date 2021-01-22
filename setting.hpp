@@ -1,4 +1,6 @@
 
+#ifndef SETTING_HPP_
+#define SETTING_HPP_
 #include <iostream>
 #include <string>
 
@@ -68,3 +70,4 @@ public:
 	}
 };
 //class cmdSetting
+#endif

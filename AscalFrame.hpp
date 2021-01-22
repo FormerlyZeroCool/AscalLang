@@ -13,6 +13,7 @@
 #include "AscalParameters.hpp"
 #include "Object.hpp"
 #include "stack.hpp"
+#include "Calculator.hpp"
 
 template <typename t>
 class AscalFrame {
@@ -33,12 +34,12 @@ public:
     {
     	//set return flags so auto return does not occur, and upon returning to calling function it is aware an object has been returned
     	this->flagRegisters |= 256|512;
-    	(*this->localMemory)["_return"] = *obj;
+    	(*this->localMemory)["_rtn"] = *obj;
     }
     Object* getReturnObject()
     {
     	this->flagRegisters &= 65535-256-512;
-    	return &(*this->localMemory)["_return"];
+    	return &(*this->localMemory)["_rtn"];
     }
     Object* getContext()
     {
@@ -142,13 +143,13 @@ public:
     void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) {};
     virtual
     ~AscalFrame() {};
-    void clearStackIfAnotherStatementProceeds(bool (*isOperator)(char))
+    void clearStackIfAnotherStatementProceeds()
     {
     	this->index++;
     	bool clear = false;
     	while(!clear && this->exp[index])
     	{
-    		if(isalpha(this->exp[index]) || (this->exp[index] >= 48 && this->exp[index] < 58) || isOperator(this->exp[index]))
+    		if(isalpha(this->exp[index]) || (this->exp[index] >= 48 && this->exp[index] < 58) || Calculator<double>::isOperator(this->exp[index]))
     		{
     			clear = true;
     		}

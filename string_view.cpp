@@ -68,7 +68,12 @@ uint32_t string_view::find(string_view s, uint32_t start, uint32_t size)
 		size = s.size();
 	return findText(ptr, len, s.ptr+start, size);
 }
-#include <iostream>
+string_view string_view::substr(uint32_t start, uint32_t end)
+{
+	if(end==-1)
+		end = this->len;
+	return string_view(this->ptr+start, end-start);
+}
 std::string string_view::str()
 {
 	return std::string(ptr, len);

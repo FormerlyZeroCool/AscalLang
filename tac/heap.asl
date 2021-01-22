@@ -14,7 +14,7 @@ let cloneArr = (a,b){
     }
 }
 let heap.heapify = (pdat){
-	cloneArr(&this.data, &pdat);
+	set this.data = pdat;
 	for i in range(floor(arrLen(pdat)/2),-1,-1){
 		this.down(i,arrLen(this.data)-1);
 	}
@@ -31,8 +31,8 @@ let heap.heapSort = (dat){
 }
 let heap.down = (start,end){
 	cloc current = start;
-	while not(current*2+1 > end){
-		if not(current*2+2>end){
+	while (current*2+1 > end)=0{
+		if (current*2+2>end)=0{
 			if ((this.data[current*2+1] > this.data[current*2+2]) * (this.data[current*2+1]>this.data[current])){
 				swap(&this.data[current*2+1],&this.data[current]);
 				set current = current*2+1;
@@ -46,7 +46,7 @@ let heap.down = (start,end){
 				set current = end;
             }
 		}
-		else if (not(current*2+1 > end) * (this.data[current*2+1]>this.data[current])){
+		else if ((current*2+1 > end)=0) * (this.data[current*2+1]>this.data[current]){
 			swap(&this.data[current*2+1],&this.data[current]);
 			set current = current*2+1;
 		}

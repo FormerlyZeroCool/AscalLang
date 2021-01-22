@@ -42,10 +42,12 @@ let saw = (x,y,z){
   
 }
 let isNeg = {
-if x<0{
+if x<0
+{
 printStr "The number is negative (-1*x)endl"
 }
-else{
+else
+{
 printStr "The number is positive (x)endl"
 }
 }
@@ -89,6 +91,7 @@ let k = (x){
 
 let isprime = (x){
   loc counter = 3
+  set x = abs(floor(x));
   cloc max = sqrt(x)
   cloc prime = when ((x-1)%2 = 0)then 1 else 0 end
   while (counter<max)*prime{
@@ -263,7 +266,8 @@ let hanoi = {
       
     };
     han(inp, 1, 2, 3)
-  }let hanoi = {
+  }
+let hanoi = {
     loc han = (n,from,h,to){
       if(n>0) {
         loc printer = {
