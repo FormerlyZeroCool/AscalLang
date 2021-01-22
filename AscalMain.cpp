@@ -112,7 +112,6 @@ int main(int argc,char* argv[])
       //Load Standard Library of functions fo Ascal
       //loadInitialFunctions();
 	  Ascal ascalRuntime(argv, argc, 0);
-	  std::cout<<"runtime initialized succseffullly\n";
   //Beginning of section interpreting program parameters from command line
 	  bool running = true;
   std::string arg = "";
