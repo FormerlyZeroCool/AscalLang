@@ -194,6 +194,7 @@ double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame,const std::st
 double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame,const std::string &subExp)
 {
     ParamFrame<double> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
+    executionFrame.returnPointer = callingFrame->returnPointer;
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
     executionFrame.setContext(callingFrame->getContext());
@@ -240,7 +241,6 @@ void AscalExecutor::createFrame(linkedStack<AscalFrame<double>* > &executionStac
         }
         //create and set new frame expression
         FunctionFrame<double> *newFrame = new FunctionFrame<double>(nullptr,nullptr,nullptr);
-        allocated += sizeofFrame;
         newFrame->exp = obj->getInstructions();
         if(memory.count(obj->id) == 0)
         	(*newFrame->getParamMemory())[obj->id] = obj;
@@ -284,9 +284,9 @@ void AscalExecutor::createFrame(linkedStack<AscalFrame<double>* > &executionStac
         }
     }
 }
-void AscalExecutor::clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame)
+void AscalExecutor::clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame)
 {
-	frame->returnPointer = rtnFrame;
+	frame->returnPointer = cachedRtnObject;
 	        if(printStack)
 	        {
 	        	std::stringstream data;
@@ -318,6 +318,7 @@ void AscalExecutor::clearStackOnError(bool printStack, std::string &error, linke
 	                executionStack.pop();
 	            }
 	        }
+	        this->cachedRtnObject = nullptr;
 }
 
 double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
@@ -332,7 +333,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
     char currentChar;
 
     double data = 0;
-    AscalFrame<double>* rtnFrame = frame->returnPointer;
+    AscalFrame<double>* rtnptr = frame->returnPointer;
     frame->returnPointer = nullptr;
     //This loop handles parsing the numbers, and adding the data from the expression
     //to the stacks
@@ -451,13 +452,18 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  currentFrame->setAugmented(true);
                  bool isDynamicBackup = currentFrame->isDynamicAllocation();
                  std::string result;
+                 if(!currentFrame->returnPointer)
+                	 cachedRtnObject = rtnptr;
                  try{
+
                  result = inputMapper.find(varName.data)->second->action(currentFrame);
                  currentFrame->setIsDynamicAllocation(isDynamicBackup);
                  }catch(std::string& s){
                      currentFrame->setIsDynamicAllocation(isDynamicBackup);
                      throw s;
                  }
+
+         	    cachedRtnObject = nullptr;
 
                  uint8_t subLevel = 0;
                  while((subLevel != 0 && currentFrame->exp[i]) || (currentFrame->exp[i] && currentFrame->exp[i] != ';' && currentFrame->exp[i] != '\n'))
@@ -644,7 +650,8 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             currentFrame->returnResult(data, memory);
         }
         executionStack.pop();
-        frame->returnPointer = rtnFrame;
+        frame->returnPointer = rtnptr;
+        cachedRtnObject = nullptr;
         if(currentFrame->isDynamicAllocation())
         {
             delete currentFrame;
@@ -654,12 +661,12 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 
     }catch(std::string &error)
     {
-    	clearStackOnError(true, error, executionStack, currentFrame, frame, rtnFrame);
+    	clearStackOnError(true, error, executionStack, currentFrame, frame);
         throw error;
     }
     catch(int exitCode)
     {
-    	clearStackOnError(false, frame->exp, executionStack, currentFrame, frame, rtnFrame);
+    	clearStackOnError(false, frame->exp, executionStack, currentFrame, frame);
     	throw exitCode;
     }
     currentStack = nullptr;

@@ -20,7 +20,7 @@ public:
 
 	std::string action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    std::vector<SubStr> params = Object("","",exp.data).params;
 	    if(params.size() < 1)
 	    	throw std::string("loadStr (<object name>)");

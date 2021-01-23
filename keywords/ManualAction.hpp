@@ -22,7 +22,7 @@ public:
 	}
 	std::string action(AscalFrame<double>* frame) override
 	{
-		uint32_t startIndex = 0;
+		uint32_t startIndex = this->keyWord.size();
 	    while(frame->exp[startIndex] == ' ' || frame->exp[startIndex] == ':')
 	        startIndex++;
 	    std::string keyWordName = frame->exp.substr(startIndex,frame->exp.find(';',startIndex)-startIndex);
@@ -35,7 +35,7 @@ public:
 	    if(!inputFile)
 	    {
 	    	std::stringstream error;
-	    	error<<"Could not locate keyword man page for keyword: "<<keyWordName<<"\n";
+	    	error<<"Error Could not locate keyword man page for keyword: "<<keyWordName;
 	    	throw error.str();
 	    }
 	    while(true)

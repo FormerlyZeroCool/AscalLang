@@ -198,20 +198,20 @@ SubStr ParsingUtil::getExpr(const std::string &data,int index, std::istream &asc
 	block. end = result.size();
     return block;
 }
-SubStr ParsingUtil::getFollowingExpr(AscalFrame<double>* frame,const std::string &&id, char start, char end)
+SubStr ParsingUtil::getFollowingExpr(std::string &exp, uint32_t index,const std::string &&id, char start, char end)
 {
-	return ParsingUtil::getFollowingExpr(frame, id, start, end);
+	return ParsingUtil::getFollowingExpr(exp, index, id, start, end);
 }
-SubStr ParsingUtil::getFollowingExpr(AscalFrame<double>* frame,const std::string &id, char start, char end)
+SubStr ParsingUtil::getFollowingExpr(std::string &exp, uint32_t startIndex,const std::string &id, char start, char end)
 {
-	int index = frame->index+id.length();
-	while(frame->exp[index] == ' ')
+	int index = startIndex+id.length();
+	while(exp[index] == ' ')
 		index++;
-	SubStr exp = ParsingUtil::getExprInString(frame->exp,index, start, end,'\1');
-	index += exp.data.length()>3?exp.data.length()-3:0;
-	exp.end = index;
-    index = frame->index+id.length();
-    return exp;
+	SubStr expr = ParsingUtil::getExprInString(exp,index, start, end,'\1');
+	index += expr.data.length()>3?expr.data.length()-3:0;
+	expr.end = index;
+    index = index+id.length();
+    return expr;
 }
 
 SubStr ParsingUtil::getExprInString(const std::string &data,int index,char opening,char closing,char lineBreak)
@@ -274,9 +274,9 @@ SubStr ParsingUtil::getExprInString(const std::string &data,int index,char openi
     return SubStr(std::string(result.begin(),result.end()),index,result.size());
 }
 
-SubStr ParsingUtil::getCodeBlock(AscalFrame<double> *frame, int index, std::istream &cin_ascal)
+SubStr ParsingUtil::getCodeBlock(std::string &exp, int index, std::istream &cin_ascal)
 {
-    SubStr codeBlock = getExpr(frame->exp,index, cin_ascal);
+    SubStr codeBlock = getExpr(exp,index, cin_ascal);
     if(codeBlock.data.size() == 0)
     {
         codeBlock.loadedNew = true;

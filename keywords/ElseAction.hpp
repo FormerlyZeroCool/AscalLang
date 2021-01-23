@@ -21,7 +21,7 @@ public:
 	    int index = frame->exp.find("else",frame->index) + 4;
 	    while(frame->exp[index] == ' ')
 	        index++;
-	    SubStr codeBlock = ParsingUtil::getCodeBlock(frame, index, runtime->ascal_cin);
+	    SubStr codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime->ascal_cin);
 	    if(frame->ifFlag() && !frame->ifResultFlag())
 	    {
 	        //if there is an if after the else this must be set

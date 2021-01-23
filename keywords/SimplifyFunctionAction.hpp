@@ -18,7 +18,7 @@ public:
 	}
 	std::string action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    if(exp.data.size() == 1)
 	    	throw std::string("simplify <function>");
 	    //Get definition by calling function.getIntsructions(), or for formatted version getInstructionsFormated

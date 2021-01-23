@@ -19,7 +19,7 @@ public:
 	}
 	std::string action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    double input = runtime->callOnFrame(frame,exp.data);
 	    double ib = input/100000;
 	    input *= 100000;

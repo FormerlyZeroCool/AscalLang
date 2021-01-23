@@ -18,7 +18,7 @@ public:
 	}
 	std::string action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    std::vector<SubStr> params = Object("","",exp.data).params;
 	    if(params.size() < 2)
 	    	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
@@ -29,7 +29,7 @@ public:
 	    if(exp.data[exp.end] == '(')
 	    {
 	    	frame->index = exp.end;
-	    	paramsForListElementFn = ParsingUtil::getFollowingExpr(frame, std::string(""));
+	    	paramsForListElementFn = ParsingUtil::getFollowingExpr(frame->exp, frame->index, std::string(""));
 	    }
 	    std::stringstream fnDef;
 	    fnDef<<"loc "<<element->id<<"="<<element->getInstructions()<<";\n"<<element->id<<'('<<paramsForListElementFn.data<<')';

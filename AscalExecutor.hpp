@@ -32,7 +32,6 @@
 #include "Object.hpp"
 #include "setting.hpp"
 #include "stack.hpp"
-#include "Vect2D.hpp"
 #include "Calculator.hpp"
 #include "SubStr.hpp"
 #include "ParsingUtil.hpp"
@@ -69,6 +68,7 @@ stack<char> savedOperators;
 stack<double> processOperands;
 stack<char> processOperators;
 std::unordered_map<uint64_t,double> memoPad;
+AscalFrame<double>* cachedRtnObject = nullptr;
 public:
 /////////////////////////////
 //Program Global Memory Declaration
@@ -84,6 +84,14 @@ stack<std::string> lastExp;
 stack<std::string> undoneExp;
 std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
+AscalFrame<double>* getCachedRtnObject()
+{
+	return this->cachedRtnObject;
+}
+void setCachedRtnObject(AscalFrame<double> *frame)
+{
+	this->cachedRtnObject = frame;
+}
 	//called in constructor
 	void loadInitialFunctions();
 	//End of called in constructor
@@ -95,7 +103,7 @@ std::vector<Object> systemDefinedFunctions;
 	double calculateExpression(AscalFrame<double>* frame);
 	double processStack(stack<double> &operands,stack<char> &operators);
 	void createFrame(linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, int i,uint64_t hash);
-	void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame, AscalFrame<double>* rtnFrame);
+	void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
 
 	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName);
 	Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, Object *obj = nullptr);
@@ -123,10 +131,9 @@ std::vector<Object> systemDefinedFunctions;
 	{
 		return commandLineParams;
 	}
-	AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), ascal_cin(stream_buffer_cin)
+	AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
 	{
-		stream_buffer_cin = streambuf;
-		ascal_cin.rdbuf(stream_buffer_cin);
+		ascal_cin.rdbuf(streambuf);
 		loadInitialFunctions();
 		commandLineParams.argc = argc;
 		commandLineParams.argv = argv;
@@ -197,6 +204,32 @@ std::vector<Object> systemDefinedFunctions;
 	          /*
 	           * End of initialization values in settings hashmap
 	           * */
+	}
+	static std::string printMemory(std::map<std::string,Object*> &memory,std::string delimiter,bool justKey = true,
+	        std::string secondDelimiter = "\n")
+	{
+	    std::string s;
+	    if(justKey)
+	        for(auto &[key,value]:memory)
+	            s+=key+delimiter;
+	    else
+	        for(auto &[key,value]:memory)
+	            s+=key+delimiter+value->instructionsToString()+secondDelimiter;
+	    return s.substr(0,s.size()-secondDelimiter.size());
+	}
+	static std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
+	        std::string secondDelimiter = "\n")
+	{
+	    std::string s;
+	    if(justKey)
+	        for(auto &[key,value]:memory)
+	            s+=key+delimiter;
+	    else
+	        for(auto &[key,value]:memory){
+	            std::string instr = value.instructionsToString();
+	            s+=key+delimiter+instr+secondDelimiter;
+	        }
+	    return s.substr(0,s.size()-secondDelimiter.size());
 	}
 	~AscalExecutor();
 };

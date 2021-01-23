@@ -9,6 +9,7 @@
 #define KEYWORDS_PLOTACTION_HPP_
 
 #include "../Keyword.hpp"
+#include "../Vect2D.hpp"
 class PlotAction: public Keyword {
 public:
 	PlotAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):

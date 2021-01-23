@@ -21,6 +21,11 @@ public:
 		uint32_t index = frame->index;
 	    SubStr objname = ParsingUtil::getVarName(frame->exp, frame->index);
 	    Object *obj;
+	    if(runtime->getCachedRtnObject())
+	    {
+	    	frame->returnPointer = runtime->getCachedRtnObject();
+	    	runtime->setCachedRtnObject(nullptr);
+	    }
 	    if(frame->returnPointer)
 	    {
 	    	uint32_t endIndex = frame->index;
@@ -30,16 +35,16 @@ public:
 	    	{
 	    	    obj = runtime->resolveNextExprSafe(frame, objname);
 	    		frame->returnPointer->setObjectReturnRegister(obj);
+		        if(*(*boolsettings)["o"])
+		        {
+		            std::cout<<"Returning "<<(obj?"object":"value of expression")<<": "<<(obj?obj->toString():rtnVal.str())<<'\n';
+		        }
 	    	}
 	    	else
 	    	{
 	    		frame->returnPointer->setReturnFlag(true);
 	    		frame->returnPointer->initialOperands.push_back(runtime->callOnFrame(frame, rtnVal.str()));
 	    	}
-	        if(*(*boolsettings)["o"])
-	        {
-	            std::cout<<"Returning "<<(obj?"object":"value of expression")<<": "<<(obj?obj->toString():rtnVal.str())<<'\n';
-	        }
 	    }
 	    while(!frame->initialOperands.isEmpty())
 	    	frame->initialOperands.pop();

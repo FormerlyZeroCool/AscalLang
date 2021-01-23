@@ -56,7 +56,7 @@ public:
 	        {
 	            std::cout<<"Boolean expression evaluation complete result: "<<(boolExpValue?"true":"false")<<'\n';
 	        }
-	        codeBlock = ParsingUtil::getCodeBlock(frame, startOfCodeBlock, runtime->ascal_cin);
+	        codeBlock = ParsingUtil::getCodeBlock(frame->exp, startOfCodeBlock, runtime->ascal_cin);
 
 	        index = startOfCodeBlock + codeBlock.end - 1;
 	        if(index > frame->exp.size())

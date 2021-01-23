@@ -18,7 +18,7 @@ public:
 	}
 	std::string action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    std::vector<SubStr> params = Object("","",exp.data).params;
 	    if(params.size() < 3)
 	    	throw std::string("arrGet(<array>,<Index as Ascal expression>,<value as expression>)");

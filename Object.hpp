@@ -16,6 +16,7 @@
 #include "ObjectKey.hpp"
 #include "SubStr.hpp"
 #include "string_view.hpp"
+#include "ParsingUtil.hpp"
 class Object {
 private:
 	std::string instructions;
@@ -59,6 +60,9 @@ public:
 	Object& getListElement(size_t index,std::unordered_map<std::string,Object> &memory);
 	bool operator==(Object o);
 	std::string toString();
+	std::string compileInstructions(uint32_t start);
+	std::stringstream& compileIf(std::stringstream &instStream, uint32_t &index);
+	std::stringstream& compileWhen(std::stringstream &instStream, uint32_t &index);
 	virtual ~Object();
 };
 

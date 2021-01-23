@@ -107,7 +107,7 @@ public:
 	    } while(frame->exp[index] && boolExpValue == 0 && index < endIndex);
 	    if(*(*boolsettings)["o"])
 	    {
-	        std::cout<<"Executing Branch: "<<value<<" Params: "<<ParsingUtil::printMemory(*frame->getParamMemory()," = ",false,"|");
+	        std::cout<<"Executing Branch: "<<value<<" Params: "<<AscalExecutor::printMemory(*frame->getParamMemory()," = ",false,"|");
 	        std::cout<<"\n";
 	    }
 	    frame->index = 0;

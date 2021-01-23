@@ -20,7 +20,7 @@ public:
 	std::string action(AscalFrame<double>* frame) override
 	{
 		static const std::string keyWord = "plotGUI";
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    std::vector<SubStr> params = Object("","",exp.data).params;
 	    if(params.size() < 7)
 	    	throw std::string("plotGUI <fun1|fun2...>,<x lower bound>, <x upper bound>, <y upper bound>, <y lower bound>, <delta x, delta y>");

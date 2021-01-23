@@ -19,7 +19,7 @@ public:
 
 	std::string action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    SubStr objname = ParsingUtil::getVarName(exp.data, 0);
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size());
 	    Object *obj = runtime->resolveNextExprSafe(frame, vns);

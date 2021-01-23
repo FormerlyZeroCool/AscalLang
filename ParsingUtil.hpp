@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sstream>
 #include "Calculator.hpp"
-#include "AscalFrame.hpp"
 #include "SubStr.hpp"
 
 class AscalExecutor;
@@ -33,11 +33,11 @@ public:
 	static double getNextDouble(const std::string &data,int &index);
 	static std::string to_string(double input);
 	static SubStr getExpr(const std::string &data,int startingIndex, std::istream &ascal_cin, char opening = '{',char closing = '}',char lineBreak = ';');
-	static SubStr getFollowingExpr(AscalFrame<double>* frame,const std::string &id, char start = '(', char end = ')');
-	static SubStr getFollowingExpr(AscalFrame<double>* frame,const std::string &&id, char start = '(', char end = ')');
+	static SubStr getFollowingExpr(std::string &exp, uint32_t startIndex,const std::string &id, char start = '(', char end = ')');
+	static SubStr getFollowingExpr(std::string &exp, uint32_t startIndex, const std::string &&id, char start = '(', char end = ')');
 	static SubStr getExprInString(const std::string &data,int index,char opening,char closing,char lineBreak);
 	static bool containsOperator(std::string s);
-	static SubStr getCodeBlock(AscalFrame<double> *frame, int index, std::istream &cin_ascal);
+	static SubStr getCodeBlock(std::string &exp, int index, std::istream &cin_ascal);
 	static SubStr getVarName(const std::string &s,int index);
 	static SubStr getNewVarName(const std::string &data);
 	//Generic string stuff
@@ -94,32 +94,6 @@ public:
 		for(it = 0; s[it] == ' '; it++){}
 
 		return s[it] == c;
-	}
-	static std::string printMemory(std::map<std::string,Object*> &memory,std::string delimiter,bool justKey = true,
-	        std::string secondDelimiter = "\n")
-	{
-	    std::string s;
-	    if(justKey)
-	        for(auto &[key,value]:memory)
-	            s+=key+delimiter;
-	    else
-	        for(auto &[key,value]:memory)
-	            s+=key+delimiter+value->instructionsToString()+secondDelimiter;
-	    return s.substr(0,s.size()-secondDelimiter.size());
-	}
-	static std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
-	        std::string secondDelimiter = "\n")
-	{
-	    std::string s;
-	    if(justKey)
-	        for(auto &[key,value]:memory)
-	            s+=key+delimiter;
-	    else
-	        for(auto &[key,value]:memory){
-	            std::string instr = value.instructionsToString();
-	            s+=key+delimiter+instr+secondDelimiter;
-	        }
-	    return s.substr(0,s.size()-secondDelimiter.size());
 	}
 };
 

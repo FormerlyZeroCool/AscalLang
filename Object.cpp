@@ -7,6 +7,76 @@
 
 #include "Object.hpp"
 
+
+	std::string Object::compileInstructions(uint32_t start)
+	{
+		uint32_t index = start;
+		std::stringstream compiled;
+		while(index < this->instructions.size())
+		{
+			if(isalpha(this->instructions[index]))
+			{
+				SubStr token = ParsingUtil::getVarName(this->instructions, index);
+				if(token.data.compare("if") == 0)
+				{
+					compileIf(compiled, index);
+				}
+				else if(token.data.compare("when") == 0)
+				{
+					compileWhen(compiled, index);
+				}
+				else
+				{
+					compiled<<token.data;
+					index += token.data.size();
+				}
+			}
+			else
+				compiled<<this->instructions[index];
+		}
+		return compiled.str();
+	}
+	std::stringstream& Object::compileIf(std::stringstream &instStream, uint32_t &index)
+	{
+
+		 index += 2;
+	    while(this->instructions[index] == ' ')
+	    {
+	            index++;
+	    }
+
+	        uint32_t startOfBoolExp = index;
+	        uint32_t startOfCodeBlock = index;
+	        SubStr codeBlock("",0,0);
+
+	        while(this->instructions[startOfCodeBlock] && this->instructions[startOfCodeBlock] != '{')
+	        {
+	            startOfCodeBlock++;
+	        }
+	        index = startOfCodeBlock;
+	        const std::string booleanExpression = this->instructions.substr(startOfBoolExp,index-startOfBoolExp);
+	        if(booleanExpression.size() == 0)
+	        {
+	            throw std::string("Error no boolean expression provided in if.\n");
+	        }
+
+	        //codeBlock = ParsingUtil::getCodeBlock(frame, startOfCodeBlock, runtime->ascal_cin);
+
+	        index = startOfCodeBlock + codeBlock.end - 1;
+	        if(index > this->instructions.size())
+	            index = this->instructions.size();
+
+
+	       index -=1;
+
+		return instStream;
+	}
+	std::stringstream& Object::compileWhen(std::stringstream &instStream, uint32_t &index)
+	{
+
+		return instStream;
+	}
+
 void newLine(std::stringstream &data,int indentationLevel)
 {
 	data<<('\n');
@@ -16,6 +86,7 @@ void newLine(std::stringstream &data,int indentationLevel)
 		data<<(' ');
 	}
 }
+
 std::string Object::instructionsToFormattedString()
 {
 	return instructionsToFormattedString(1);

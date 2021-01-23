@@ -55,7 +55,7 @@ public:
 	    {
 	        std::cout<<"Execution Complete. "<<(boolExpValue?"true":"false")<<"\n\n";
 	    }
-	    codeBlock = ParsingUtil::getCodeBlock(frame, index, runtime->ascal_cin);
+	    codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime->ascal_cin);
 	    if(boolExpValue != 0)
 	    {
 	        while(boolExpValue != 0)

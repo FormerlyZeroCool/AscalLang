@@ -7,7 +7,6 @@
 
 #ifndef ASCAL_HPP_
 #define ASCAL_HPP_
-#include <unordered_map>
 #include "AscalExecutor.hpp"
 #include "keywords/PrintBoolSetting.hpp"
 #include "keywords/TimeBoolSetting.hpp"

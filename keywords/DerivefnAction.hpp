@@ -19,7 +19,7 @@ public:
 	std::string action(AscalFrame<double>* frame) override
 	{
 		//Feel free to change anything, I've just added the boilerplate, and some convenience code for you
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    std::vector<SubStr> params = Object("","",exp.data).params;
 	    //you can change this, just getting some params for you
 	    if(params.size()<3)

@@ -41,7 +41,7 @@ public:
 	        startOfCodeBlock++;
 	    }
 	    index = startOfCodeBlock;
-	    codeBlock = ParsingUtil::getCodeBlock(frame, index, runtime->ascal_cin);
+	    codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime->ascal_cin);
 
 		double i = limitParams.params.size()>1?runtime->callOnFrame(frame,limitParams.params[0].data):0;
 	    if(ParsingUtil::firstChar(limitStr.data,'&'))

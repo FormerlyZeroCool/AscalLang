@@ -19,7 +19,7 @@ public:
 	std::string action(AscalFrame<double>* frame) override
 	{
 		std::string data;
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame, keyWord);
+	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 		SubStr varName = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size());
 	    std::cout<<"print var "<<exp.data.substr(0,exp.data.find(';'))<<" = "<<runtime->resolveNextExprSafe(frame, varName)->toString()<<"\n";
 	    return MAX;
