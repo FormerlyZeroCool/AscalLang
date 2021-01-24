@@ -166,6 +166,8 @@ public:
 	  case '<':
 		  priority = 60;
 		  break;
+	  case 'a':
+		  priority = -255;
 
 	  }
 	  return priority;
