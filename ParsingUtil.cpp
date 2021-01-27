@@ -12,6 +12,66 @@ ParsingUtil::ParsingUtil() {
 
 }
 
+double ParsingUtil::getNextDoubleS(const std::string &data,int &index)
+{
+  bool stillReading = true;
+  bool isNegative = false;
+  bool afterDecimal = false;
+  char previous;
+  double num = 0;
+  int afterDecimalCount = 1;
+
+  if(index-1 >= 0)
+  {
+    previous = data[index-1];
+  }
+  else
+  {
+    previous = '&';
+  }
+  if(data[index] == '-')
+  {
+    isNegative = true;
+    index++;
+  }
+  while(stillReading)
+  {
+    if(data[index]>=48 && data[index]<58)
+    {
+        if(!afterDecimal){
+            num *= 10;
+            num += (double)(data[index]-48);
+        }
+        else
+        {
+            num += (double) (data[index]-48)/afterDecimalCount;
+        }
+    }
+    if(data[index] == '.')
+    {
+        afterDecimal = true;
+    }
+    else if(!Calculator<double>::isOperator(previous) && index != 0)
+  {
+
+    if(data[index]<48 || data[index]>=58)
+    {
+      stillReading = false;
+    }
+
+  }
+    if(afterDecimal)
+    {
+        afterDecimalCount *= 10;
+    }
+    previous = data[index++];
+
+  }
+  index -= 2;
+  if(isNegative)
+    num *= -1;
+  return num;
+}
 
 template <typename string_type>
 bool isObj(string_type &s)

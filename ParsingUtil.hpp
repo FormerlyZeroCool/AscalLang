@@ -45,6 +45,8 @@ public:
 	static bool cmpstr(const std::string &s1,const std::string &&s2);
 	static bool hasChar(const std::string &dat,const char &c);
 	static bool isDouble(std::string &exp);
+
+	static double getNextDoubleS(const std::string &data,int &index);
 	template <typename string_type>
 	static bool isObj(string_type &s)
 	{
