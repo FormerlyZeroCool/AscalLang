@@ -34,12 +34,14 @@ public:
 	    uint16_t degree = (uint16_t) runtime->callOnFrame(frame, params[2].data);
 	    //Your code here
 
+        std::stringstream strStream;
+
 		std::string fnString = function->instructionsToString();
 
 	    //end of your code is defining the string derivative
-	    std::string derivative = derive_inter(0, fnString.length() - 2, withRespectTo[0], fnString);
+	    derive_inter(0, fnString.length() - 2, withRespectTo[0], fnString, strStream);
 	    std::stringstream call;
-	    call<<"let "<<function->id<<"prime"<<degree<<" = "<<derivative;
+	    call<<"let "<<function->id<<"prime"<<degree<<" = "<<strStream.str();
 	    //Saves function that when it is a first derivative of f looks like
 	    //fprime1 = first derivative of f
 	    runtime->callOnFrame(frame, call.str());
@@ -72,8 +74,8 @@ private:
 	}
 
 	// Recursively determines the derivative. Rather than creating new strings to pass to recursive calls, derive_inter uses the pair of indices i and j
-    // to determine which string portion is to be processed. The characters between indeces i and j are processed, including the characters at i and j.
-    std::string derive_inter(int i, int j, char by, std::string &expr) {
+    // to determine which string portion is to be processed. The characters between indices i and j are processed, including the characters at i and j.
+    void derive_inter(int i, int j, char by, std::string &expr, std::stringstream &strStream) {
         int p_count = 0;
 
 		/*for(int k = i; k <= j; ++k) {
@@ -92,7 +94,10 @@ private:
                 --p_count;
             }
             else if (p_count == 0 && (expr[k] == '+' || expr[k] == '-')) {
-                return derive_inter(i, k - 1, by, expr) + expr[k] + derive_inter(k + 1, j, by, expr);
+                derive_inter(i, k - 1, by, expr, strStream);
+                strStream << expr[k];
+                derive_inter(k + 1, j, by, expr, strStream);
+                return;
             }
         }
 
@@ -109,24 +114,43 @@ private:
             if (p_count == 0 && expr[k] != '^') {
                 if (expr[k] == '*') {
                     // Apply product rule
-                    return "((" + derive_inter(i, k - 1, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i) + ")";
+                    strStream << "((";
+                    derive_inter(i, k - 1, by, expr, strStream);
+                    strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
+                    derive_inter(k + 1, j, by, expr, strStream);
+                    strStream << ")*(" << expr.substr(i, k - i)<< ")";
+                    return;
                 }
                 else if (expr[k] == '/') {
                     // Apply quotient rule
-                    return "(((" + derive_inter(i, k - 1, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i) + ")/("
-                        + expr.substr(k + 1, j - k) + ")^2)";
+                    strStream << "(((";
+                    derive_inter(i, k - 1, by, expr, strStream);
+                    strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
+                    derive_inter(k + 1, j, by, expr, strStream);
+                    strStream << ")*(" << expr.substr(i, k - i) << "))/(" << expr.substr(k + 1, j - k) + ")^2)";
+                    return;
                 }
                 else if (i != j && k + 1 <= j) {
                     // Apply product rule when '*' isn't present
                     if (((expr[k] == ')') && (operators.find(expr[k + 1]) == operators.npos))) {
-                        std::cout << expr.substr(i, k - i + 1) << std::endl;
-                        std::cout << expr.substr(k + 1, j - k) << std::endl;
-                        return "((" + derive_inter(i, k, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i + 1) + ")";
+                        //std::cout << expr.substr(i, k - i + 1) << std::endl;
+                        //std::cout << expr.substr(k + 1, j - k) << std::endl;
+                        strStream << "((";
+                        derive_inter(i, k, by, expr, strStream);
+                        strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
+                        derive_inter(k + 1, j, by, expr, strStream);
+                        strStream << ")*(" << expr.substr(i, k - i + 1) << "))";
+                        return;
                     }
                     else if ((expr[k + 1] == '(') && (operators.find(expr[k]) == operators.npos)) {
-                        std::cout << expr.substr(i, k - i + 1) << std::endl;
-                        std::cout << expr.substr(k + 1, j - k) << std::endl;
-                        return "((" + derive_inter(i, k, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i + 1) + ")";
+                        //std::cout << expr.substr(i, k - i + 1) << std::endl;
+                        //std::cout << expr.substr(k + 1, j - k) << std::endl;
+                        strStream << "((";
+                        derive_inter(i, k, by, expr, strStream);
+                        strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
+                        derive_inter(k + 1, j, by, expr, strStream);
+                        strStream << ")*(" << expr.substr(i, k - i + 1) << "))";
+                        return;
                     }
                 }
             }
@@ -151,19 +175,23 @@ private:
             }
             else if (p_count == 0 && expr[k] == '^') {
                 if (expr.substr(k + 1, j - k).find(by) != expr.npos) {
-                    //Apply generalized power rule
-                    return "";
+                    //Apply generalized power rule 
+                    ///Currently unimpemented
+                    strStream << "";
+                    return;
                 }
                 else {
                     //Apply basic power rule
-                    return "((" + expr.substr(k + 1, j - k) + ")*(" + expr.substr(i, k - i) + ")^(" + expr.substr(k + 1, j - k) + "-1))";
+                    strStream << "((" << expr.substr(k + 1, j - k) << ")*(" << expr.substr(i, k - i) << ")^(" << expr.substr(k + 1, j - k) << "-1))";
+                    return;
                 }
             }
         }
 
         // If none of the previous cases passed, and there are parentheses, the parentheses are considered useless and are discarded in another recursive call.
         if (expr[i] == '(' && expr[j] == ')') {
-            return derive_inter(i + 1, j - 1, by, expr);
+            derive_inter(i + 1, j - 1, by, expr, strStream);
+            return;
         }
 
         p_count = 0;
@@ -171,16 +199,19 @@ private:
         // The only considerations left are if there is a lone x term (possibly with a coefficient) raised to the first power, or there is no x term.
         if (expr.substr(i, j - i + 1).find(by) != expr.npos) {
             if (0 != expr.substr(i, j - i + 1).find(by) && expr[expr.substr(i, j - i + 1).find(by) + i - 1] != ' ') {
-                std::cout << expr.substr(i, j - i + 1) << std::endl; 
-                std::cout << expr.substr(i, j - i + 1).find(by) + i - 1 << std::endl;
-				std::cout << '\"' << expr[expr.substr(i, j - i + 1).find(by) + i - 1] << '\"' << std::endl;
-                return expr.substr(i, expr.substr(i, j - i + 1).find(by));
+                //std::cout << expr.substr(i, j - i + 1) << std::endl; 
+                //std::cout << expr.substr(i, j - i + 1).find(by) + i - 1 << std::endl;
+				//std::cout << '\"' << expr[expr.substr(i, j - i + 1).find(by) + i - 1] << '\"' << std::endl;
+                strStream << expr.substr(i, expr.substr(i, j - i + 1).find(by));
+                return;
             }
             else {
-                return std::string("1");
+                strStream << 1;
+                return;
             }
         }
-        return std::string("0");
+        strStream << 0;
+        return;
     }
 };
 
