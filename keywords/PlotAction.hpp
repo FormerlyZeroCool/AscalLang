@@ -46,17 +46,17 @@ public:
 	    }
 	    functions.push_back(frame->exp.substr(trailer,endOfFun - (trailer)));
 	    index = endOfFun+1;
-	    const double xMin = ParsingUtil::getNextDouble(frame->exp,index);
+	    const double xMin = ParsingUtil::getNextDoubleS(frame->exp,index);
 	    index+=2;
-	    const double xMax = ParsingUtil::getNextDouble(frame->exp,index);
+	    const double xMax = ParsingUtil::getNextDoubleS(frame->exp,index);
 	    index = endOfDomain+1;
-	    const double yMin = ParsingUtil::getNextDouble(frame->exp,index);
+	    const double yMin = ParsingUtil::getNextDoubleS(frame->exp,index);
 	    index +=2;
-	    const double yMax = ParsingUtil::getNextDouble(frame->exp,index);
+	    const double yMax = ParsingUtil::getNextDoubleS(frame->exp,index);
 	    index +=2;
-	    const double xStepSize = ParsingUtil::getNextDouble(frame->exp,index);
+	    const double xStepSize = ParsingUtil::getNextDoubleS(frame->exp,index);
 	    index += 2;
-	    const double yStepSize = ParsingUtil::getNextDouble(frame->exp,index);
+	    const double yStepSize = ParsingUtil::getNextDoubleS(frame->exp,index);
 	    int tableWidth = (xMax-xMin)/(xStepSize>0?xStepSize:1);
 	    int tableHeight = (yMax-yMin)/(yStepSize>0?yStepSize:1);
 	    double dx = (xMax-xMin)/tableWidth;

@@ -125,6 +125,21 @@ SubStr ParsingUtil::getVarName(const std::string &s,int index)
     index--;
     return SubStr(result,begin,begin + result.length()-1);
 }
+string_view ParsingUtil::getVarNameSV(const std::string &s,uint32_t &index)
+{
+    int begin = index;
+    while(s.length() > index && !isalpha(s[index]))
+    {
+        begin++;
+        index++;
+    }
+    while(s.length()>index && (isalpha(s[index]) || ParsingUtil::isNumeric(s[index])))
+    {
+    	index++;
+    }
+    index = index>s.length()?s.length():index;
+    return string_view(s,begin>s.length()?s.length():begin,index);
+}
 SubStr ParsingUtil::getNewVarName(const std::string &data)
 {
     int index = data.find("let")<5000 || data.find("const")<5000?data.find("t ")+1:0;
@@ -137,8 +152,8 @@ SubStr ParsingUtil::getExpr(const std::string &data,int index, std::istream &asc
     int maxOpeningCount = 0;
     SubStr block("",0,0);
     std::vector<char> result;
-    if(data.length()<256)
-        result.reserve(256);
+    if(data.length()<1024)
+        result.reserve(1024);
     else
         result.reserve(data.length());
     std::string line = data;
@@ -220,8 +235,8 @@ SubStr ParsingUtil::getExprInString(const std::string &data,int index,char openi
     int openingCount = 0;
     int maxOpeningCount = 0;
     std::vector<char> result;
-    if(data.length()<256)
-        result.reserve(256);
+    if(data.length()<1024)
+        result.reserve(1024);
     else
         result.reserve(data.length());
     std::string line = data;
@@ -274,6 +289,21 @@ SubStr ParsingUtil::getExprInString(const std::string &data,int index,char openi
     return SubStr(std::string(result.begin(),result.end()),index,result.size());
 }
 
+string_view ParsingUtil::getExprInStringSV(const std::string &line, uint32_t &index,char opening,char closing,char lineBreak)
+{
+    uint32_t i = index;
+    uint8_t subLevel = 0;
+    while((subLevel != 0 && line[i]) || (line[i] && line[i] != lineBreak && line[i] != '\n'))
+    {
+        subLevel += (line[i]==opening) - (line[i] == closing);
+        i++;
+
+    }
+    subLevel -= (line[i] == closing);
+
+    return string_view(line, index, i);
+}
+
 SubStr ParsingUtil::getCodeBlock(std::string &exp, int index, std::istream &cin_ascal)
 {
     SubStr codeBlock = getExpr(exp,index, cin_ascal);
@@ -288,6 +318,67 @@ SubStr ParsingUtil::getCodeBlock(std::string &exp, int index, std::istream &cin_
         }
     }
     return codeBlock;
+}
+
+double ParsingUtil::getNextDoubleS(const std::string &data,int &index)
+{
+  bool stillReading = true;
+  bool isNegative = false;
+  bool afterDecimal = false;
+  char previous;
+  double num = 0;
+  int afterDecimalCount = 1;
+
+  if(index-1 >= 0)
+  {
+    previous = data[index-1];
+  }
+  else
+  {
+    previous = '&';
+  }
+  if(data[index] == '-')
+  {
+    isNegative = true;
+    index++;
+  }
+  while(stillReading)
+  {
+    if(data[index]>=48 && data[index]<58)
+    {
+        if(!afterDecimal){
+            num *= 10;
+            num += (double)(data[index]-48);
+        }
+        else
+        {
+            num += (double) (data[index]-48)/afterDecimalCount;
+        }
+    }
+    if(data[index] == '.')
+    {
+        afterDecimal = true;
+    }
+    else if(!Calculator<double>::isOperator(previous) && index != 0)
+  {
+
+    if(data[index]<48 || data[index]>=58)
+    {
+      stillReading = false;
+    }
+
+  }
+    if(afterDecimal)
+    {
+        afterDecimalCount *= 10;
+    }
+    previous = data[index++];
+
+  }
+  index -= 2;
+  if(isNegative)
+    num *= -1;
+  return num;
 }
 
 //Desc of resolveNextObjectExpression algorithm
