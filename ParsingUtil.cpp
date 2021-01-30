@@ -304,6 +304,22 @@ string_view ParsingUtil::getExprInStringSV(const std::string &line, uint32_t &in
     return string_view(line, index, i);
 }
 
+SubStr ParsingUtil::getCodeBlock(std::string &exp, int index, std::istream &cin_ascal)
+{
+    SubStr codeBlock = getExpr(exp,index, cin_ascal);
+    if(codeBlock.data.size() == 0)
+    {
+        codeBlock.loadedNew = true;
+    	std::string nextLine;
+        while(cin_ascal && codeBlock.data.size() == 0)
+        {
+        	getline(cin_ascal,nextLine);
+        	codeBlock = getExpr(nextLine, 0, cin_ascal);
+        }
+    }
+    return codeBlock;
+}
+
 double ParsingUtil::getNextDoubleS(const std::string &data,int &index)
 {
   bool stillReading = true;
@@ -363,22 +379,6 @@ double ParsingUtil::getNextDoubleS(const std::string &data,int &index)
   if(isNegative)
     num *= -1;
   return num;
-}
-
-SubStr ParsingUtil::getCodeBlock(std::string &exp, int index, std::istream &cin_ascal)
-{
-    SubStr codeBlock = getExpr(exp,index, cin_ascal);
-    if(codeBlock.data.size() == 0)
-    {
-        codeBlock.loadedNew = true;
-    	std::string nextLine;
-        while(cin_ascal && codeBlock.data.size() == 0)
-        {
-        	getline(cin_ascal,nextLine);
-        	codeBlock = getExpr(nextLine, 0, cin_ascal);
-        }
-    }
-    return codeBlock;
 }
 
 //Desc of resolveNextObjectExpression algorithm
