@@ -109,11 +109,11 @@ private:
             if (p_count == 0 && expr[k] != '^') {
                 if (expr[k] == '*') {
                     // Apply product rule
-                    return "((" + derive_inter(i, k - 1, by, expr) + ")(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")(" + expr.substr(i, k - i) + ")";
+                    return "((" + derive_inter(i, k - 1, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i) + ")";
                 }
                 else if (expr[k] == '/') {
                     // Apply quotient rule
-                    return "(((" + derive_inter(i, k - 1, by, expr) + ")(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")(" + expr.substr(i, k - i) + ")/("
+                    return "(((" + derive_inter(i, k - 1, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i) + ")/("
                         + expr.substr(k + 1, j - k) + ")^2)";
                 }
                 else if (i != j && k + 1 <= j) {
@@ -121,12 +121,12 @@ private:
                     if (((expr[k] == ')') && (operators.find(expr[k + 1]) == operators.npos))) {
                         std::cout << expr.substr(i, k - i + 1) << std::endl;
                         std::cout << expr.substr(k + 1, j - k) << std::endl;
-                        return "((" + derive_inter(i, k, by, expr) + ")(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")(" + expr.substr(i, k - i + 1) + ")";
+                        return "((" + derive_inter(i, k, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i + 1) + ")";
                     }
                     else if ((expr[k + 1] == '(') && (operators.find(expr[k]) == operators.npos)) {
                         std::cout << expr.substr(i, k - i + 1) << std::endl;
                         std::cout << expr.substr(k + 1, j - k) << std::endl;
-                        return "((" + derive_inter(i, k, by, expr) + ")(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")(" + expr.substr(i, k - i + 1) + ")";
+                        return "((" + derive_inter(i, k, by, expr) + ")*(" + expr.substr(k + 1, j - k) + ")+(" + derive_inter(k + 1, j, by, expr) + ")*(" + expr.substr(i, k - i + 1) + ")";
                     }
                 }
             }
@@ -156,7 +156,7 @@ private:
                 }
                 else {
                     //Apply basic power rule
-                    return "((" + expr.substr(k + 1, j - k) + ")(" + expr.substr(i, k - i) + ")^(" + expr.substr(k + 1, j - k) + "-1))";
+                    return "((" + expr.substr(k + 1, j - k) + ")*(" + expr.substr(i, k - i) + ")^(" + expr.substr(k + 1, j - k) + "-1))";
                 }
             }
         }
