@@ -84,6 +84,8 @@ private:
 
 		std::cout << std::endl;*/
 
+        std::cout << expr << '\n';
+
         // This loop attempts to find a pair of terms with "parenthesis depth" 0, where parenthesis depth is 0 if k isn't inside any parentheses, 1 if 
         // inside one set of parentheses, etc. This loop only looks for terms separated by + or -.
         for (int k = i; k <= j; ++k) {
@@ -175,6 +177,7 @@ private:
             }
             else if (p_count == 0 && expr[k] == '^') {
                 if (expr.substr(k + 1, j - k).find(by) != -1) {
+                    
                     //Apply generalized power rule 
                     ///Currently unimpemented
                     strStream << "";

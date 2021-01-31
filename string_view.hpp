@@ -22,7 +22,7 @@ public:
 	string_view();
 	string_view(const std::string &s);
 	string_view(const std::string &s, uint32_t start, uint32_t end);
-	string_view::string_view(const string_view &s, uint32_t start, uint32_t end);
+	string_view(const string_view &s, uint32_t start, uint32_t end);
 	string_view(const char *s, uint32_t len);
 	uint32_t size()
 	{
@@ -42,7 +42,7 @@ public:
 	string_view substr(uint32_t start, uint32_t end = -1);
 	std::string str();
 	friend std::ostream& operator<<(std::ostream &o,string_view &l);
-	friend std::stringstream& operator<<(std::stringstream &o,string_view &l);
+	friend std::ostream& operator<<(std::ostream &o,string_view &&l);
 	virtual ~string_view();
 };
 
