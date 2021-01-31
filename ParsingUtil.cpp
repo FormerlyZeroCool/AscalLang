@@ -138,7 +138,7 @@ string_view ParsingUtil::getVarNameSV(const std::string &s,uint32_t &index)
     	index++;
     }
     index = index>s.length()?s.length():index;
-    return string_view(s,begin>s.length()?s.length():begin,index);
+    return string_view(s,begin>s.length()?s.length():begin,index - (begin>s.length()?s.length():begin));
 }
 SubStr ParsingUtil::getNewVarName(const std::string &data)
 {
@@ -301,7 +301,7 @@ string_view ParsingUtil::getExprInStringSV(const std::string &line, uint32_t &in
     }
     subLevel -= (line[i] == closing);
 
-    return string_view(line, index, i);
+    return string_view(line, index, i - index);
 }
 
 SubStr ParsingUtil::getCodeBlock(std::string &exp, int index, std::istream &cin_ascal)
