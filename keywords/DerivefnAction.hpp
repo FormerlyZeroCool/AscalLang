@@ -39,7 +39,7 @@ public:
 		std::string fnString = function->instructionsToString();
 
 	    //end of your code is defining the string derivative
-	    derive_inter(0, fnString.length() - 2, withRespectTo[0], fnString, strStream);
+	    derive_inter(0, fnString.length() - 2, withRespectTo.c_str(), string_view(fnString.c_str(), fnString.length() - 1), strStream);
 	    std::stringstream call;
 	    call<<"let "<<function->id<<"prime"<<degree<<" = "<<strStream.str();
 	    //Saves function that when it is a first derivative of f looks like
@@ -75,7 +75,7 @@ private:
 
 	// Recursively determines the derivative. Rather than creating new strings to pass to recursive calls, derive_inter uses the pair of indices i and j
     // to determine which string portion is to be processed. The characters between indices i and j are processed, including the characters at i and j.
-    void derive_inter(int i, int j, char by, std::string &expr, std::stringstream &strStream) {
+    void derive_inter(int i, int j, const char *by, string_view expr, std::stringstream &strStream) {
         int p_count = 0;
 
 		/*for(int k = i; k <= j; ++k) {
@@ -94,9 +94,9 @@ private:
                 --p_count;
             }
             else if (p_count == 0 && (expr[k] == '+' || expr[k] == '-')) {
-                derive_inter(i, k - 1, by, expr, strStream);
+                derive_inter(i, k - 1, by, string_view(expr, i, k - 1), strStream);
                 strStream << expr[k];
-                derive_inter(k + 1, j, by, expr, strStream);
+                derive_inter(k + 1, j, by, string_view(expr, k + 1, j), strStream);
                 return;
             }
         }
@@ -115,19 +115,19 @@ private:
                 if (expr[k] == '*') {
                     // Apply product rule
                     strStream << "((";
-                    derive_inter(i, k - 1, by, expr, strStream);
+                    derive_inter(i, k - 1, by, string_view(expr, i, k - 1), strStream);
                     strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
-                    derive_inter(k + 1, j, by, expr, strStream);
+                    derive_inter(k + 1, j, by, string_view(expr, k + 1, j), strStream);
                     strStream << ")*(" << expr.substr(i, k - i)<< ")";
                     return;
                 }
                 else if (expr[k] == '/') {
                     // Apply quotient rule
                     strStream << "(((";
-                    derive_inter(i, k - 1, by, expr, strStream);
+                    derive_inter(i, k - 1, by, string_view(expr, i, k - 1), strStream);
                     strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
-                    derive_inter(k + 1, j, by, expr, strStream);
-                    strStream << ")*(" << expr.substr(i, k - i) << "))/(" << expr.substr(k + 1, j - k) + ")^2)";
+                    derive_inter(k + 1, j, by, string_view(expr, k + 1, j), strStream);
+                    strStream << ")*(" << expr.substr(i, k - i) << "))/(" << expr.substr(k + 1, j - k) << ")^2)";
                     return;
                 }
                 else if (i != j && k + 1 <= j) {
@@ -136,9 +136,9 @@ private:
                         //std::cout << expr.substr(i, k - i + 1) << std::endl;
                         //std::cout << expr.substr(k + 1, j - k) << std::endl;
                         strStream << "((";
-                        derive_inter(i, k, by, expr, strStream);
+                        derive_inter(i, k, by, string_view(expr, i, k), strStream);
                         strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
-                        derive_inter(k + 1, j, by, expr, strStream);
+                        derive_inter(k + 1, j, by, string_view(expr, k + 1, j), strStream);
                         strStream << ")*(" << expr.substr(i, k - i + 1) << "))";
                         return;
                     }
@@ -146,9 +146,9 @@ private:
                         //std::cout << expr.substr(i, k - i + 1) << std::endl;
                         //std::cout << expr.substr(k + 1, j - k) << std::endl;
                         strStream << "((";
-                        derive_inter(i, k, by, expr, strStream);
+                        derive_inter(i, k, by, string_view(expr, i, k), strStream);
                         strStream << ")*(" << expr.substr(k + 1, j - k) << ")+(";
-                        derive_inter(k + 1, j, by, expr, strStream);
+                        derive_inter(k + 1, j, by, string_view(expr, k + 1, j), strStream);
                         strStream << ")*(" << expr.substr(i, k - i + 1) << "))";
                         return;
                     }
@@ -174,7 +174,7 @@ private:
                 --p_count;
             }
             else if (p_count == 0 && expr[k] == '^') {
-                if (expr.substr(k + 1, j - k).find(by) != expr.npos) {
+                if (expr.substr(k + 1, j - k).find(by) != -1) {
                     //Apply generalized power rule 
                     ///Currently unimpemented
                     strStream << "";
@@ -197,7 +197,7 @@ private:
         p_count = 0;
 
         // The only considerations left are if there is a lone x term (possibly with a coefficient) raised to the first power, or there is no x term.
-        if (expr.substr(i, j - i + 1).find(by) != expr.npos) {
+        if (expr.substr(i, j - i + 1).find(by) != -1) {
             if (0 != expr.substr(i, j - i + 1).find(by) && expr[expr.substr(i, j - i + 1).find(by) + i - 1] != ' ') {
                 //std::cout << expr.substr(i, j - i + 1) << std::endl; 
                 //std::cout << expr.substr(i, j - i + 1).find(by) + i - 1 << std::endl;

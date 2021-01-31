@@ -21,6 +21,10 @@ string_view::string_view(const std::string &s, uint32_t start, uint32_t end)
 	this->ptr = (char*) s.c_str()+start;
 	this->len = (end - start)<s.size()?(end-start):s.size();
 }
+string_view::string_view(const string_view &s, uint32_t start, uint32_t end) {
+    this->ptr = s.ptr+start;
+    this->len = (end - start)<s.len?(end-start):s.len;
+}
 string_view::string_view(const char *s, uint32_t len)
 {
 	ptr = (char*) s;
