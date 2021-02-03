@@ -38,7 +38,7 @@ public:
 	    {
 	    	//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
 	    	//x addresses the x point xMin+dx*x, using xMin, and dx defined above
-	    	Vect2D<double> points = calcTable(functions, xMin, xMax, dx, dy);
+	    	Vect2D<std::pair<double, double> > points = calcTable(functions, xMin, xMax, dx, dy);
 	    	//Your GUI code
 	    	//throw 0;
 	    }
@@ -51,17 +51,17 @@ public:
 	}
 	//For plotGUI to use the y index of the Vect2D corresponds to the index of the function name in the functions vector
 	//the x index in cartesian space is x*dx+xMin
-	Vect2D<double> calcTable(const std::vector<std::string> &functions, double xMin, double xMax, double xStepSize, double yStepSize)
+	Vect2D<std::pair<double, double> > calcTable(const std::vector<std::string> &functions, double xMin, double xMax, double xStepSize, double yStepSize)
 	{
 	    int tableWidth = (xMax-xMin)/(xStepSize>0?xStepSize:1);
 		double dx = (xMax-xMin)/tableWidth;
 		    double dy = yStepSize>0?yStepSize:1;
 		    double xi;
-		    Vect2D<double> outPuts(tableWidth,functions.size()-1);
+		    Vect2D<std::pair<double, double> > outPuts(tableWidth,functions.size()-1);
 		    std::stringstream exp;
 		    for(int j = 0;j<functions.size();j++)
 		    {
-		        std::string function = functions[j];
+		        const std::string &function = functions[j];
 		        for(int i = 0;i<tableWidth;i++)
 		        {
 		            xi = xMin+dx*(i);
@@ -70,7 +70,8 @@ public:
 		            calledFunction->exp = exp.str();
 		            exp.str(std::string());
 		            outPuts.push_back(
-		                    runtime->calculateExpression(calledFunction));
+		                    std::pair<double, double>(xi, runtime->calculateExpression(calledFunction))
+			    );
 		        }
 		    }
 		    return outPuts;
