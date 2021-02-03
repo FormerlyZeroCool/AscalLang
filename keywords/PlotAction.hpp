@@ -10,15 +10,15 @@
 
 #include "../Keyword.hpp"
 #include "../Vect2D.hpp"
-class PlotAction: public Keyword {
+class PlotAction: public StKeyword {
 public:
 	PlotAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	StKeyword(runtime, memory, boolsettings)
 	{
 		this->keyWord = "plot";
 	}
 
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    const int plotKeyWordIndex = frame->exp.find("plot",frame->index);
 	    const int endOfFun = frame->exp.find(",", plotKeyWordIndex);
@@ -156,8 +156,6 @@ public:
 	        std::cout<<"Function: "<<functions[i]<<", plotted using symbol: "<<symbols[i%10]<<", function defined as: "<<(*memory)[functions[i]].instructionsToFormattedString();
 	        std::cout<<"Area Under Curve calculated with reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
 	    }
-
-	    return MAX;
 	}
 };
 
