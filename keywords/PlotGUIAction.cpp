@@ -1,5 +1,18 @@
+/**************************PlotGUIAction.cpp************************************
+* Branch: GUI_Plot
+* Developed By: Arhum Z. Nayyar (Rummy)
+* PlotGUIAction.cpp: Creates forked instances of Plotting GUI's and Renders
+* Date: 2/1/21
+*******************************************************************************/
 
 #include "PlotGUIAction.hpp"
+
+namespace {
+	const int FPS = 50;
+	// remove 5 *
+	const int MAX_FRAME_TIME = 5 * 1000 / FPS; //Max amount of time a frame is allowed to last
+}
+
 
 PlotGUIAction::PlotGUIAction(AscalExecutor* runtime, std::unordered_map<std::string, Object>* memory, std::map<std::string, setting<bool> >* boolsettings) :
 	Keyword(runtime, memory, boolsettings)
@@ -9,8 +22,6 @@ PlotGUIAction::PlotGUIAction(AscalExecutor* runtime, std::unordered_map<std::str
 
 std::string PlotGUIAction::action(AscalFrame<double>* frame)
 {
-	//Graphics graphics;
-
 	SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	std::vector<SubStr> params = Object("", "", exp.data).params;
 	std::vector<std::string> functions = ParsingUtil::split(params[0].data, std::string("|"));
@@ -23,17 +34,18 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 	double dx = runtime->callOnFrame(frame, params[5].data);
 	double dy = runtime->callOnFrame(frame, params[6].data);
 
-	std::cout << "DATA: " << xMin << " , " << xMax << " , " << yMin << " , " << yMax << " , " << dx << " , " << dy << std::endl;
-
 	int pid = fork();
-	std::cout << "FORK PID IS: " << pid << std::endl;
 	if (!pid)
 	{
-		std::cout << "just so we know you know?" << std::endl;
 		//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
 		//x addresses the x point xMin+dx*x, using xMin, and dx defined above
-		Vect2D<double> points = calcTable(functions, xMin, xMax, dx, dy);
 
+		Vect2D<std::pair<double, double> > points = calcTable(functions, xMin, xMax, dx, dy);
+
+		SDL_Point coordList = { 1, 2 };
+		double xPoints = 0;
+		std::cout << "xMin: " << xMin << std::endl;
+		std::cout << "dx :" << dx << std::endl;
 		/*
 		void* handle = dlopen("SDL2.dll", RTLD_LAZY);
 		void* var = bird;
@@ -45,17 +57,30 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 		}*/
 
 		Graphics graphics;
+		Camera camera;
 		SDL_Event event;
 		Input input;
 
 		//Get the amount of miliseconds since SDL-Lib was intialized
 		//This will help us know when to update screen
 		int delta_time = SDL_GetTicks();
+		//DEBUG
+		std::cout << "\nSIZE OF POINTS: " << points.size() << std::endl;
 
+		SDL_Texture* texture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+		SDL_Rect destRect = {0,0,graphics.getScreenWidth(), graphics.getScreenHeight() };
 
-		std::cout << "This is after fork()!" << std::endl;
+		struct Point {
+			double x, y;
+		};
+
+		Point cameraPosition = { 0,0 };
+		bool drawLine = true;
+		
 		while (true) {
 			input.beginNewFrame(); //reset released key/press key
+			const int CURRENT_TIME_MS = SDL_GetTicks();
+			int ELAPSED_TIME_MS = CURRENT_TIME_MS - delta_time;
 
 			if (SDL_PollEvent(&event)) {
 				if (event.type == SDL_KEYDOWN) {
@@ -75,18 +100,90 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 				throw 0; //User exits normally with ESC key
 			}
 
-			const int CURRENT_TIME_MS = SDL_GetTicks();
-			int ELAPSED_TIME_MS = CURRENT_TIME_MS - delta_time;
+			else if (input.isKeyHeld(SDL_SCANCODE_Q) == true) {
+				graphics.d_rect.h -= 10;
+				graphics.d_rect.w -= 10;
+			}
 
-			//this->_graphics = graphics; //updated graphics
+			else if (input.isKeyHeld(SDL_SCANCODE_E) == true) {
+				graphics.d_rect.h += 10;
+				graphics.d_rect.w += 10;
+			}
 
+			else if (input.isKeyHeld(SDL_SCANCODE_A) == true) {
+				cameraPosition.x -= 10;
+			}
+			else if (input.isKeyHeld(SDL_SCANCODE_D) == true) {
+				cameraPosition.x += 10;
+			}
 
-			graphics.drawRect2();
-			graphics.drawRect();
+			else if (input.isKeyHeld(SDL_SCANCODE_W) == true) {
+				cameraPosition.y -= 10;
+			}
 
-			CrossPlatform::usleep(30000);
+			else if (input.isKeyHeld(SDL_SCANCODE_S) == true) {
+				cameraPosition.y += 10;
+			}
 
-			//graphics.clear();
+			else if (input.wasKeyPressed(SDL_SCANCODE_L) == true) {
+				if (drawLine == false) {
+					drawLine = true;
+				}
+				else if (drawLine == true) {
+					drawLine = false;
+				}
+			}
+
+			else if (input.wasKeyPressed(SDL_SCANCODE_P) == true) {
+				cameraPosition.x = 0; 
+				cameraPosition.y = 0;
+			}
+
+			delta_time = CURRENT_TIME_MS;
+	
+			SDL_SetRenderTarget(graphics.getRenderer(), texture);
+			SDL_SetRenderDrawColor(graphics.getRenderer(), 0x00, 0x00, 0x00, 0x00);
+			graphics.clear();
+			SDL_SetRenderDrawColor(graphics.getRenderer(), 0xFF, 0xFF, 0xFF, 0xFF);
+			SDL_RenderDrawLine(graphics.getRenderer(), -800, graphics.getScreenHeight() / 2, 1200, graphics.getScreenHeight() / 2);
+			SDL_RenderDrawLine(graphics.getRenderer(), graphics.getScreenWidth() / 2, -800, graphics.getScreenWidth() / 2, 1400);
+			SDL_SetRenderDrawColor(graphics.getRenderer(), 255, 0, 0, 0);
+			unsigned char isFirst = 1;
+			double previous_x = 0;
+			double previous_y = 0;
+			for (int i = 0; i < points.size(); i++) {
+				/* In order to translate/scale the function correctly we use the following functions:
+				* For x coordinate: (x - xMin) / (xMax - xMin) * screen width
+				* For y coordinate: screen height - (y - yMin) / (yMax - yMin) * screen height
+				* And to scroll horizontally we keep a scroll offset and add that to all the points
+				* when drawing them. The offset is the opposite of what direction the user is scrolling
+				*/
+
+				double realX = ((points[i].first - xMin) / (xMax - xMin)) * 742;
+				double realY = 584 - ((points[i].second - yMin) / (yMax - yMin) * 584);
+				SDL_RenderDrawPoint(graphics.getRenderer(), realX + (-cameraPosition.x), realY + (-cameraPosition.y));
+
+			if (drawLine == true){
+					if (!isFirst)
+					{
+						SDL_RenderDrawLine(graphics.getRenderer(), previous_x + (-cameraPosition.x), previous_y + (-cameraPosition.y), realX + (-cameraPosition.x), realY + (-cameraPosition.y));
+					}
+
+				previous_x = realX;
+				previous_y = realY;
+
+				if (isFirst)
+				{
+					isFirst = 0;
+				}
+			  }
+			}
+			SDL_SetRenderTarget(graphics.getRenderer(), NULL);
+			graphics.blitSurface(texture, NULL, &destRect);
+			SDL_RenderPresent(graphics.getRenderer());
+			camera.Update(std::min(ELAPSED_TIME_MS, MAX_FRAME_TIME), graphics);
+
+			CrossPlatform::usleep(10000);
 		}
 
 		throw 0;
@@ -99,30 +196,35 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 	return MAX;
 }
 
-Vect2D<double> PlotGUIAction::calcTable(const std::vector<std::string>& functions, double xMin, double xMax, double xStepSize, double yStepSize)
+void PlotGUIAction::draw(Graphics& graphics, Vect2D<std::pair<double, double>>& points, SDL_Texture* texture, SDL_Rect destRect) {
+}
+
+void PlotGUIAction::update(float elapsedTime) {
+}
+
+Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std::string>& functions, double xMin, double xMax, double xStepSize, double yStepSize)
 {
+	int tableWidth = (xMax - xMin) / (xStepSize > 0 ? xStepSize : 1);
+	double dx = (xMax - xMin) / tableWidth;
+	double dy = yStepSize > 0 ? yStepSize : 1;
+	double xi;
+	Vect2D<std::pair<double, double> > outPuts(tableWidth, functions.size() - 1);
+	std::stringstream exp;
+	for (int j = 0; j < functions.size(); j++)
 	{
-		int tableWidth = (xMax - xMin) / (xStepSize > 0 ? xStepSize : 1);
-		double dx = (xMax - xMin) / tableWidth;
-		double dy = yStepSize > 0 ? yStepSize : 1;
-		double xi;
-		Vect2D<double> outPuts(tableWidth, functions.size() - 1);
-		std::stringstream exp;
-		for (int j = 0; j < functions.size(); j++)
+		const std::string& function = functions[j];
+		for (int i = 0; i < tableWidth; i++)
 		{
-			std::string function = functions[j];
-			for (int i = 0; i < tableWidth; i++)
-			{
-				xi = xMin + dx * (i);
-				FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr, nullptr, nullptr);
-				exp << function << '(' << ParsingUtil::to_string(xi) << ')';
-				calledFunction->exp = exp.str();
-				exp.str(std::string());
-				outPuts.push_back(
-					runtime->calculateExpression(calledFunction));
-			}
+			xi = xMin + dx * (i);
+			FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr, nullptr, nullptr);
+			exp << function << '(' << ParsingUtil::to_string(xi) << ')';
+			calledFunction->exp = exp.str();
+			exp.str(std::string());
+			outPuts.push_back(
+				std::pair<double, double>(xi, runtime->calculateExpression(calledFunction))
+			);
 		}
-		return outPuts;
 	}
+	return outPuts;
 }
 

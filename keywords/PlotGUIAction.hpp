@@ -16,6 +16,7 @@
 
 #include "../plot_gui/Graphics.h"
 #include "../plot_gui/Input.h"
+#include "../plot_gui/Camera.h"
 //#include "..\plot_gui\Graphics.h"
 //
 class PlotGUIAction: public Keyword {
@@ -26,15 +27,27 @@ public:
 	std::string action(AscalFrame<double>* frame) override;
 
 
-	//void update(float elapsedTime, Graphics& graphics);
+	void update(float elapsedTime);
+	void draw(Graphics& graphics, Vect2D<std::pair<double, double>> &points, SDL_Texture* texture, SDL_Rect destRect);
+
 	//Graphics _graphics; //store graphics object
 	SDL_Window* bird;
 	SDL_Renderer* word;
 	
 	//For plotGUI to use the y index of the Vect2D corresponds to the index of the function name in the functions vector
 	//the x index in cartesian space is x*dx+xMin
-	Vect2D<double> calcTable(const std::vector<std::string>& functions, double xMin, double xMax, double xStepSize, double yStepSize);
-	
+	Vect2D<std::pair<double, double>> calcTable(const std::vector<std::string>& functions, double xMin, double xMax, double xStepSize, double yStepSize);
+
+	double xMin, xMax, yMin, yMax, dx, dy;
+
+	struct Point {
+		double x, y;
+	};
+
+	Point cameraPosition = { 0,0 };
+private:
+	//Graphics _graphics; //store graphics object
+	SDL_Point* coordinates = {};
 };
 
 #endif /* KEYWORDS_PLOTGUIACTION_HPP_ */

@@ -19,7 +19,7 @@
 //extern "C"
 
 #include <SDL2/SDL.h>
-
+#include <SDL2/SDL_image.h>
 
 //#include <SDL2/SDL.h>
 
@@ -45,15 +45,24 @@ public:
 
 	void clear();
 
+	void draw();
+
 	void drawRect();
 
 	void drawRect2();
 
 	SDL_Renderer* getRenderer() const;
 
+	SDL_Window* getWindow() const;
+
+	SDL_Rect d_rect;
+
+	int getScreenWidth();
+	int getScreenHeight();
+
 private:
 	SDL_Window* _window;
 	SDL_Renderer* _renderer;
-
+	int SCREEN_WIDTH = 1024, SCREEN_HEIGHT = 768;
 };
 #endif
