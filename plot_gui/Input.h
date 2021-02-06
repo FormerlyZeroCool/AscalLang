@@ -1,3 +1,9 @@
+/**************************Input.h****************************************
+* Branch: GUI_Plot
+* Developed By: Arhum Z. Nayyar (Rummy)
+* Input.h: Keeps track of Keyboard state
+* Date: 2/1/21
+*******************************************************************************/
 #ifndef INPUT_H
 #define INPUT_H
 

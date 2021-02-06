@@ -4,7 +4,6 @@
 * Camera.h: Zooming In/Out
 * Date: 2/4/21
 *******************************************************************************/
-
 #pragma once
 #include <SDL2/SDL.h>
 #include "Graphics.h"

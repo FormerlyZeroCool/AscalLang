@@ -1,11 +1,12 @@
-/* Input class
-* Keeps track of Keyboard state
-*/
-
+/**************************Input.cpp****************************************
+* Branch: GUI_Plot
+* Developed By: Arhum Z. Nayyar (Rummy)
+* Input.cpp: Keeps track of Keyboard state
+* Date: 2/1/21
+*******************************************************************************/
 #include "Input.h"
 
 SDL_Keysym stateQuit;
-
 
 void loadKey() {
 #ifdef __APPLE__
@@ -36,12 +37,14 @@ void Input::keyDownEvent(const SDL_Event& event) {
 //This gets called when a key gets released
 void Input::keyUpEvent(const SDL_Event& event) {
 	this->_releasedKeys[event.key.keysym.scancode] = true;
-	this->_heldKeys[event.key.keysym.scancode] = false; //because it was already set true when it was pressed and now we set false since we stopped holding
+	//because it was already set true when it was pressed and now we set false since we stopped holding
+	this->_heldKeys[event.key.keysym.scancode] = false; 
 }
 
 //checks if a certain key was pressed during the current frame
 bool Input::wasKeyPressed(SDL_Scancode key) {
-	return this->_pressedKeys[key]; //will return a bool if it was pressed
+	//will return a bool if it was pressed
+	return this->_pressedKeys[key]; 
 }
 
 //checks if a certain key was released during the current frame

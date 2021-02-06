@@ -4,15 +4,11 @@
 * Graphics.cpp: Holds all the information that deals with graphics & rendering
 * Date: 1/28/21
 *******************************************************************************/
-//#include "plot_gui\Graphics.h"
 #include "plot_gui/Graphics.h"
 #include "plot_gui/Camera.h"
-//#include <SDL2\SDL.h>
 //extern "C"
 
 #include <SDL2/SDL.h>
-
-//#include <SDL.h>
 #include <string>
 #include <iostream>
 
@@ -80,9 +76,6 @@ void Graphics::drawRect() {
 	rect.w = 400;
 
 	SDL_SetRenderDrawColor(this->_renderer, 255, 255, 255, 255);
-	//SDL_RenderDrawPoint(this->_renderer, 125, 370);
-	//SDL_RenderDrawPoint(this->_renderer, 145, 350);
-	//SDL_RenderDrawPoint(this->_renderer, 167, 322);
 	SDL_RenderDrawRect(this->_renderer, &rect);
 
 	//SDL_SetRenderDrawColor(this->_renderer, 0, 0, 0, 255);

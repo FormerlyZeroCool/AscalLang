@@ -4,15 +4,12 @@
 * PlotGUIAction.cpp: Creates forked instances of Plotting GUI's and Renders
 * Date: 2/1/21
 *******************************************************************************/
-
 #include "PlotGUIAction.hpp"
 
 namespace {
 	const int FPS = 50;
-	// remove 5 *
 	const int MAX_FRAME_TIME = 5 * 1000 / FPS; //Max amount of time a frame is allowed to last
 }
-
 
 PlotGUIAction::PlotGUIAction(AscalExecutor* runtime, std::unordered_map<std::string, Object>* memory, std::map<std::string, setting<bool> >* boolsettings) :
 	Keyword(runtime, memory, boolsettings)
@@ -37,46 +34,29 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 	int pid = fork();
 	if (!pid)
 	{
-		//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
-		//x addresses the x point xMin+dx*x, using xMin, and dx defined above
-
-		Vect2D<std::pair<double, double> > points = calcTable(functions, xMin, xMax, dx, dy);
-
-		SDL_Point coordList = { 1, 2 };
-		double xPoints = 0;
-		std::cout << "xMin: " << xMin << std::endl;
-		std::cout << "dx :" << dx << std::endl;
-		/*
-		void* handle = dlopen("SDL2.dll", RTLD_LAZY);
-		void* var = bird;
-		biggie obj;
-		obj = (biggie)dlsym(handle, "SDL_CreateWindowAndRenderer");
-		obj(640, 480, 0, &this->bird, &this->word);
-		while (true) {
-			std::cin.get();
-		}*/
-
 		Graphics graphics;
 		Camera camera;
 		SDL_Event event;
 		Input input;
+		Point cameraPosition = { 0,0 };
+		bool drawLine = true;
+		struct Point {
+			double x, y;
+		};
+
+		//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
+        //x addresses the x point xMin+dx*x, using xMin, and dx defined above
+		Vect2D<std::pair<double, double> > points = calcTable(functions, xMin, xMax, dx, dy);
 
 		//Get the amount of miliseconds since SDL-Lib was intialized
 		//This will help us know when to update screen
 		int delta_time = SDL_GetTicks();
 		//DEBUG
-		std::cout << "\nSIZE OF POINTS: " << points.size() << std::endl;
+		std::cout << "\nNumber of Points being plotted: " << points.size() << std::endl;
 
 		SDL_Texture* texture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
 		SDL_Rect destRect = {0,0,graphics.getScreenWidth(), graphics.getScreenHeight() };
 
-		struct Point {
-			double x, y;
-		};
-
-		Point cameraPosition = { 0,0 };
-		bool drawLine = true;
-		
 		while (true) {
 			input.beginNewFrame(); //reset released key/press key
 			const int CURRENT_TIME_MS = SDL_GetTicks();
@@ -106,8 +86,10 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 			}
 
 			else if (input.isKeyHeld(SDL_SCANCODE_E) == true) {
-				graphics.d_rect.h += 10;
-				graphics.d_rect.w += 10;
+				if (graphics.d_rect.h <= -5) {
+					graphics.d_rect.h += 10;
+					graphics.d_rect.w += 10;
+				}
 			}
 
 			else if (input.isKeyHeld(SDL_SCANCODE_A) == true) {
@@ -137,16 +119,21 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 			else if (input.wasKeyPressed(SDL_SCANCODE_P) == true) {
 				cameraPosition.x = 0; 
 				cameraPosition.y = 0;
+				graphics.d_rect.h = 0;
+				graphics.d_rect.w = 0;
 			}
 
 			delta_time = CURRENT_TIME_MS;
 	
 			SDL_SetRenderTarget(graphics.getRenderer(), texture);
+			//set background color and clear() to fill with the specified color
 			SDL_SetRenderDrawColor(graphics.getRenderer(), 0x00, 0x00, 0x00, 0x00);
 			graphics.clear();
+			//set x/y axis color and draw
 			SDL_SetRenderDrawColor(graphics.getRenderer(), 0xFF, 0xFF, 0xFF, 0xFF);
-			SDL_RenderDrawLine(graphics.getRenderer(), -800, graphics.getScreenHeight() / 2, 1200, graphics.getScreenHeight() / 2);
-			SDL_RenderDrawLine(graphics.getRenderer(), graphics.getScreenWidth() / 2, -800, graphics.getScreenWidth() / 2, 1400);
+			SDL_RenderDrawLine(graphics.getRenderer(), -800 + (-cameraPosition.x), graphics.getScreenHeight() / 2 + (-cameraPosition.y), 1200 + (-cameraPosition.x), graphics.getScreenHeight() / 2 + (-cameraPosition.y));
+			SDL_RenderDrawLine(graphics.getRenderer(), graphics.getScreenWidth() / 2 + (-cameraPosition.x), -800 + (-cameraPosition.y), graphics.getScreenWidth() / 2 + (-cameraPosition.x), 1400 + (-cameraPosition.y));
+			//set points color and iterate through each point
 			SDL_SetRenderDrawColor(graphics.getRenderer(), 255, 0, 0, 0);
 			unsigned char isFirst = 1;
 			double previous_x = 0;

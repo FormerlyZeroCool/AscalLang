@@ -3,22 +3,20 @@
  *
  *  Created on: Jan 15, 2021
  *      Author: andrewrubinstein
+ *	 Modified: Arhum Z. Nayyar (Rummy)
  */
-
 #ifndef KEYWORDS_PLOTGUIACTION_HPP_
 #define KEYWORDS_PLOTGUIACTION_HPP_
 
 #include "../Keyword.hpp"
 #include "../Vect2D.hpp"
 #include "../CrossPlatform.hpp"
-#include <unistd.h>
-#include <dlfcn.h>
-
 #include "../plot_gui/Graphics.h"
 #include "../plot_gui/Input.h"
 #include "../plot_gui/Camera.h"
-//#include "..\plot_gui\Graphics.h"
-//
+#include <unistd.h>
+#include <dlfcn.h>
+
 class PlotGUIAction: public Keyword {
 public:
 	PlotGUIAction(AscalExecutor* runtime, std::unordered_map<std::string, Object>* memory, std::map<std::string, setting<bool> >* boolsettings);
@@ -26,11 +24,9 @@ public:
 
 	std::string action(AscalFrame<double>* frame) override;
 
-
 	void update(float elapsedTime);
 	void draw(Graphics& graphics, Vect2D<std::pair<double, double>> &points, SDL_Texture* texture, SDL_Rect destRect);
 
-	//Graphics _graphics; //store graphics object
 	SDL_Window* bird;
 	SDL_Renderer* word;
 	
@@ -46,7 +42,6 @@ public:
 
 	Point cameraPosition = { 0,0 };
 private:
-	//Graphics _graphics; //store graphics object
 	SDL_Point* coordinates = {};
 };
 
