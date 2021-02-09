@@ -34,7 +34,8 @@ public:
 	//the x index in cartesian space is x*dx+xMin
 	Vect2D<std::pair<double, double>> calcTable(const std::vector<std::string>& functions, double xMin, double xMax, double xStepSize, double yStepSize);
 
-	double xMin, xMax, yMin, yMax, dx, dy;
+
+	void reDraw(std::vector<std::pair<double, double> > &points, Graphics &graphics, bool drawLine, SDL_Texture* texture, SDL_Rect destRect);
 
 	struct Point {
 		double x, y;

@@ -8,26 +8,93 @@
 #include <iostream>
 #include <fstream>
 
-static SDL_Rect m_rect;
+double Camera::xMin;
+double Camera::xMax;
+double Camera::yMin;
+double Camera::yMax;
+double Camera::pXMin; 
+double Camera::pXMax;
+double Camera::scaleFactor = 1;
+double Camera::pScalefactor;
+Graphics *Camera::graphics;
 
-void Camera::Init()
+void Camera::Init(double xMin, double xMax, double yMin, double yMax, Graphics &graphics)
 {
-	m_rect = { 0, 0, 640, 480 };
+	Camera::xMin = xMin, Camera::xMax = xMax, Camera::yMin = yMin, Camera::yMax = yMax;
+	Camera::graphics = &graphics;
 }
 
 
-SDL_Rect Camera::GetRect()
+void Camera::translateX(double dx)
 {
-	SDL_Rect GetRect = { m_rect.x,m_rect.y,m_rect.w,m_rect.h };
-	return GetRect;
+	Camera::xMin += dx;
+	Camera::xMax += dx;
 }
 
-void Camera::Update(float elapsedTime, Graphics& graphics)
+void Camera::translateY(double dy)
 {
-	m_rect.x = graphics.d_rect.x;
-	m_rect.y = graphics.d_rect.y;
-	m_rect.w = graphics.d_rect.w;
-	m_rect.h = graphics.d_rect.h;
-	GetRect();
+	Camera::yMin += dy;
+	Camera::yMax += dy;
+}
+
+double Camera::suggestedDx()
+{
+	
+	return (xMax - xMin) * 0.01;
+}
+
+double Camera::suggestedDy()
+{
+	return (yMax - yMin) * 0.01;
+}
+
+std::pair<double, double> Camera::transformCartesianToScreen(std::pair<double, double> p)
+{
+	//*For x coordinate : (x - xMin) / (xMax - xMin) * screen width
+	//* For y coordinate : screen height - (y - yMin) / (yMax - yMin) * screen height
+	std::pair<double, double> outPut;
+	p.first *= scaleFactor;
+	p.second *= scaleFactor;
+	outPut.first = (p.first - xMin) / (xMax - xMin) * Camera::graphics->getScreenWidth();
+	outPut.second = Camera::graphics->getScreenHeight() - (p.second - yMin) / (yMax - yMin) * Camera::graphics->getScreenHeight();
+	return outPut;
+}
+
+double Camera::domainRange()
+{
+	return (Camera::xMax - Camera::xMin) * .5 / Camera::scaleFactor;
+}
+
+bool Camera::shouldRecalc()
+{
+	double ratio;
+	if (Camera::pScalefactor > Camera::scaleFactor) {
+		ratio = Camera::pScalefactor / Camera::scaleFactor;
+	}
+	else {
+		ratio = Camera::scaleFactor / Camera::pScalefactor;
+	}
+	return (std::abs(Camera::pXMin - Camera::xMin) / Camera::scaleFactor > Camera::domainRange()) || ratio > .5;
+}
+
+void Camera::draw(double &xMin, double &xMax)
+{
+	Camera::pXMin = xMin;
+	Camera::pXMax = xMax;
+	xMin = Camera::xMin;
+	xMax = Camera::xMax;
+
+}
+
+void Camera::drawScale(double& scale)
+{
+	Camera::pScalefactor = scale;
+	scale = Camera::scaleFactor;
+}
+
+void Camera::scale(double delta)
+{
+	if (Camera::scaleFactor + delta > 0.01)
+	Camera::scaleFactor += delta;
 }
 

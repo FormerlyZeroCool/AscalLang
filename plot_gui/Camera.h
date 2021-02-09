@@ -12,7 +12,23 @@ class Graphics;
 
 class Camera {
 public:
-	static void Init(); 
-	static SDL_Rect GetRect(); 
-	static void Update(float elapsedTime, Graphics &graphics);
+	static void Init(double xMin, double xMax, double yMin, double yMax, Graphics &graphics); 
+	static void translateX(double dx);
+	static void translateY(double dy);
+	static double suggestedDx();
+	static double suggestedDy();
+	static double xMin, xMax, yMin, yMax;
+	static std::pair<double, double> transformCartesianToScreen(std::pair<double, double> p);
+
+	static double domainRange();
+	static bool shouldRecalc();
+	static void draw(double &xMin, double &xMax);
+	static void drawScale(double& scale);
+	static void scale(double delta);
+	static double scaleFactor;
+private:
+	static double pXMin, pXMax;
+	static double pScalefactor;
+	static Graphics *graphics;
+	
 };

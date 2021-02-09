@@ -13,8 +13,10 @@
 #include <iostream>
 
 Graphics::Graphics() {
-	SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0, &this->_window, &this->_renderer);
-	SDL_SetWindowTitle(this->_window, "PLOT_GUI");
+	_window = SDL_CreateWindow("GUI", 50, 50, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
+	_renderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_TARGETTEXTURE);
+	//SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0, &this->_window, &this->_renderer);
+	//SDL_SetWindowTitle(this->_window, "PLOT_GUI");
 	d_rect = {0,0,0,0};
 }
 
@@ -27,9 +29,9 @@ Graphics::~Graphics() {
 
 
 void Graphics::blitSurface(SDL_Texture* texture, SDL_Rect* sourceRectangle, SDL_Rect* destinationRectangle) {
-	SDL_Rect tmp = { destinationRectangle->x - Camera::GetRect().x, destinationRectangle->y - Camera::GetRect().y, destinationRectangle->w - Camera::GetRect().w, destinationRectangle->h - Camera::GetRect().h };
+	//SDL_Rect tmp = { destinationRectangle->x, destinationRectangle->y, destinationRectangle->w, destinationRectangle->h };
 	//SDL_Rect srcTmp = { sourceRectangle->x - Camera::GetRect().x, sourceRectangle->y - Camera::GetRect().y, sourceRectangle->w - Camera::GetRect().w, sourceRectangle->h - Camera::GetRect().h };
-	SDL_RenderCopy(this->_renderer, texture, sourceRectangle, &tmp);
+	SDL_RenderCopy(this->_renderer, texture, sourceRectangle, destinationRectangle);
 	//SDL_RenderCopy(this->_renderer, texture, &srcTmp, destinationRectangle);
 }
 

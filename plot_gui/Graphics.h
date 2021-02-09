@@ -47,6 +47,8 @@ public:
 	int getScreenWidth();
 	int getScreenHeight();
 
+	
+
 private:
 	SDL_Window* _window;
 	SDL_Renderer* _renderer;

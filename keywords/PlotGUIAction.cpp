@@ -30,12 +30,12 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 	double yMax = runtime->callOnFrame(frame, params[4].data);
 	double dx = runtime->callOnFrame(frame, params[5].data);
 	double dy = runtime->callOnFrame(frame, params[6].data);
+	double scale = 1;
 
 	int pid = fork();
 	if (!pid)
 	{
 		Graphics graphics;
-		Camera camera;
 		SDL_Event event;
 		Input input;
 		Point cameraPosition = { 0,0 };
@@ -43,11 +43,13 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 		struct Point {
 			double x, y;
 		};
+		Camera::Init(xMin, xMax, yMin, yMax, graphics);
+
 
 		//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
         //x addresses the x point xMin+dx*x, using xMin, and dx defined above
-		Vect2D<std::pair<double, double> > points = calcTable(functions, xMin, xMax, dx, dy);
-
+		Vect2D<std::pair<double, double> > points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), dx, dy);
+		Camera::draw(xMin, xMax);
 		//Get the amount of miliseconds since SDL-Lib was intialized
 		//This will help us know when to update screen
 		int delta_time = SDL_GetTicks();
@@ -56,7 +58,8 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 
 		SDL_Texture* texture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
 		SDL_Rect destRect = {0,0,graphics.getScreenWidth(), graphics.getScreenHeight() };
-
+		SDL_Texture* plotTexture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+		reDraw(points, graphics, drawLine, plotTexture, destRect);
 		while (true) {
 			input.beginNewFrame(); //reset released key/press key
 			const int CURRENT_TIME_MS = SDL_GetTicks();
@@ -81,30 +84,68 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 			}
 
 			else if (input.isKeyHeld(SDL_SCANCODE_Q) == true) {
-				graphics.d_rect.h -= 10;
-				graphics.d_rect.w -= 10;
+				Camera::scale(0.007);
+				if (Camera::shouldRecalc()) {
+					Camera::drawScale(scale);
+					points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), dx, dy);
+				}
+				SDL_DestroyTexture(plotTexture);
+				plotTexture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+				reDraw(points, graphics, drawLine, plotTexture, destRect);
 			}
 
 			else if (input.isKeyHeld(SDL_SCANCODE_E) == true) {
-				if (graphics.d_rect.h <= -5) {
-					graphics.d_rect.h += 10;
-					graphics.d_rect.w += 10;
+				Camera::scale(-0.007);
+				if (Camera::shouldRecalc()) {
+					Camera::drawScale(scale);
+					points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), dx, dy);
 				}
+				SDL_DestroyTexture(plotTexture);
+				plotTexture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+				reDraw(points, graphics, drawLine, plotTexture, destRect);
 			}
 
 			else if (input.isKeyHeld(SDL_SCANCODE_A) == true) {
-				cameraPosition.x -= 10;
+				Camera::translateX(Camera::suggestedDx() * -1);
+				if (Camera::shouldRecalc()) {
+					Camera::draw(xMin, xMax);
+					points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), dx, dy);
+				}
+				SDL_DestroyTexture(plotTexture);
+				plotTexture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+				reDraw(points, graphics, drawLine, plotTexture, destRect);
 			}
 			else if (input.isKeyHeld(SDL_SCANCODE_D) == true) {
-				cameraPosition.x += 10;
+				Camera::translateX(Camera::suggestedDx());
+				if (Camera::shouldRecalc()) {
+					Camera::draw(xMin, xMax);
+					points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), dx, dy);
+				}
+				SDL_DestroyTexture(plotTexture);
+				plotTexture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+				reDraw(points, graphics, drawLine, plotTexture, destRect);
 			}
 
 			else if (input.isKeyHeld(SDL_SCANCODE_W) == true) {
-				cameraPosition.y -= 10;
+				Camera::translateY(Camera::suggestedDy() * -1);
+				if (Camera::shouldRecalc()) {
+					Camera::draw(xMin, xMax);
+					points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), dx, dy);
+				}
+				SDL_DestroyTexture(plotTexture);
+				plotTexture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+				reDraw(points, graphics, drawLine, plotTexture, destRect);
 			}
 
 			else if (input.isKeyHeld(SDL_SCANCODE_S) == true) {
-				cameraPosition.y += 10;
+				Camera::translateY(Camera::suggestedDy());
+				if (Camera::shouldRecalc()) {
+					Camera::draw(xMin, xMax);
+					points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), dx, dy);
+				}
+				SDL_DestroyTexture(plotTexture);
+				plotTexture = SDL_CreateTexture(graphics.getRenderer(), SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, graphics.getScreenWidth(), graphics.getScreenHeight());
+				reDraw(points, graphics, drawLine, plotTexture, destRect);
 			}
 
 			else if (input.wasKeyPressed(SDL_SCANCODE_L) == true) {
@@ -122,55 +163,25 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 				graphics.d_rect.h = 0;
 				graphics.d_rect.w = 0;
 			}
+			
 
 			delta_time = CURRENT_TIME_MS;
-	
-			SDL_SetRenderTarget(graphics.getRenderer(), texture);
-			//set background color and clear() to fill with the specified color
-			SDL_SetRenderDrawColor(graphics.getRenderer(), 0x00, 0x00, 0x00, 0x00);
-			graphics.clear();
-			//set x/y axis color and draw
-			SDL_SetRenderDrawColor(graphics.getRenderer(), 0xFF, 0xFF, 0xFF, 0xFF);
-			SDL_RenderDrawLine(graphics.getRenderer(), -800 + (-cameraPosition.x), graphics.getScreenHeight() / 2 + (-cameraPosition.y), 1200 + (-cameraPosition.x), graphics.getScreenHeight() / 2 + (-cameraPosition.y));
-			SDL_RenderDrawLine(graphics.getRenderer(), graphics.getScreenWidth() / 2 + (-cameraPosition.x), -800 + (-cameraPosition.y), graphics.getScreenWidth() / 2 + (-cameraPosition.x), 1400 + (-cameraPosition.y));
-			//set points color and iterate through each point
-			SDL_SetRenderDrawColor(graphics.getRenderer(), 255, 0, 0, 0);
-			unsigned char isFirst = 1;
-			double previous_x = 0;
-			double previous_y = 0;
-			for (int i = 0; i < points.size(); i++) {
-				/* In order to translate/scale the function correctly we use the following functions:
-				* For x coordinate: (x - xMin) / (xMax - xMin) * screen width
-				* For y coordinate: screen height - (y - yMin) / (yMax - yMin) * screen height
-				* And to scroll horizontally we keep a scroll offset and add that to all the points
-				* when drawing them. The offset is the opposite of what direction the user is scrolling
-				*/
-
-				double realX = ((points[i].first - xMin) / (xMax - xMin)) * 742;
-				double realY = 584 - ((points[i].second - yMin) / (yMax - yMin) * 584);
-				SDL_RenderDrawPoint(graphics.getRenderer(), realX + (-cameraPosition.x), realY + (-cameraPosition.y));
-
-			if (drawLine == true){
-					if (!isFirst)
-					{
-						SDL_RenderDrawLine(graphics.getRenderer(), previous_x + (-cameraPosition.x), previous_y + (-cameraPosition.y), realX + (-cameraPosition.x), realY + (-cameraPosition.y));
-					}
-
-				previous_x = realX;
-				previous_y = realY;
-
-				if (isFirst)
-				{
-					isFirst = 0;
-				}
-			  }
-			}
 			SDL_SetRenderTarget(graphics.getRenderer(), NULL);
-			graphics.blitSurface(texture, NULL, &destRect);
-			SDL_RenderPresent(graphics.getRenderer());
-			camera.Update(std::min(ELAPSED_TIME_MS, MAX_FRAME_TIME), graphics);
 
-			CrossPlatform::usleep(10000);
+			//SDL_SetRenderTarget(graphics.getRenderer(), NULL);
+			//graphics.blitSurface(texture, NULL, NULL);
+			//SDL_Rect source = destRect;
+			graphics.blitSurface(plotTexture, NULL, NULL);
+			//SDL_SetRenderTarget(graphics.getRenderer(), NULL);
+			//SDL_RenderPresent(graphics.getRenderer());
+			//graphics.clear();
+		//	graphics.blitSurface(texy, NULL, NULL);
+			SDL_RenderPresent(graphics.getRenderer());
+			//SDL_DestroyTexture(texy);
+			
+			//SDL_Delay(50);
+			CrossPlatform::usleep(20000);
+			
 		}
 
 		throw 0;
@@ -183,6 +194,7 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 	return MAX;
 }
 
+
 void PlotGUIAction::draw(Graphics& graphics, Vect2D<std::pair<double, double>>& points, SDL_Texture* texture, SDL_Rect destRect) {
 }
 
@@ -191,6 +203,11 @@ void PlotGUIAction::update(float elapsedTime) {
 
 Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std::string>& functions, double xMin, double xMax, double xStepSize, double yStepSize)
 {
+	xMin /= Camera::scaleFactor;
+	xMax /= Camera::scaleFactor;
+	xStepSize /= Camera::scaleFactor;
+	//std::cout << "Scale factor: " << Camera::scaleFactor << "\n";
+	//std::cout << "Step Size: " << xStepSize << "\n";
 	int tableWidth = (xMax - xMin) / (xStepSize > 0 ? xStepSize : 1);
 	double dx = (xMax - xMin) / tableWidth;
 	double dy = yStepSize > 0 ? yStepSize : 1;
@@ -213,5 +230,52 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 		}
 	}
 	return outPuts;
+}
+
+void PlotGUIAction::reDraw(std::vector<std::pair<double, double> >& points, Graphics& graphics, bool drawLine, SDL_Texture* texture, SDL_Rect destRect)
+{
+	bool isFirst = 1;
+	std::pair<double, double> previousPoint;
+	SDL_SetRenderTarget(graphics.getRenderer(), texture);
+	//set background color and clear() to fill with the specified color
+	SDL_SetRenderDrawColor(graphics.getRenderer(), 0x00, 0x00, 0x00, 0x00);
+	graphics.clear();
+	//set x/y axis color and draw
+	SDL_SetRenderDrawColor(graphics.getRenderer(), 0xFF, 0xFF, 0xFF, 0x00);
+
+	//Draw x/y axis
+	std::pair<double, double> startX = Camera::transformCartesianToScreen(std::pair<double, double>(Camera::xMin / Camera::scaleFactor, 0));
+	std::pair<double, double> startY = Camera::transformCartesianToScreen(std::pair<double, double>(0, Camera::yMin / Camera::scaleFactor));
+	std::pair<double, double> endX = Camera::transformCartesianToScreen(std::pair<double, double>(Camera::xMax / Camera::scaleFactor, 0));
+	std::pair<double, double> endY = Camera::transformCartesianToScreen(std::pair<double, double>(0, Camera::yMax / Camera::scaleFactor));
+
+	SDL_RenderDrawLine(graphics.getRenderer(), startX.first, startX.second, endX.first, endX.second);
+	SDL_RenderDrawLine(graphics.getRenderer(), startY.first, startY.second, endY.first, endY.second);
+	for (int i = 0; i < points.size(); i++) {
+		/* In order to translate/scale the function correctly we use the following functions:
+		* For x coordinate: (x - xMin) / (xMax - xMin) * screen width
+		* For y coordinate: screen height - (y - yMin) / (yMax - yMin) * screen height
+		* And to scroll horizontally we keep a scroll offset and add that to all the points
+		* when drawing them. The offset is the opposite of what direction the user is scrolling
+		*/
+		SDL_SetRenderDrawColor(graphics.getRenderer(), 255, 0, 0, 0);
+		std::pair<double, double> p = Camera::transformCartesianToScreen(points[i]);
+		SDL_RenderDrawPoint(graphics.getRenderer(), p.first, p.second);
+		//std::cout << realX << "," << realY << std::endl;
+		if (drawLine == true) {
+			if (!isFirst)
+			{
+				SDL_RenderDrawLine(graphics.getRenderer(), previousPoint.first, previousPoint.second, p.first, p.second);
+			}
+			previousPoint = p;
+
+
+			if (isFirst)
+			{
+				isFirst = 0;
+			}
+		}
+	}
+
 }
 
