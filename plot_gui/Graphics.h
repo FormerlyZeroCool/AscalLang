@@ -6,23 +6,10 @@
 *******************************************************************************/
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
-//#include <SDL_main.h>
-//#include <SDL2\SDL.h>
-//#include <SDL2\SDL_stdinc.h>
-//#include <SDL2\SDL_main.h>
-//#include <SDL2\SDL.h>
-//#include <SDL.h>
 #include <map>
-//#include <SDL2\SDL.h>
-//#include <SDL2/SDL.h>
-//#include <SDL.h>
 //extern "C"
-
 #include <SDL2/SDL.h>
-
-
-//#include <SDL2/SDL.h>
-
+//#include <SDL2/SDL_image.h>
 
 struct SDL_Window;
 struct SDL_Renderer;
@@ -35,7 +22,7 @@ public:
 	~Graphics();
 
 	//void blitzSurface will draw a texture to a certain part of the screen
-	//source is what we are drawing to the screen, sourceRectangle is what part of the spritesheet we will draw
+	//sourceRectangle is what we are drawing to the screen (A part of the texture or NULL for entire texture)
 	//destinationRectangle is where on the screen we will draw it
 	void blitSurface(SDL_Texture* source, SDL_Rect* sourceRectangle, SDL_Rect* destinationRectangle);
 
@@ -45,15 +32,26 @@ public:
 
 	void clear();
 
+	void draw();
+
 	void drawRect();
 
 	void drawRect2();
 
 	SDL_Renderer* getRenderer() const;
 
+	SDL_Window* getWindow() const;
+
+	SDL_Rect d_rect;
+
+	int getScreenWidth();
+	int getScreenHeight();
+
+	
+
 private:
 	SDL_Window* _window;
 	SDL_Renderer* _renderer;
-
+	int SCREEN_WIDTH = 1024, SCREEN_HEIGHT = 768;
 };
 #endif
