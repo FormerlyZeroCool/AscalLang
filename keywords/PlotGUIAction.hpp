@@ -35,7 +35,7 @@ public:
 	Vect2D<std::pair<double, double>> calcTable(const std::vector<std::string>& functions, double xMin, double xMax, double xStepSize, double yStepSize);
 
 
-	void reDraw(std::vector<std::pair<double, double> > &points, Graphics &graphics, bool drawLine, SDL_Texture* texture, SDL_Rect destRect);
+	void reDraw(Vect2D<std::pair<double, double> > &points, Graphics &graphics, bool drawLine, SDL_Texture* texture, SDL_Rect destRect);
 
 	struct Point {
 		double x, y;

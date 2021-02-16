@@ -19,16 +19,17 @@ public:
 	static double suggestedDy();
 	static double xMin, xMax, yMin, yMax;
 	static std::pair<double, double> transformCartesianToScreen(std::pair<double, double> p);
-
+	static double transformScreenToCartesian(double x);
 	static double domainRange();
 	static bool shouldRecalc();
 	static void draw(double &xMin, double &xMax);
 	static void drawScale(double& scale);
 	static void scale(double delta);
 	static double scaleFactor;
+	static Graphics *graphics;
+	static void update();
 private:
 	static double pXMin, pXMax;
 	static double pScalefactor;
-	static Graphics *graphics;
 	
 };

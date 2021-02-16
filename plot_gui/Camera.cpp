@@ -27,25 +27,26 @@ void Camera::Init(double xMin, double xMax, double yMin, double yMax, Graphics &
 
 void Camera::translateX(double dx)
 {
+	dx = dx/graphics->getScreenWidth()*(xMax-xMin);
 	Camera::xMin += dx;
 	Camera::xMax += dx;
 }
 
 void Camera::translateY(double dy)
 {
+	dy = dy/graphics->getScreenHeight()*(yMax-yMin);
 	Camera::yMin += dy;
 	Camera::yMax += dy;
 }
 
 double Camera::suggestedDx()
 {
-	
-	return (xMax - xMin) * 0.01;
+	return 5;
 }
 
 double Camera::suggestedDy()
 {
-	return (yMax - yMin) * 0.01;
+	return 5;
 }
 
 std::pair<double, double> Camera::transformCartesianToScreen(std::pair<double, double> p)
@@ -59,7 +60,12 @@ std::pair<double, double> Camera::transformCartesianToScreen(std::pair<double, d
 	outPut.second = Camera::graphics->getScreenHeight() - (p.second - yMin) / (yMax - yMin) * Camera::graphics->getScreenHeight();
 	return outPut;
 }
-
+double Camera::transformScreenToCartesian(double x)
+{
+	double sf = 1/scaleFactor;
+	double xMinS = xMin*sf, xMaxS = xMax*sf;
+	return (x) / (Camera::graphics->getScreenWidth())*(xMaxS - xMinS)+xMinS;
+}
 double Camera::domainRange()
 {
 	return (Camera::xMax - Camera::xMin) * .5 / Camera::scaleFactor;
@@ -67,14 +73,15 @@ double Camera::domainRange()
 
 bool Camera::shouldRecalc()
 {
-	double ratio;
-	if (Camera::pScalefactor > Camera::scaleFactor) {
-		ratio = Camera::pScalefactor / Camera::scaleFactor;
+	static bool scaled = scaleFactor;
+	if(scaled == scaleFactor)
+		return (std::abs(Camera::pXMin/scaleFactor - Camera::xMin/scaleFactor) > Camera::domainRange());
+	else
+	{
+		scaled = scaleFactor;
+		return true;
 	}
-	else {
-		ratio = Camera::scaleFactor / Camera::pScalefactor;
-	}
-	return (std::abs(Camera::pXMin - Camera::xMin) / Camera::scaleFactor > Camera::domainRange()) || ratio > .5;
+	
 }
 
 void Camera::draw(double &xMin, double &xMax)
