@@ -158,10 +158,10 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 
 			else if (input.wasKeyPressed(SDL_SCANCODE_P) == true) {
 				Camera::scaleFactor = 1;
-				Camera::xMin = -5;
-				Camera::xMax = 5;
-				Camera::yMin = -5;
-				Camera::yMax = 5;
+				Camera::xMin = -15;
+				Camera::xMax = 15;
+				Camera::yMin = -15;
+				Camera::yMax = 15;
 				points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), graphics.getScreenWidth(), dy);
 				redraw = true;
 			}
@@ -233,7 +233,8 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 			xi = Camera::transformScreenToCartesian(i*0.25);
 			std::string xis = ParsingUtil::to_string(xi);
 			uint64_t hash = 0;
-			hash = (hash = hashFunctionCall(function)) + hashFunctionCall(hash,xis);
+			hash = hashFunctionCall(function);
+			hash += hashFunctionCall(hash,xis);
 			if(memoize && runtime->memoPad.count(hash))
 			{
 				outPuts.push_back(
