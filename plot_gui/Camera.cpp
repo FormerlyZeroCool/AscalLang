@@ -73,14 +73,15 @@ double Camera::domainRange()
 
 bool Camera::shouldRecalc()
 {
-	static bool scaled = scaleFactor;
+	return true;
+	/*static bool scaled = scaleFactor;
 	if(scaled == scaleFactor)
-		return (std::abs(Camera::pXMin/scaleFactor - Camera::xMin/scaleFactor) > Camera::domainRange());
+		return true || (std::abs(Camera::pXMin/scaleFactor - Camera::xMin/scaleFactor) > Camera::domainRange());
 	else
 	{
 		scaled = scaleFactor;
 		return true;
-	}
+	}*/
 	
 }
 

@@ -17,8 +17,11 @@
 #include <unistd.h>
 #include <dlfcn.h>
 
+
 class PlotGUIAction: public Keyword {
+	bool memoize;
 public:
+
 	PlotGUIAction(AscalExecutor* runtime, std::unordered_map<std::string, Object>* memory, std::map<std::string, setting<bool> >* boolsettings);
 	//~PlotGUIAction();
 

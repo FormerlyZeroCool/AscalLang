@@ -5,7 +5,27 @@
 * Date: 2/1/21
 *******************************************************************************/
 #include "PlotGUIAction.hpp"
+static const std::hash<std::string> hashfn;
+static uint64_t hashFunctionCall(const std::string &exp)
+{
+    return hashfn(exp);
+}
 
+static uint64_t h;
+static uint64_t hashFunctionCall(uint64_t hash,std::string& s)
+{
+	h = hash;
+        hash += hashfn(s);
+        hash ^= hash>>2;
+        hash ^= hash<<5;
+        hash ^= hash>>12;
+        hash ^= hash<<18;
+        hash ^= hash>>21;
+        hash ^= hash<<26;
+        hash ^= hash<<29;
+    
+    return hash+h;
+}
 namespace {
 	const int FPS = 50;
 	const int MAX_FRAME_TIME = 5 * 1000 / FPS; //Max amount of time a frame is allowed to last
@@ -19,6 +39,7 @@ PlotGUIAction::PlotGUIAction(AscalExecutor* runtime, std::unordered_map<std::str
 
 std::string PlotGUIAction::action(AscalFrame<double>* frame)
 {
+	memoize = *runtime->boolsettings["memoize"];
 	SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	std::vector<SubStr> params = Object("", "", exp.data).params;
 	std::vector<std::string> functions = ParsingUtil::split(params[0].data, std::string("|"));
@@ -59,7 +80,7 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
 
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1); 
-	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" );
+	SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "2" );
 
 		//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
         //x addresses the x point xMin+dx*x, using xMin, and dx defined above
@@ -170,7 +191,7 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 			
 			//SDL_Delay(50);
 			delta_time = SDL_GetTicks() - CURRENT_TIME_MS;
-			CrossPlatform::usleep(30000-delta_time*1000);
+			CrossPlatform::usleep(32000-delta_time*1000);
 			
 		}
 
@@ -198,7 +219,7 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 	//std::cout << "Scale factor: " << Camera::scaleFactor << "\n";
 	//std::cout << "Step Size: " << xStepSize << "\n";
 	double xi;
-	uint32_t tableWidth = Camera::graphics->getScreenWidth() * 2;
+	uint32_t tableWidth = Camera::graphics->getScreenWidth() * 4;
 	Vect2D<std::pair<double, double> > outPuts(tableWidth, functions.size());
 	std::stringstream exp;
 	FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr, nullptr, nullptr);
@@ -209,7 +230,17 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 		const std::string& function = functions[j];
 		for (uint32_t i = 0; i < tableWidth; i++)
 		{
-			xi = Camera::transformScreenToCartesian(i*0.5);
+			xi = Camera::transformScreenToCartesian(i*0.25);
+			std::string xis = ParsingUtil::to_string(xi);
+			uint64_t hash = 0;
+			hash = (hash = hashFunctionCall(function)) + hashFunctionCall(hash,xis);
+			if(memoize && runtime->memoPad.count(hash))
+			{
+				outPuts.push_back(
+					std::pair<double, double>(xi, runtime->memoPad[hash]) );
+			}
+			else
+			{
 	                        calledFunction->index = 0;
 	                        calledFunction->level = 0;
 	                        calledFunction->setIsFirstRun(true);
@@ -217,12 +248,17 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 							calledFunction->setComingfromElse(false);
 							calledFunction->setIfFlag(false);
 							calledFunction->setIfResultFlag(false);
-			exp << function << '(' << ParsingUtil::to_string(xi) << ')';
+			exp << function << '(' << xis << ')';
 			calledFunction->exp = exp.str();
 			exp.str(std::string());
+			double result = runtime->calculateExpression(calledFunction);
 			outPuts.push_back(
-				std::pair<double, double>(xi, runtime->calculateExpression(calledFunction))
+				std::pair<double, double>(xi, result)
 			);
+			if(memoize)
+				runtime->memoPad[hash] = result;
+			}
+			
 		}}catch(std::string &error)
 		{
 			delete calledFunction;
