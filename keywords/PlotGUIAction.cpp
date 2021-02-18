@@ -219,9 +219,8 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 	//std::cout << "Scale factor: " << Camera::scaleFactor << "\n";
 	//std::cout << "Step Size: " << xStepSize << "\n";
 	double xi;
-	uint32_t tableWidth = Camera::graphics->getScreenWidth() * 4;
+	uint32_t tableWidth = Camera::graphics->getScreenWidth() * 2;
 	Vect2D<std::pair<double, double> > outPuts(tableWidth, functions.size());
-	std::stringstream exp;
 	FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr, nullptr, nullptr);
 	calledFunction->setIsDynamicAllocation(false);
 	for (int j = 0; j < functions.size(); j++)
@@ -230,7 +229,7 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 		const std::string& function = functions[j];
 		for (uint32_t i = 0; i < tableWidth; i++)
 		{
-			xi = Camera::transformScreenToCartesian(i*0.25);
+			xi = Camera::transformScreenToCartesian(i*0.5);
 			std::string xis = ParsingUtil::to_string(xi);
 			uint64_t hash = 0;
 			hash = hashFunctionCall(function);
@@ -242,22 +241,21 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 			}
 			else
 			{
-	                        calledFunction->index = 0;
-	                        calledFunction->level = 0;
-	                        calledFunction->setIsFirstRun(true);
-	                        calledFunction->setAugmented(false);
-							calledFunction->setComingfromElse(false);
-							calledFunction->setIfFlag(false);
-							calledFunction->setIfResultFlag(false);
-			exp << function << '(' << xis << ')';
-			calledFunction->exp = exp.str();
-			exp.str(std::string());
-			double result = runtime->calculateExpression(calledFunction);
-			outPuts.push_back(
-				std::pair<double, double>(xi, result)
-			);
-			if(memoize)
-				runtime->memoPad[hash] = result;
+	            calledFunction->index = 0;
+	            calledFunction->level = 0;
+	            calledFunction->setIsFirstRun(true);
+	            calledFunction->setAugmented(false);
+				calledFunction->setComingfromElse(false);
+				calledFunction->setIfFlag(false);
+				calledFunction->setIfResultFlag(false);
+				std::stringstream exp;
+				exp << function << '(' << xis << ')';
+				calledFunction->exp = exp.str();
+				double result = runtime->calculateExpression(calledFunction);
+				outPuts.push_back(
+					std::pair<double, double>(xi, result) );
+				if(memoize)
+					runtime->memoPad[hash] = result;
 			}
 			
 		}}catch(std::string &error)
@@ -271,6 +269,7 @@ Vect2D<std::pair<double, double>> PlotGUIAction::calcTable(const std::vector<std
 		}catch(...)
 		{
 			delete calledFunction;
+			throw 1;
 		}
 	}
 	delete calledFunction;
