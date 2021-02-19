@@ -60,16 +60,23 @@ std::map
 std::string (*)(AscalFrame<double>*,Object&)> objectActionMapper;
 
 /////////////////////////////
-size_t rememberedFromMemoTableCount;
 //stacks!
 //these stacks handle respecting priority, the can handle as many priority levels as you like
 stack<double> savedOperands;
 stack<char> savedOperators;
 stack<double> processOperands;
 stack<char> processOperators;
-std::unordered_map<uint64_t,double> memoPad;
 AscalFrame<double>* cachedRtnObject = nullptr;
 public:
+size_t rememberedFromMemoTableCount;
+std::unordered_map<uint64_t,double> memoPad;
+struct ColorRGBA {
+	uint8_t r,g,b,a = 0;
+	ColorRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
+	ColorRGBA(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b), a(0) {}
+};
+std::map<std::string, ColorRGBA> colorMap;
+std::unordered_map<uint64_t,double> memoPad;
 /////////////////////////////
 //Program Global Memory Declaration
 std::unordered_map<std::string,Object > memory;
