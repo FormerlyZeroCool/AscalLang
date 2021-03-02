@@ -116,7 +116,17 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 			if (input.wasKeyPressed(SDL_SCANCODE_ESCAPE) == true) {
 				throw 0; //User exits normally with ESC key
 			}
-
+			if (event.type == SDL_MOUSEWHEEL) {
+				if (event.wheel.y > 0) {
+					Camera::scale(Camera::scaleFactor < 2 ? 0.20 : 0.5);
+					redraw = true;
+				}
+				else if (event.wheel.y < 0) {
+					Camera::scale(Camera::scaleFactor < 2 ? -0.20 : -0.5);
+					redraw = true;
+				}
+			}
+			event.wheel.y = 0;
 			if (input.isKeyHeld(SDL_SCANCODE_Q) == true) {
 				Camera::scale(Camera::scaleFactor<2?0.01:0.5);
 				redraw = true;
@@ -164,6 +174,8 @@ std::string PlotGUIAction::action(AscalFrame<double>* frame)
 				Camera::yMax = 15;
 				points = calcTable(functions, Camera::xMin - Camera::domainRange(), Camera::xMax + Camera::domainRange(), graphics.getScreenWidth(), dy);
 				redraw = true;
+				std::cout << "Memoized values: " << runtime->memoPad.size() << " memory used(bytes): " << runtime->memoPad.size() * 16 << "\n";
+				std::cout << "Times cache used: " << runtime->rememberedFromMemoTableCount << " Ratio(s/u): " << (runtime->memoPad.size() * 1.0 / runtime->rememberedFromMemoTableCount) << "\n";
 			}
 			if(redraw)
 			{

@@ -14,7 +14,7 @@
 
 Graphics::Graphics() {
 	_window = SDL_CreateWindow("GUI", 50, 50, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE);
-	_renderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_TARGETTEXTURE);
+	_renderer = SDL_CreateRenderer(_window, -1, SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_ACCELERATED);
 	//SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0, &this->_window, &this->_renderer);
 	//SDL_SetWindowTitle(this->_window, "PLOT_GUI");
 	d_rect = {0,0,0,0};
