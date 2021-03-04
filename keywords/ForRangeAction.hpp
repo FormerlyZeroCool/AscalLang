@@ -9,29 +9,28 @@
 #define KEYWORDS_FORRANGEACTION_HPP_
 
 #include "../Keyword.hpp"
-class ForRangeAction: public Keyword {
+class ForRangeAction: public ComplexStKeyword {
 public:
-	ForRangeAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ForRangeAction(AscalExecutor &runtime):
+		ComplexStKeyword(runtime)
 	{
 		this->keyWord = "for";
 	}
 
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    std::string expbkp = frame->exp;
-	    int index = frame->index+4;
+	    uint32_t index = frame->index+4;
 	    while(frame->exp[index] == ' ')
 	        index++;
 
-	    SubStr itVar = ParsingUtil::getVarName(frame->exp, index);
+	    SubStrSV itVar = ParsingUtil::getVarNameSV(frame->exp, index);
 	    const int postRangeIndex = frame->exp.find("in range", index)+8;
-	    SubStr limitExpr = ParsingUtil::getExprInString(frame->exp, postRangeIndex, '(', ')', '{');
-	    Object limitParams("","","");
+	    SubStrSV limitExpr = ParsingUtil::getExprInStringSV(frame->exp, postRangeIndex, '(', ')', '{');
+	    Object limitParams(runtime.memMan, "","","");
 	    limitParams.setParams(limitExpr.data);
 	    if(limitParams.params.empty())
 	    	throw std::string("Error no limit in for loop condition");
-	    runtime->callOnFrame(frame, "loc "+itVar.data+" = 0");
+	    runtime.callOnFrame(frame, "loc "+itVar.data.str()+" = 0");
 	    SubStr limitStr = limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0];
 	    int startOfCodeBlock = limitExpr.start;
 	    SubStr codeBlock("",0,0);
@@ -41,37 +40,45 @@ public:
 	        startOfCodeBlock++;
 	    }
 	    index = startOfCodeBlock;
-	    codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime->ascal_cin);
-
-		double i = limitParams.params.size()>1?runtime->callOnFrame(frame,limitParams.params[0].data):0;
+	    codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime.ascal_cin);
+	    ParamFrame<double> executionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
+	    executionFrame.exp = codeBlock.data;
+	    executionFrame.setIsDynamicAllocation(false);
+	    executionFrame.setContext(frame->getContext());
+		double i = limitParams.params.size()>1?runtime.callOnFrame(frame,limitParams.params[0].data):0;
+		size_t itObj = (*frame->getLocalMemory()).getIndex(itVar.data);
 	    if(ParsingUtil::firstChar(limitStr.data,'&'))
 	    {
-	    	SubStr limitPartial = ParsingUtil::getVarName(frame->exp, postRangeIndex+limitStr.start);
+	    	uint32_t index = postRangeIndex+limitStr.start;
+	    	SubStrSV limitPartial = ParsingUtil::getVarNameSV(frame->exp, index);
 	    	limitStr.start = limitStr.data.find("&")+1;
-	    	size_t limitStrEnd = limitStr.data.find(".")-1;
 
 
-	    	Object *list = runtime->resolveNextExprSafe(frame, limitPartial);
+	    	Object *list = runtime.resolveNextExprSafe(frame, limitPartial);
 	    	if(list->getListSize() > 0)
 	    	{
-
-	        	if(limitParams.params.size()<3 || runtime->callOnFrame(frame,limitParams.params[2].data) > 0)
+	        	if(limitParams.params.size()<3 || runtime.callOnFrame(frame,limitParams.params[2].data) > 0)
 	        	{
-	            	for(;i < list->getListSize(); i += limitParams.params.size()>2?runtime->callOnFrame(frame,limitParams.params[2].data):1)
+	            	for(;i < list->getListSize(); i += limitParams.params.size()>2?runtime.callOnFrame(frame,limitParams.params[2].data):1)
 	            	{
-	            		if(*(*boolsettings)["o"])
+	            	    if(*runtime.boolsettings["o"])
 	                    {
 	                        std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
 	                    }
 	                    try{
-	                        (*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
-	                        runtime->callOnFrame(frame,codeBlock.data);
+	                        //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
+	                    	frame->getLocalMemory()->getObject(itObj) = list->getListElement(i, runtime.memory);
+	                        executionFrame.index = 0;
+	                        executionFrame.level = 0;
+	                        executionFrame.setIsFirstRun(true);
+	                        executionFrame.setZeroFlag(false);
+	                        runtime.calculateExpression(&executionFrame);
 	                    }
 	                    catch(std::string &exception)
 	                    {
 	                        throw std::string(exception + "\nIn for body subexp: ");
 	                    }
-	                    if(*(*boolsettings)["o"])
+	            	    if(*runtime.boolsettings["o"])
 	                    {
 	                        std::cout<<"for block Execution Complete.\n\n";
 	                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list->getListSize()<<"\n";
@@ -82,21 +89,26 @@ public:
 	        	{
 	        		if(i == 0)
 	        			i = list->getListSize()-1;
-	            	for(;i >= 0; i += runtime->callOnFrame(frame,limitParams.params[2].data))
+	            	for(;i >= 0; i += runtime.callOnFrame(frame,limitParams.params[2].data))
 	            	{
-	            		if(*(*boolsettings)["o"])
+	            	    if(*runtime.boolsettings["o"])
 	                    {
 	                        std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
 	                    }
 	                    try{
-	                        (*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
-	                        runtime->callOnFrame(frame,codeBlock.data);
+	                        //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
+	                    	frame->getLocalMemory()->getObject(itObj) = list->getListElement(i, runtime.memory);
+	                        executionFrame.index = 0;
+	                        executionFrame.level = 0;
+	                        executionFrame.setIsFirstRun(true);
+	                        executionFrame.setZeroFlag(false);
+	                        runtime.calculateExpression(&executionFrame);
 	                    }
 	                    catch(std::string &exception)
 	                    {
 	                        throw std::string(exception + "\nIn for body subexp: ");
 	                    }
-	                    if(*(*boolsettings)["o"])
+	            	    if(*runtime.boolsettings["o"])
 	                    {
 	                        std::cout<<"for block Execution Complete.\n\n";
 	                        std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<list->getListSize()<<"\n";
@@ -107,25 +119,29 @@ public:
 	    }
 	    else
 	    {
-	        double limit = runtime->callOnFrame(frame, limitStr.data);
+	        double limit = runtime.callOnFrame(frame, limitStr.data);
 	    	    if(i < limit)
 	    	        for(; i < limit;
-	    	        		i += limitParams.params.size()>2?runtime->callOnFrame(frame,limitParams.params[2].data):1)
+	    	        		i += limitParams.params.size()>2?runtime.callOnFrame(frame,limitParams.params[2].data):1)
 	    	        {
-
-	    	        	if(*(*boolsettings)["o"])
+	    	    	    if(*runtime.boolsettings["o"])
 	    	            {
 	    	                std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
 	    	            }
 	    	            try{
-	    	                (*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
-	    	                runtime->callOnFrame(frame,codeBlock.data);
+	    	                //(*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
+	    	            	frame->getLocalMemory()->getObject(itObj).setDouble(i);
+	                        executionFrame.index = 0;
+	                        executionFrame.level = 0;
+	                        executionFrame.setIsFirstRun(true);
+	                        executionFrame.setZeroFlag(false);
+	                        runtime.calculateExpression(&executionFrame);
 	    	            }
 	    	            catch(std::string &exception)
 	    	            {
 	    	                throw std::string(exception + "\nIn for body subexp: ");
 	    	            }
-	    	            if(*(*boolsettings)["o"])
+	    	    	    if(*runtime.boolsettings["o"])
 	    	            {
 	    	                std::cout<<"for block Execution Complete.\n\n";
 	    	                std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
@@ -133,22 +149,26 @@ public:
 	    	        }
 	    	    else
 	    	        for(; i > limit;
-	    	        		i += limitParams.params.size()>2?runtime->callOnFrame(frame,limitParams.params[2].data):-1)
+	    	        		i += limitParams.params.size()>2?runtime.callOnFrame(frame,limitParams.params[2].data):-1)
 	    	        {
-
-	    	        	if(*(*boolsettings)["o"])
+	    	    	    if(*runtime.boolsettings["o"])
 	    	            {
 	    	                std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
 	    	            }
 	    	            try{
-	    	                (*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
-	    	                runtime->callOnFrame(frame,codeBlock.data);
+	    	                //(*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
+	    	            	frame->getLocalMemory()->getObject(itObj).setDouble(i);
+	                        executionFrame.index = 0;
+	                        executionFrame.level = 0;
+	                        executionFrame.setIsFirstRun(true);
+	                        executionFrame.setZeroFlag(false);
+	                        runtime.calculateExpression(&executionFrame);
 	    	            }
 	    	            catch(std::string &exception)
 	    	            {
 	    	                throw std::string(exception + "\nIn for body subexp: ");
 	    	            }
-	    	            if(*(*boolsettings)["o"])
+	    	    	    if(*runtime.boolsettings["o"])
 	    	            {
 	    	                std::cout<<"for block Execution Complete.\n\n";
 	    	                std::cout<<"Jumping back to execute for Boolean Expression: "<<i+1<<"<"<<limit<<"\n";
@@ -157,13 +177,11 @@ public:
 
 	    }
 
-	     runtime->callOnFrame(frame, "delete "+itVar.data);
-
-	    index = codeBlock.end + startOfCodeBlock-2;
-	    frame->index = 0;
+	    index = codeBlock.end + startOfCodeBlock;
 	    while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
 	        index++;
-	    return "a"+expbkp.substr((index-2<frame->exp.size()?index-2:frame->exp.size()),frame->exp.size());
+	    frame->index = (index-2<frame->exp.size()?index-2:frame->exp.size());
+
 	}
 };
 

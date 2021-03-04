@@ -9,30 +9,30 @@
 #define KEYWORDS_TRYACTION_HPP_
 
 #include "../Keyword.hpp"
-class TryAction: public Keyword {
+class TryAction: public OpKeyword {
 public:
-	TryAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	TryAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "try";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    try{
-	    	double input = runtime->callOnFrame(frame,exp.data);
+	    	double input = runtime.callOnFrame(frame,exp.data);
 	    	frame->initialOperands.push(input);
 	    }
 	    catch(std::string &s)
 	    {
 	    	frame->initialOperands.push(std::floor(std::numeric_limits<double>::max()));
-	    	runtime->callOnFrame(frame, "loc errorMessageLog = {"+s+"};\nloc hasErrorOccurred = 1");
+	    	runtime.callOnFrame(frame, "loc errorMessageLog = {"+s+"};\nloc hasErrorOccurred = 1");
 	    }
-        if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"try("<<exp.data<<")\n";
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+        frame->index = exp.end;
 	}
 };
 

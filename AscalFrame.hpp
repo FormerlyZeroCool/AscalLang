@@ -11,9 +11,13 @@
 #include <map>
 
 #include "AscalParameters.hpp"
+#include "AscalExecutor.hpp"
 #include "Object.hpp"
 #include "stack.hpp"
+#include "StackSegment.hpp"
 #include "Calculator.hpp"
+#include "string_view.hpp"
+#include "MemoryMap.hpp"
 
 template <typename t>
 class AscalFrame {
@@ -25,21 +29,28 @@ protected:
 	//+64 designates the frame as never run
     uint16_t flagRegisters = 1 + 8 + 64;
     AscalParameters* params;
-    std::map<std::string,Object* >* paramMemory;
-    std::map<std::string,Object>* localMemory;
+    std::map<string_view,Object*>* paramMemory;
+    MemoryMap* localMemory;
     Object *contextObj = nullptr;
 
 public:
+    AscalFrame* returnPointer = nullptr;
+    uint16_t level = 0;
+    uint32_t index = 0;
+    uint64_t memoPointer = 0;
+    StackString exp;
+    StackSegment<t> initialOperands;
+    StackSegment<char> initialOperators;
     void setObjectReturnRegister(Object *obj)
     {
     	//set return flags so auto return does not occur, and upon returning to calling function it is aware an object has been returned
     	this->flagRegisters |= 256|512;
-    	(*this->localMemory)["_rtn"] = *obj;
+    	(*this->localMemory)[string_view("_rtn")] = *obj;
     }
     Object* getReturnObject()
     {
     	this->flagRegisters &= 65535-256-512;
-    	return &(*this->localMemory)["_rtn"];
+    	return &(*this->localMemory)[string_view("_rtn")];
     }
     Object* getContext()
     {
@@ -63,19 +74,12 @@ public:
     		s<<value->toString()<<"\n";
     	}
     	s<<"Local Memory\n";
-    	for(auto &[key, value]:*localMemory)
+    	for(auto &value:*localMemory)
     	{
     		s<<value.toString()<<"\n";
     	}
     	return s.str();
     }
-    AscalFrame* returnPointer = nullptr;
-    uint16_t level = 0;
-    uint32_t index = 0;
-    uint64_t memoPointer = 0;
-    std::string exp;
-    stack<t> initialOperands;
-    stack<char> initialOperators;
     AscalFrame<t>*  getReturnPointer()
     {
         return returnPointer;
@@ -92,6 +96,7 @@ public:
     bool isAugmented() { return flagRegisters & (uint16_t)128; };
     bool isReturnObjectFlagSet() { return flagRegisters & (uint16_t)256; };
     bool isReturnFlagSet() { return flagRegisters & (uint16_t)512; };
+    bool isZeroFlagSet() { return flagRegisters & (uint16_t)1024; };
     void setIfResultFlag(bool value)
     {
         flagRegisters &= (uint16_t)65535-1;
@@ -132,15 +137,20 @@ public:
         flagRegisters &= (uint16_t)(65535-512);
         flagRegisters ^= (uint16_t)(512*value);
     };
-    std::map<std::string,Object*>* getParamMemory(){ return paramMemory; };
-    std::map<std::string,Object>* getLocalMemory(){ return localMemory; };
+    void setZeroFlag(bool value)
+    {
+        flagRegisters &= (uint16_t)(65535-1024);
+        flagRegisters ^= (uint16_t)(1024*value);
+    };
+    std::map<string_view,Object*>* getParamMemory(){ return paramMemory; };
+    MemoryMap* getLocalMemory(){ return localMemory; };
     AscalParameters* getParams(){ return params; };
     virtual
 	char getType(){
     	return 'a';
     }
     virtual
-    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) {};
+    void returnResult(t result, MemoryMap& globalMemory) = 0;
     virtual
     ~AscalFrame() {};
     void clearStackIfAnotherStatementProceeds()
@@ -170,18 +180,27 @@ template <typename t>
 class ParamFrame: public AscalFrame<t> {
 private:
 public:
-    ParamFrame(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
+    ParamFrame(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
     {
         this->params = params;
         this->paramMemory = paramMemory;
         this->localMemory = localMemory;
+    	this->initialOperands.setData(runtime.operands);
+    	this->initialOperators.setData(runtime.operators);
+    	this->exp.setMemory(runtime.instructionsStack);
     }
-    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
+    void returnResult(t result, MemoryMap& globalMemory) override
     {
         if(this->returnPointer)
         {
-        	Object *obj = &((*this->localMemory)[std::to_string(runningNumber++)] = Object("",std::to_string(result),""));
-            this->returnPointer->getParams()->push_back(obj);
+        	Object j(globalMemory.getMemMan(), "   ");
+        	j.id[0] = 2;
+        	uint16_t *jd = (uint16_t*) &j.id[1];
+        	*jd = this->returnPointer->getParams()->size();
+        	//std::cout<<"Param frame rtning: "<<result<<"\n";
+        	Object &obj = this->returnPointer->getLocalMemory()->insert(j);
+        	obj.setDouble(result);
+        	this->returnPointer->getParams()->push_back(&obj);
         }
     }
 	char getType() override
@@ -194,13 +213,17 @@ template <typename t>
 class ParamFrameFunctionPointer: public AscalFrame<t> {
 public:
     Object *obj;
-    ParamFrameFunctionPointer(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
+    ParamFrameFunctionPointer(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory):
+    	obj(nullptr)
     {
         this->params = params;
         this->paramMemory = paramMemory;
         this->localMemory = localMemory;
+    	this->initialOperands.setData(runtime.operands);
+    	this->initialOperators.setData(runtime.operators);
+    	this->exp.setMemory(runtime.instructionsStack);
     }
-    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
+    void returnResult(t result, MemoryMap& globalMemory) override
     {
     	if(this->returnPointer && obj)
     	{
@@ -220,19 +243,23 @@ public:
 template <typename t>
 class FunctionFrame: public AscalFrame<t> {
 private:
-	std::map<std::string,Object*> paramMem;
-	std::map<std::string,Object> localMem;
+	std::map<string_view,Object*> paramMem;
+	MemoryMap localMem;
 	AscalParameters param;
 public:
-    FunctionFrame(AscalParameters* params, std::map<std::string,Object*>* paramMemory, std::map<std::string,Object>* localMemory)
+    FunctionFrame(AscalExecutor &runtime, MemoryManager<Object> &memMan) : localMem(memMan)
     {
+    	param.setMemory(runtime.paramsStack);
         this->params = &param;
         this->paramMemory = &paramMem;
         this->localMemory = &localMem;
+    	this->initialOperands.setData(runtime.operands);
+    	this->initialOperators.setData(runtime.operators);
+    	this->exp.setMemory(runtime.instructionsStack);
         //bitwise or with the 2^5 bit 32 sets isFunction true
         this->flagRegisters |= 32;
     }
-    void returnResult(t result, std::unordered_map<std::string, Object>& globalMemory) override
+    void returnResult(t result, MemoryMap& globalMemory) override
     {
         if(this->returnPointer)
         {

@@ -9,17 +9,16 @@
 #define KEYWORDS_SHOWOPBOOLSETTING_HPP_
 
 #include "../Keyword.hpp"
-class ShowOpBoolSetting: public Keyword {
+class ShowOpBoolSetting: public StKeyword {
 public:
-	ShowOpBoolSetting(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ShowOpBoolSetting(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "o";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    runtime->updateBoolSetting(frame);
-	    return MAX;
+	    runtime.updateBoolSetting(frame);
 	}
 };
 

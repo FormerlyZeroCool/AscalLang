@@ -9,22 +9,22 @@
 #define KEYWORDS_ARRGETVALACTION_HPP_
 
 #include "../Keyword.hpp"
-class ArrGetValAction: public Keyword {
+class ArrGetValAction: public OpKeyword {
 public:
-	ArrGetValAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ArrGetValAction(AscalExecutor &runtime):
+		OpKeyword(runtime)
 	{
 		this->keyWord = "arrGet";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    std::vector<SubStr> params = Object("","",exp.data).params;
+	    std::vector<SubStrSV> params = Object(runtime.memMan, "","",exp.data).params;
 	    if(params.size() < 2)
 	    	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
-	    double indexToGet = runtime->callOnFrame(frame,params[1].data);
+	    double indexToGet = runtime.callOnFrame(frame,params[1].data);
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
-	    Object *element = &runtime->resolveNextExprSafe(frame, vns)->getListElement(indexToGet, *memory);
+	    Object *element = &runtime.resolveNextExprSafe(frame, vns)->getListElement(indexToGet, runtime.memory);
 	    SubStr paramsForListElementFn("", 0 , exp.end);
 	    if(exp.data[exp.end] == '(')
 	    {
@@ -34,16 +34,16 @@ public:
 	    std::stringstream fnDef;
 	    fnDef<<"loc "<<element->id<<"="<<element->getInstructions()<<";\n"<<element->id<<'('<<paramsForListElementFn.data<<')';
 
-	    frame->initialOperands.push(runtime->callOnFrame(frame,fnDef.str()));
+	    frame->initialOperands.push(runtime.callOnFrame(frame,fnDef.str()));
 
-	    runtime->callOnFrame(frame, "delete "+element->id);
-	    if(*(*boolsettings)["o"])
+	    runtime.callOnFrame(frame, "delete "+element->id);
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	double t;
 	    	frame->initialOperands.top(t);
 	    	std::cout<<"got element at index: "<<params[1].data<<" from list "<<params[0].data<<" value: "<<(t)<<"\n";
 	    }
-	    return 'a'+frame->exp.substr(paramsForListElementFn.end,frame->exp.size());
+	    frame->index = paramsForListElementFn.end;
 	}
 };
 

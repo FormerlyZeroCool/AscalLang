@@ -9,25 +9,41 @@
 #define KEYWORDS_NEWLOCALVARACTION_HPP_
 
 #include "../Keyword.hpp"
-class NewLocalVarAction: public Keyword {
+class NewLocalVarAction: public StKeyword {
 public:
-	NewLocalVarAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	NewLocalVarAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "cloc";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr localName = ParsingUtil::getVarName(frame->exp, frame->exp.find("loc", frame->index)+4);
-	    SubStr subexp = ParsingUtil::getExpr(frame->exp, frame->exp.find('=',frame->index)+1, runtime->ascal_cin);
-	    std::string value = ParsingUtil::to_string(runtime->callOnFrame(frame, subexp.data));
-	    Object newLocalVar(localName.data,value,"");
-	    if(*(*boolsettings)["o"])
+		uint32_t index = frame->index+4;
+	    SubStr localName = ParsingUtil::getVarNameSV(frame->exp, index);
+	    index = frame->exp.find('=',frame->index)+1;
+		SubStr subexp = ParsingUtil::getExpr(frame->exp, frame->exp.find('=',frame->index)+1, runtime.ascal_cin);
+	    Object *nobj = nullptr;
+	    double value = 0;
+	    if(!ParsingUtil::isDouble(subexp.data))
+	    {
+		    value = (runtime.callOnFrame(frame, subexp.data));
+		    Object newLocalVar(runtime.memMan, localName.data);
+		    newLocalVar.setDouble(value);
+		    nobj = &runtime.loadUserDefinedFn(newLocalVar, *frame->getLocalMemory());
+	    }
+	    else
+	    {
+	    	Object obj(runtime.memMan, localName.data);
+    		char tmp = subexp.data[subexp.data.size()];
+    		subexp.data[subexp.data.size()] = 0;
+    		obj.setDouble(atof(&subexp.data[0]));
+    		subexp.data[subexp.data.size()] = tmp;
+		    nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());
+	    }
+	    if(*runtime.boolsettings["o"])
 	    {
 	        std::cout<<std::endl<<"New local var: "<<localName.data<< " = "<<value<<std::endl;
 	    }
-	    (*frame->getLocalMemory())[newLocalVar.id] = newLocalVar;
-	    return MAX;
 	}
 };
 

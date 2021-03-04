@@ -64,11 +64,11 @@ private:
 	    }
 	    return result;
 	}
-	t log(t &and1,t &and2){return std::log(and2)/std::log(and1);}
-	t rootOp(t &and1,t &and2){return std::pow(and2,1/and1);}
-	t equals(t &and1,t &and2){return and1==and2;}
-	t lessThan(t &and1,t &and2){return and1<and2;}
-	t greaterThan(t &and1,t &and2){    return and1>and2;}
+	t log(t &and1,t &and2){ return std::log(and2)/std::log(and1); }
+	t rootOp(t &and1,t &and2){ return std::pow(and2,1/and1); }
+	t equals(t &and1,t &and2){ return and1==and2; }
+	t lessThan(t &and1,t &and2){ return and1<and2; }
+	t greaterThan(t &and1,t &and2){ return and1>and2; }
 public:
 	Calculator(){}
 
@@ -143,6 +143,9 @@ public:
 		  priority = 80;
 		  break;
 	  case '$':
+		  priority = 80;
+		  break;
+	  case '@':
 		  priority = 80;
 		  break;
 	  case 'P':

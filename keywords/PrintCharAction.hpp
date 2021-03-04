@@ -9,23 +9,23 @@
 #define KEYWORDS_PRINTCHARACTION_HPP_
 
 #include "../Keyword.hpp"
-class PrintCharAction: public Keyword {
+class PrintCharAction: public StKeyword {
 public:
-	PrintCharAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	PrintCharAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "printChar";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    char input = runtime->callOnFrame(frame,exp.data);
+	    char input = runtime.callOnFrame(frame,exp.data);
 	    std::cout<<( input);
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"printChar("<<input<<") = "<<(char)(input)<<'\n';
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+	    frame->index = exp.end;
 	}
 };
 

@@ -10,22 +10,22 @@
 
 #include "../Keyword.hpp"
 #include "../PRNG.hpp"
-class RandomAction: public Keyword {
+class RandomAction: public OpKeyword {
 public:
-	RandomAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	RandomAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "rand";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 		double hash = PRNG::ascalPRNG();
 		frame->initialOperands.push(hash);
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"rand = "<<ParsingUtil::to_string(hash)<<"\n";
 	    }
-	    return 'a'+frame->exp.substr(frame->index+4,frame->exp.size());
+	    frame->index += this->keyWord.size();
 	}
 };
 

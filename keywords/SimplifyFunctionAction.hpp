@@ -9,14 +9,14 @@
 #define KEYWORDS_SIMPLIFYFUNCTIONACTION_HPP_
 
 #include "../Keyword.hpp"
-class SimplifyFunctionAction: public Keyword {
+class SimplifyFunctionAction: public StKeyword {
 public:
-	SimplifyFunctionAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	SimplifyFunctionAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "simplify";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    if(exp.data.size() == 1)
@@ -25,7 +25,7 @@ public:
 	    Object* function;
 	    try{
 	        SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size());
-	    	function = runtime->resolveNextExprSafe(frame, vns);
+	    	function = runtime.resolveNextExprSafe(frame, vns);
 	    }catch(std::string &objNotFoundErr)
 	    {
 	    	throw std::string("Error could not find function: " + exp.data + " to simplify.");
@@ -36,8 +36,7 @@ public:
 	    std::string simplifiedfn;
 	    std::stringstream call;
 	    call<<"set "<<exp.data<<" = "<<simplifiedfn;
-	    runtime->callOnFrame(frame, call.str());
-		return MAX;
+	    runtime.callOnFrame(frame, call.str());
 	}
 };
 

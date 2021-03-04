@@ -71,7 +71,8 @@ int main(int argc,char* argv[])
       getline(std::cin, arg);
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
-      arg = ParsingUtil::getExpr(arg, 0, std::cin).data;
+      	if(ParsingUtil::firstChar(arg, '{'))
+    	  arg = ParsingUtil::getExpr(arg, 0, std::cin).data;
         try{
         	ascalRuntime.execExpression(arg);
         }

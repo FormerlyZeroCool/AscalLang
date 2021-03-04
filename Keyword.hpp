@@ -15,21 +15,38 @@
 #include "AscalFrame.hpp"
 #include "AscalExecutor.hpp"
 #include "ParsingUtil.hpp"
+
 //create a wrapper class that has pointers to functions
 class Keyword {
 protected:
 	static const std::string MAX;
 	std::string keyWord;
-	//Program Global Memory
-	std::unordered_map<std::string,Object> *memory;
-	//Interpreter Settings HashMap for toggle flags, like show time, or operations
-	std::map<std::string,setting<bool> > *boolsettings;
-	AscalExecutor *runtime;
+	AscalExecutor &runtime;
 public:
-	Keyword(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings);
-	std::string getName() { return keyWord; }
+	Keyword(AscalExecutor &runtime);
+	const std::string& getName() { return keyWord; }
 	void setName(std::string key) { keyWord = key; }
-	virtual std::string action(AscalFrame<double> *frame) { return ""; }
+	virtual void action(AscalFrame<double> *frame) {}
+	virtual uint8_t getType() { return 'r'; }
 	virtual ~Keyword();
+};
+class OpKeyword : public Keyword {
+public:
+	OpKeyword(AscalExecutor &runtime):
+	Keyword(runtime){}
+	virtual uint8_t getType() override { return 1; }
+
+};
+class StKeyword : public Keyword {
+public:
+	StKeyword(AscalExecutor &runtime):
+	Keyword(runtime){}
+	virtual uint8_t getType() override { return 0; }
+};
+class ComplexStKeyword : public Keyword {
+public:
+	ComplexStKeyword(AscalExecutor &runtime):
+	Keyword(runtime){}
+	virtual uint8_t getType() override { return 3; }
 };
 #endif /* KEYWORD_HPP_ */

@@ -11,17 +11,17 @@
 #include "../Keyword.hpp"
 #include "PrintStringAction.hpp"
 #include "PrintCommand.hpp"
-class PrintDefaultAction: public Keyword {
+class PrintDefaultAction: public StKeyword {
 private:
 	PrintStringAction ps;
 	PrintCommand pc;
 public:
-	PrintDefaultAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings), ps(runtime, memory, boolsettings), pc(runtime, memory, boolsettings)
+	PrintDefaultAction(AscalExecutor &runtime):
+	StKeyword(runtime), ps(runtime), pc(runtime)
 	{
 		this->keyWord = "print";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    int endOfStatement = frame->index;
 	    while(frame->exp[endOfStatement] && (frame->exp[endOfStatement] != ';' && frame->exp[endOfStatement] != '\n' &&
@@ -38,7 +38,6 @@ public:
 	    {
 	        pc.action(frame);
 	    }
-	    return MAX;
 	}
 
 };

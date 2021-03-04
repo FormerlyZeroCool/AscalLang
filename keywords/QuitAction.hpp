@@ -9,19 +9,18 @@
 #define KEYWORDS_QUITACTION_HPP_
 
 #include "../Keyword.hpp"
-class QuitAction: public Keyword {
+class QuitAction: public StKeyword {
 public:
-	QuitAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	QuitAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "quit";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	        std::cout<<"Quitting Ascal, have a nice day!"<<std::endl;
 	    throw 0;
-	    return MAX;
 	}
 };
 

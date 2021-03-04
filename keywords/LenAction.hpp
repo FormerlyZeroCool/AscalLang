@@ -11,24 +11,24 @@
 #include "../Keyword.hpp"
 class LenAction: public Keyword {
 public:
-	LenAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	LenAction(AscalExecutor &runtime):
+	Keyword(runtime)
 	{
 		this->keyWord = "arrLen";
 	}
 
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    SubStr objname = ParsingUtil::getVarName(exp.data, 0);
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size());
-	    Object *obj = runtime->resolveNextExprSafe(frame, vns);
+	    Object *obj = runtime.resolveNextExprSafe(frame, vns);
 	    frame->initialOperands.push(obj->getListSize());
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"arrLen(&"<<obj->id<<") = "<<obj->getListSize()<<'\n';
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+	    frame->index = exp.end;
 	}
 };
 

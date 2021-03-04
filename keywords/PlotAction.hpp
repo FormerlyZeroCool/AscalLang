@@ -10,15 +10,15 @@
 
 #include "../Keyword.hpp"
 #include "../Vect2D.hpp"
-class PlotAction: public Keyword {
+class PlotAction: public StKeyword {
 public:
-	PlotAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	PlotAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "plot";
 	}
 
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    const int plotKeyWordIndex = frame->exp.find("plot",frame->index);
 	    const int endOfFun = frame->exp.find(",", plotKeyWordIndex);
@@ -37,14 +37,14 @@ public:
 	        {
 	            if(frame->exp[index] == '|')
 	            {
-	                functions.push_back(frame->exp.substr(trailer,index-(trailer)));
+	                functions.push_back(frame->exp.substr(trailer,index-(trailer)).str());
 	                sumArea.push_back(0);
 	                trailer = index+1;
 	            }
 	                index++;
 	        }
 	    }
-	    functions.push_back(frame->exp.substr(trailer,endOfFun - (trailer)));
+	    functions.push_back(frame->exp.substr(trailer,endOfFun - (trailer)).str());
 	    index = endOfFun+1;
 	    const double xMin = ParsingUtil::getNextDoubleS(frame->exp,index);
 	    index+=2;
@@ -67,17 +67,17 @@ public:
 	    for(int j = 0;j<functions.size();j++)
 	    {
 	        std::string function = functions[j];
-	        if(*(*boolsettings)["o"])
+		    if(*runtime.boolsettings["o"])
 	        	std::cout<<"\nProcessing: "<<function<<"\n";
 	        for(int i = 0;i<tableWidth;i++)
 	        {
 	            xi = xMin+dx*(i);
-	            FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+	            FunctionFrame<double>* calledFunction = new FunctionFrame<double>(runtime, runtime.memMan);
 	            exp << function << '(' << ParsingUtil::to_string(xi) << ')';
 	            calledFunction->exp = exp.str();
 	            exp.str(std::string());
 	            outPuts.push_back(
-	                    runtime->calculateExpression(calledFunction));
+	                    runtime.calculateExpression(calledFunction));
 	            sumArea[j] += outPuts.get(i,j)*dx;
 	        }
 	    }
@@ -153,11 +153,9 @@ public:
 	            yMin<<" to "<<yMax<<" with a step size in the x of:"<<xStepSize<<", and in the y: "<<yStepSize<<"\n";
 	    for(int i =0; i<functions.size();i++)
 	    {
-	        std::cout<<"Function: "<<functions[i]<<", plotted using symbol: "<<symbols[i%10]<<", function defined as: "<<(*memory)[functions[i]].instructionsToFormattedString();
+	        std::cout<<"Function: "<<functions[i]<<", plotted using symbol: "<<symbols[i%10]<<", function defined as: "<<runtime.memory[functions[i]].instructionsToFormattedString();
 	        std::cout<<"Area Under Curve calculated with reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
 	    }
-
-		return MAX;
 	}
 };
 

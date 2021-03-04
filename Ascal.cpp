@@ -12,7 +12,7 @@
 	}
 	double Ascal::execExpression(std::string &exp)
 	{
-		AscalFrame<double> *frame = (AscalFrame<double> *)new FunctionFrame<double>(NULL,NULL,NULL);
+		AscalFrame<double> *frame = (AscalFrame<double> *)new FunctionFrame<double>(runtime, runtime.memMan);
 		frame->exp = exp;
 	try{
 		return runtime.calcWithOptions(frame);

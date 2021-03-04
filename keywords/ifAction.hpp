@@ -9,15 +9,15 @@
 #define KEYWORDS_IFACTION_HPP_
 
 #include "../Keyword.hpp"
-class IfAction: public Keyword {
+class IfAction: public OpKeyword {
 public:
-	IfAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	IfAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "if";
 	}
 
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 		uint32_t index = frame->exp.find("if",frame->index)!=-1?frame->exp.find("if",frame->index)+2:0;
 	    while(frame->exp[index] == ' ')
@@ -34,29 +34,30 @@ public:
 	            startOfCodeBlock++;
 	        }
 	        index = startOfCodeBlock;
-	        const std::string booleanExpression = frame->exp.substr(startOfBoolExp,index-startOfBoolExp);
+	        const string_view booleanExpression = frame->exp.substr(startOfBoolExp,index-startOfBoolExp);
 	        if(booleanExpression.size() == 0)
 	        {
 	            throw std::string("Error no boolean expression provided in if.\n");
 	        }
 	        double boolExpValue;
-	        if(*(*boolsettings)["o"])
+		    if(*runtime.boolsettings["o"])
 	        {
 	            std::cout<<"Executing boolean expression in if: "<<booleanExpression<<'\n';
 	        }
+
 	        try{
-	            boolExpValue = runtime->callOnFrame(frame,booleanExpression);
+	            boolExpValue = runtime.callOnFrame(frame,booleanExpression);
 	        }
 	        catch(std::string &exception)
 	        {
-	            throw std::string(exception + "\nIn if boolean exp: " + booleanExpression);
+	            throw std::string(exception + "\nIn if boolean exp: " + booleanExpression.str());
 	        }
 
-	        if(*(*boolsettings)["o"])
+		    if(*runtime.boolsettings["o"])
 	        {
 	            std::cout<<"Boolean expression evaluation complete result: "<<(boolExpValue?"true":"false")<<'\n';
 	        }
-	        codeBlock = ParsingUtil::getCodeBlock(frame->exp, startOfCodeBlock, runtime->ascal_cin);
+	        codeBlock = ParsingUtil::getCodeBlock(frame->exp, startOfCodeBlock, runtime.ascal_cin);
 
 	        index = startOfCodeBlock + codeBlock.end - 1;
 	        if(index > frame->exp.size())
@@ -73,18 +74,18 @@ public:
 	                frame->setIfFlag(false);
 	                frame->setIfResultFlag(true);
 	            }
-	            if(*(*boolsettings)["o"])
+	    	    if(*runtime.boolsettings["o"])
 	            {
 	                std::cout<<"Executing code block in if: "<<codeBlock.data<<'\n';
 	            }
 	            try{
-	                runtime->callOnFrame(frame,codeBlock.data);
+	                runtime.callOnFrame(frame,codeBlock.data);
 	            }
 	            catch(std::string &exception)
 	            {
 	                throw std::string(exception + "\nIn if body subexp: "+codeBlock.data);
 	            }
-	            if(*(*boolsettings)["o"])
+	    	    if(*runtime.boolsettings["o"])
 	            {
 	                std::cout<<"If block Execution Complete.\n";
 	            }
@@ -92,8 +93,7 @@ public:
 	        }
 	        else
 	        {
-
-	        	if(*(*boolsettings)["o"])
+	    	    if(*runtime.boolsettings["o"])
 	            {
 	                std::cout<<"Skipping if code block\n";
 	            }
@@ -110,8 +110,7 @@ public:
 	        }
 	        frame->setComingfromElse(false);
 
-	        frame->index = 0;
-	        return "a"+frame->exp.substr(index-1,frame->exp.size());
+	        frame->index = index-1;
 	}
 };
 

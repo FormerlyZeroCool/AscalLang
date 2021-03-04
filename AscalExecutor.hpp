@@ -28,13 +28,16 @@
 #include <iostream>
 #include <fstream>
 #include <thread>
-#include "AscalFrame.hpp"
 #include "Object.hpp"
 #include "setting.hpp"
 #include "stack.hpp"
 #include "Calculator.hpp"
 #include "SubStr.hpp"
 #include "ParsingUtil.hpp"
+#include "string_view.hpp"
+#include "MemoryMap.hpp"
+template <typename t>
+class AscalFrame;
 class Keyword;
 struct CommandLineParams{
 	char ** argv;
@@ -43,21 +46,16 @@ struct CommandLineParams{
 };
 class AscalExecutor {
 private:
-const size_t sizeofFrame = sizeof(AscalFrame<double>);
-size_t allocated = 0, deallocated = 0;;
+const size_t sizeofFrame = 0;
 const std::string VERSION = "2.01";
 
 uint32_t frameCount = 1;
 uint32_t varCount = 0;
 
-linkedStack<AscalFrame<double> *> *currentStack = nullptr;
+stack<AscalFrame<double> *> *currentStack = nullptr;
 //Interpreter hash map for system keywords
-std::unordered_map
-<std::string,
-Keyword*> inputMapper;
-std::map
-<ObjectKey,
-std::string (*)(AscalFrame<double>*,Object&)> objectActionMapper;
+std::unordered_map<string_view, Keyword*> inputMapper;
+
 
 /////////////////////////////
 size_t rememberedFromMemoTableCount;
@@ -67,12 +65,20 @@ stack<double> savedOperands;
 stack<char> savedOperators;
 stack<double> processOperands;
 stack<char> processOperators;
+//private stack frame shred memory
+stack<char> instructionStack;
+//end stack frame shred memory
 std::unordered_map<uint64_t,double> memoPad;
 AscalFrame<double>* cachedRtnObject = nullptr;
 public:
 /////////////////////////////
 //Program Global Memory Declaration
-std::unordered_map<std::string,Object > memory;
+stack<double> operands;
+stack<char> operators;
+stack<char> instructionsStack;
+stack<Object* > paramsStack;
+MemoryManager<Object> memMan;
+MemoryMap memory;
 CommandLineParams commandLineParams;
 std::streambuf* stream_buffer_cin;
 std::istream ascal_cin;
@@ -98,18 +104,18 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	void addKeyWord(Keyword *key);
 
 	double callOnFrame(AscalFrame<double>* callingFrame,const std::string &subExp);
-	double callOnFrame(AscalFrame<double>* callingFrame,const std::string &&subExp);
+	double callOnFrame(AscalFrame<double>* callingFrame,const string_view subExp);
 	double callOnFrameFormatted(AscalFrame<double>* callingFrame,std::string subExp);
 	double calculateExpression(AscalFrame<double>* frame);
 	double processStack(stack<double> &operands,stack<char> &operators);
-	void createFrame(linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, int i,uint64_t hash);
-	void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
+	void createFrame(stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, int i,uint64_t hash);
+	void clearStackOnError(bool printStack, std::string &error, stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
 
-	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName);
-	Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, Object *obj = nullptr);
-	Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &varName, Object *obj = nullptr);
-	Object& getObject(AscalFrame<double>* frame, std::string &functionName);
-	Object* getObjectNoError(AscalFrame<double>* frame, std::string &functionName);
+	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName);
+	Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);
+	Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);
+	Object& getObject(AscalFrame<double>* frame, string_view functionName);
+	Object* getObjectNoError(AscalFrame<double>* frame, string_view functionName);
 
 	template <typename t>
 	void cleanOnError(bool timeInstruction, t start, t end);
@@ -124,17 +130,27 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	//helper functions
 	/////////////////////////////
 	void loadFn(Object function);
-	template <typename t>
-	void loadUserDefinedFn(Object &function, t &mem);
+	Object& loadUserDefinedFn(Object &function, MemoryMap &mem);
+	Object& loadUserDefinedFn(Object &function, std::map<string_view, Object*> &mem);
 	void updateBoolSetting(AscalFrame<double>* frame);
 	CommandLineParams& getCLParams()
 	{
 		return commandLineParams;
 	}
-	AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
+	AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): memory(memMan), rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
 	{
+
 		ascal_cin.rdbuf(streambuf);
 		loadInitialFunctions();
+		savedOperands.reserve(8192);
+		savedOperators.reserve(8192);
+		paramsStack.reserve(8192);
+		instructionsStack.reserve(8192*10);
+		processOperands.reserve(8192);
+		processOperators.reserve(8192);
+		operands.reserve(8192);
+		operators.reserve(8192);
+		instructionStack.reserve(8192);
 		commandLineParams.argc = argc;
 		commandLineParams.argv = argv;
 		commandLineParams.index = 1;
@@ -205,7 +221,8 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	           * End of initialization values in settings hashmap
 	           * */
 	}
-	static std::string printMemory(std::map<std::string,Object*> &memory,std::string delimiter,bool justKey = true,
+	template <typename string1, typename string2>
+	static std::string printMemory(std::map<string1,Object*> &memory,string2 delimiter,bool justKey = true,
 	        std::string secondDelimiter = "\n")
 	{
 	    std::string s;
@@ -214,10 +231,11 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	            s+=key+delimiter;
 	    else
 	        for(auto &[key,value]:memory)
-	            s+=key+delimiter+value->instructionsToString()+secondDelimiter;
+	            s+=key+delimiter+value->instructionsToFormattedString()+secondDelimiter;
 	    return s.substr(0,s.size()-secondDelimiter.size());
 	}
-	static std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
+	template <typename string1, typename string2>
+	static std::string printMemory(std::unordered_map<string1,Object> &memory,string2 delimiter,bool justKey = true,
 	        std::string secondDelimiter = "\n")
 	{
 	    std::string s;
@@ -226,7 +244,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	            s+=key+delimiter;
 	    else
 	        for(auto &[key,value]:memory){
-	            std::string instr = value.instructionsToString();
+	            std::string instr = value.instructionsToFormattedString();
 	            s+=key+delimiter+instr+secondDelimiter;
 	        }
 	    return s.substr(0,s.size()-secondDelimiter.size());

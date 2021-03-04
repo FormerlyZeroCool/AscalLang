@@ -9,52 +9,61 @@
 #define KEYWORDS_NEWGLOBALVARACTION_HPP_
 
 #include "../Keyword.hpp"
-class NewGlobalVarAction: public Keyword {
+class NewGlobalVarAction: public StKeyword {
 public:
-	NewGlobalVarAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	NewGlobalVarAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "const";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-		SubStr exPart = ParsingUtil::getExpr(frame->exp, frame->exp.find('=',frame->index)+1, runtime->ascal_cin);
+		SubStr exPart = ParsingUtil::getExpr(frame->exp, frame->exp.find('=',frame->index)+1, runtime.ascal_cin);
 		    SubStr newVarPart = ParsingUtil::getVarName(frame->exp,frame->index+5);
-	        Object *parent = runtime->resolveNextObjectExpressionPartial(frame, newVarPart, frame->getContext()->getThis());
-		    Object var(newVarPart.data,"","");
-		    Object *newObj = nullptr;
+	        Object *parent = nullptr;
+	        if(frame->getContext())
+	        	parent = runtime.resolveNextObjectExpressionPartial(frame, newVarPart, frame->getContext()->getThis());
+		    Object var(runtime.memMan, newVarPart.data);
 
 	        if(parent)
 	        {
+			    Object *newObj = nullptr;
 	        	if(ParsingUtil::isDouble(var.id))
 	        		newObj = &parent->setList(var, stoi(var.id));
 	        	else
-	        		newObj = &parent->loadChild(var);
+	        		newObj = &parent->loadChild(var, runtime);
 
 	        	Object *c = frame->getContext();
 	        	frame->setContext(newObj);
-	    	    std::string value = ParsingUtil::to_string(runtime->callOnFrame(frame, exPart.data));
+	    	    double value = runtime.callOnFrame(frame, exPart.data);
 	        	frame->setContext(c);
-	    	    newObj->getInstructions() = value;
+	    	    newObj->setDouble(value);
+	        }
+	        else if(ParsingUtil::isDouble(exPart.data))
+	        {
+	    		char tmp = exPart.data[exPart.data.size()];
+	    		exPart.data[exPart.data.size()] = 0;
+	    		var.setDouble(atof(&exPart.data[0]));
+	    		exPart.data[exPart.data.size()] = tmp;
+			    runtime.loadUserDefinedFn(var, *frame->getLocalMemory());
 	        }
 	        else
 	        {
-	    	    std::string value = ParsingUtil::to_string(runtime->callOnFrame(frame, exPart.data));
-	    	    var.getInstructions() = value;
+	    	    double value = runtime.callOnFrame(frame, exPart.data);
+	    	    var.setDouble(value);
 	        	//delete old  reference from list not really needed
-	    	    std::vector<Object>::iterator position = std::find(runtime->userDefinedFunctions.begin(), runtime->userDefinedFunctions.end(), (*memory)[var.id]);
-	    	                            if(position != runtime->userDefinedFunctions.end())
-	    	                            	runtime->userDefinedFunctions.erase(position);
+	    	    std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), runtime.memory[var.id]);
+	    	                            if(position != runtime.userDefinedFunctions.end())
+	    	                            	runtime.userDefinedFunctions.erase(position);
 	    	    //set var defined's value in hash map
-	    	                            (*memory)[var.id] = var;
-	    	                            runtime->userDefinedFunctions.push_back(var);
+	    	                            runtime.loadUserDefinedFn(var, runtime.memory);
+	    	                            runtime.userDefinedFunctions.push_back(var);
 	        }
-		    if(*(*boolsettings)["o"])
+		    if(*runtime.boolsettings["o"])
 		    {
 		        std::cout<<std::endl<<"New global var: "<<newVarPart.data<< " = "
 		        		<<var.instructionsToFormattedString()<<std::endl;
 		    }
-		    return MAX;
 	}
 };
 

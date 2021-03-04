@@ -9,27 +9,30 @@
 #define KEYWORDS_EXISTSACTION_HPP_
 
 #include "../Keyword.hpp"
-class ExistsAction: public Keyword {
+class ExistsAction: public OpKeyword {
 public:
-	ExistsAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ExistsAction(AscalExecutor &runtime):
+		OpKeyword(runtime)
 	{
 		this->keyWord = "exists";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    int index = frame->index+6;
 	    while(frame->exp[index++] == ' '){}
 	    SubStr varName = ParsingUtil::getVarName(frame->exp,index);
 	    index += varName.data.length();
 
-	    if(frame->getLocalMemory()->count(varName.data) || frame->getParamMemory()->count(varName.data) || memory->count(varName.data))
+	    if(frame->getLocalMemory()->count(varName.data) || frame->getParamMemory()->count(varName.data) || runtime.memory.count(varName.data))
 	    {
 	    	frame->initialOperands.push(1);
-	        return "a"+frame->exp.substr(index,frame->exp.size());
 	    }
-		frame->initialOperands.push(0);
-	    return "a"+frame->exp.substr(index,frame->exp.size());
+	    else
+	    {
+	    	frame->initialOperands.push(0);
+	    }
+		frame->index = index;
+
 	}
 };
 

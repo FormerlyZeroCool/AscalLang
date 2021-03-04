@@ -28,6 +28,9 @@
 #include "keywords/ifAction.hpp"
 #include "keywords/ImportAction.hpp"
 #include "keywords/InputAction.hpp"
+#include "keywords/JumpZF.hpp"
+#include "keywords/JumpNZ.hpp"
+#include "keywords/EvalSetZF.hpp"
 #include "keywords/LenAction.hpp"
 #include "keywords/LoadStrAction.hpp"
 #include "keywords/MemoizeOperations.hpp"
@@ -71,7 +74,7 @@ public:
 	template <typename keyword>
 	void addKeyWord()
 	{
-		keyword *key = new keyword(&runtime, &runtime.memory, &runtime.boolsettings);
+		keyword *key = new keyword(runtime);
 		runtime.addKeyWord((Keyword*) key);
 	}
 	Ascal(char** argv, int argc, int index):runtime(argv, argc, index, std::cin.rdbuf())
@@ -138,6 +141,9 @@ public:
 			addKeyWord<UndoAction>();
 			addKeyWord<WhenAction>();
 			addKeyWord<WhileAction>();
+			addKeyWord<JumpZF>();
+			addKeyWord<JumpNZ>();
+			addKeyWord<EvalSetZF>();
 	}
 	double execExpression(std::string &&exp);
 	double execExpression(std::string &exp);

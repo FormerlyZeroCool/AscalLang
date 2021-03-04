@@ -9,21 +9,20 @@
 #define KEYWORDS_FLUSHOUTACTION_HPP_
 
 #include "../Keyword.hpp"
-class FlushOutAction: public Keyword {
+class FlushOutAction: public StKeyword {
 public:
-	FlushOutAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	FlushOutAction(AscalExecutor &runtime):
+		StKeyword(runtime)
 	{
 		this->keyWord = "flush";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    std::fflush(stdout);
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"Flushing std out"<<'\n';
 	    }
-	    return MAX;
 	}
 };
 

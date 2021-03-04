@@ -11,6 +11,16 @@ AscalParameters::AscalParameters() {
 	useCount = 0;
 }
 
+/*
+std::string AscalParameters::toString()
+{
+	std::string data;
+	for(std::string &s:*this)
+	{
+		data += s+",";
+	}
+	return data;
+}*/
 
 AscalParameters& AscalParameters::operator++()
 {

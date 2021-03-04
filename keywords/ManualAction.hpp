@@ -13,22 +13,22 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
-class ManualAction: public Keyword {
+class ManualAction: public StKeyword {
 public:
-	ManualAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ManualAction(AscalExecutor &runtime):
+		StKeyword(runtime)
 	{
 		this->keyWord = "man";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 		uint32_t startIndex = this->keyWord.size();
 	    while(frame->exp[startIndex] == ' ' || frame->exp[startIndex] == ':')
 	        startIndex++;
-	    std::string keyWordName = frame->exp.substr(startIndex,frame->exp.find(';',startIndex)-startIndex);
+	    string_view keyWordName = frame->exp.substr(startIndex,frame->exp.find(';',startIndex)-startIndex);
 		std::stringstream fullPath;
-		fullPath<<runtime->commandLineParams.argv[0]<<PATH_SEPARATOR<<"KeywordManuals"<<PATH_SEPARATOR<<keyWordName<<".txt";
-		if(*(*boolsettings)["o"])
+		fullPath<<runtime.commandLineParams.argv[0]<<PATH_SEPARATOR<<"KeywordManuals"<<PATH_SEPARATOR<<keyWordName<<".txt";
+	    if(*runtime.boolsettings["o"])
 			std::cout<<"Searching for man page at path: "<<fullPath.str()<<"\n";
 	    std::ifstream inputFile;
 	    inputFile.open(fullPath.str());
@@ -46,7 +46,6 @@ public:
 	    	    break;
 	    	std::cout<<line<<'\n';
 	    }
-	    return MAX;
 	}
 };
 

@@ -9,14 +9,14 @@
 #define KEYWORDS_APPROXINTACTION_HPP_
 
 #include "../Keyword.hpp"
-class ApproxIntAction: public Keyword {
+class ApproxIntAction: public OpKeyword {
 public:
-	ApproxIntAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ApproxIntAction(AscalExecutor &runtime):
+		OpKeyword(runtime)
 	{
 		this->keyWord = "approxInt";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    const int plotKeyWordIndex = frame->exp.find("approxInt",frame->index);
 	    const int endOfFun = frame->exp.find(",",frame->index);
@@ -35,14 +35,14 @@ public:
 	        {
 	            if(frame->exp[index] == '|')
 	            {
-	                functions.push_back(frame->exp.substr(trailer,index-(trailer)));
+	                functions.push_back(frame->exp.substr(trailer,index-(trailer)).str());
 	                sumArea.push_back(0);
 	                trailer = index+1;
 	            }
 	                index++;
 	        }
 	    }
-	    functions.push_back(frame->exp.substr(trailer,endOfFun - (trailer)));
+	    functions.push_back(frame->exp.substr(trailer,endOfFun - (trailer)).str());
 	    index = endOfFun + 1;
 	    //getNextDouble updates index to be the character at the end of the double
 	    const double xMin = ParsingUtil::getNextDouble(frame->exp,index);
@@ -66,11 +66,11 @@ public:
 	        for(int i = 0;i<tableWidth;i++)
 	        {
 	            xi = xMin+dx*(i+1);
-	            FunctionFrame<double>* calledFunction = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+	            FunctionFrame<double>* calledFunction = new FunctionFrame<double>(runtime, runtime.memMan);
 	            exp << function << '(' << ParsingUtil::to_string(xi) << ')';
 	            calledFunction->exp = exp.str();
 	            exp.str(std::string());
-	            thisIndex = runtime->calculateExpression(calledFunction);//outPuts.get(i,j)*dx;
+	            thisIndex = runtime.calculateExpression(calledFunction);//outPuts.get(i,j)*dx;
 
 	            sumArea[j] +=
 	                    //Trapezoidal this is the defaulr
@@ -101,11 +101,10 @@ public:
 	    std::cout<<"domain:"<<xMin<<" to "<<xMax<<" with a step size in the x of: "<<xStepSize<<"\n";
 	    for(int i =0; i<functions.size();i++)
 	    {
-	        std::cout<<"Function: "<<functions[i]<<", function defined as: "<<(*memory)[functions[i]].instructionsToFormattedString();
+	        std::cout<<"Function: "<<functions[i]<<", function defined as: "<<runtime.memory.find(functions[i]).instructionsToFormattedString();
 	        std::cout<<"Area Under Curve calculated with "<<calculationType<<" Reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
 	    }
-
-	    return "a"+frame->exp.substr(index+1);
+	    frame->index = index + 1;
 	}
 };
 

@@ -9,25 +9,25 @@
 #define KEYWORDS_ELSEACTION_HPP_
 
 #include "../Keyword.hpp"
-class ElseAction: public Keyword {
+class ElseAction: public StKeyword {
 public:
-	ElseAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ElseAction(AscalExecutor &runtime):
+		StKeyword(runtime)
 	{
 		this->keyWord = "else";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    int index = frame->exp.find("else",frame->index) + 4;
 	    while(frame->exp[index] == ' ')
 	        index++;
-	    SubStr codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime->ascal_cin);
+	    SubStr codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime.ascal_cin);
 	    if(frame->ifFlag() && !frame->ifResultFlag())
 	    {
 	        //if there is an if after the else this must be set
 	        if(frame->exp[index] == 'i' && frame->exp[index+1] == 'f')
 	        {
-	            if(*(*boolsettings)["o"])
+	    	    if(*runtime.boolsettings["o"])
 	            {
 	                std::cout<<"Executing else case:\n";
 	            }
@@ -41,12 +41,12 @@ public:
 	            else
 	                index = frame->exp.size();
 
-	            if(*(*boolsettings)["o"])
+	    	    if(*runtime.boolsettings["o"])
 	            {
 	                std::cout<<"Executing else case:\n";
 	            }
 	            try{
-	                runtime->callOnFrame(frame,codeBlock.data);
+	                runtime.callOnFrame(frame,codeBlock.data);
 	            }
 	            catch(std::string &exception)
 	            {
@@ -57,7 +57,7 @@ public:
 	    }
 	    else
 	    {
-	    	if(*(*boolsettings)["o"])
+		    if(*runtime.boolsettings["o"])
 	        {
 	            std::cout<<"Skipping else case\n";
 	        }
@@ -67,8 +67,7 @@ public:
 	        	index = frame->exp.size();
 	    }
 	    frame->setIfFlag(false);
-	    frame->index = 0;
-	    return "a"+frame->exp.substr(index,frame->exp.size());
+	    frame->index = index;
 	}
 };
 

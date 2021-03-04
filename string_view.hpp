@@ -8,40 +8,140 @@
 #ifndef STRINGVIEW_HPP_
 #define STRINGVIEW_HPP_
 #include <string>
+#include <sstream>
 #include <iostream>
+#include "StackSegment.hpp"
+struct SubStrSV;
 #if defined(WIN32) || defined(_WIN32)
 #include <cstring>
 #else
 #include <string.h>
 #endif
 class string_view {
-private:
+protected:
 	char *ptr = nullptr;
 	uint32_t len = 0;
 public:
 	string_view();
 	string_view(const std::string &s);
-	string_view(const std::string &s, uint32_t start, uint32_t end);
-	string_view(const char *s, uint32_t len);
-	uint32_t size()
+	string_view(const std::string &s, const uint32_t start, const uint32_t end);
+	string_view(const string_view s, const uint32_t start, const uint32_t end);
+	string_view(const char *s, const uint32_t len);
+	const char* c_str() const { return ptr; }
+	uint32_t size() const
 	{
 		return this->len;
 	}
-	uint32_t length()
+	uint32_t length() const
 	{
 		return this->size();
 	}
-	char& operator[](uint32_t index)
+	char& operator[](uint32_t index) const
 	{
 		return ptr[index];
 	}
-	uint32_t find(const std::string &s);
-	uint32_t find(const char *s, uint32_t start = 0, uint32_t size = -1);
-	uint32_t find(string_view, uint32_t start = 0, uint32_t size = -1);
-	string_view substr(uint32_t start, uint32_t end = -1);
-	std::string str();
-	friend std::ostream& operator<<(std::ostream &o,string_view &l);
+	std::string operator+(const string_view &s) const;
+	std::string operator+(const std::string &s) const;
+	string_view& operator=(const std::string &s);
+	string_view& operator=(const string_view &s);
+	string_view& operator=(const SubStrSV &s);
+	bool operator==(const string_view &s) const;
+	bool operator<(const string_view &s) const;
+	uint32_t find(const std::string &s) const;
+	uint32_t find(const char *s, uint32_t start = 0, uint32_t size = -1) const;
+	uint32_t find(const string_view, const uint32_t start = 0, uint32_t size = -1) const;
+	uint32_t find(const char, const uint32_t start = 0) const;
+	string_view substr(const uint32_t start, uint32_t len = -1) const;
+	std::string str() const;
+	friend std::ostream& operator<<(std::ostream &o, const string_view &l);
 	virtual ~string_view();
 };
+static const std::hash<char> hashfnc;
+using sv = string_view;
+template <> struct std::hash<sv>
+{
+	//fnv-1a
+  size_t operator()(const sv &x) const
+  {
+  	static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
+  	size_t hash = offset;
+  	for(uint32_t i = 0; i < x.length(); i++)
+  	{
+  		hash ^= hashfnc(x[i]);
+  		hash *= prime;
+  	}
+  	return hash;
+  }
+};
+template <> struct std::less<sv>
+{
+  size_t operator()(const sv &x, const sv &y) const
+  {
+  	return x<y;
+  }
+};
 
+template <> struct std::equal_to<sv>
+{
+  size_t operator()(const sv &x, const sv &y) const
+  {
+  	return x == y;
+  }
+};
+
+class StackString: public string_view {
+private:
+	size_t start;
+	StackSegment<char> data;
+	bool managingMemory = true;
+	void loadThis(size_t len)
+	{
+		for(uint32_t i = 0; i < len; i++)
+		{
+			data.push((*this)[start+i]);
+		}
+		this->ptr = &data[start];
+		this->data.push(0);
+	}
+	void copy(const char *ptr, size_t len)
+	{
+		size_t i = 0;
+		this->start = data.size();
+		if(managingMemory)
+		while(i < this->size() && i < len)
+		{
+			this->ptr[i] = ptr[i++];
+		}
+		while(i < this->size() && i >= len)
+		{
+			this->data.pop();
+			i++;
+		}
+		while(i >= this->size() && i < len)
+		{
+			this->data.push(ptr[i++]);
+		}
+		this->data.push(0);
+		this->len = this->data.length();
+		this->ptr = &this->data[start];
+	}
+public:
+	StackString(): string_view((char*)nullptr, 0), start(0) {}
+	StackString(stack<char> data, const std::string &s): start(data.size()), data(data) { loadThis(s.size()); }
+	StackString(stack<char> data, const std::string &s, const uint32_t start, const uint32_t end):
+		string_view(s, start, end), start(data.size()), data(data) { loadThis(this->size()); }
+	StackString(stack<char> data, const string_view s, const uint32_t start, const uint32_t end):
+		string_view(s, start, end), start(data.size()), data(data) { loadThis(this->size()); }
+	void setMemory(stack<char> &d) { data.setData(d); }
+	StackString& operator=(const std::string &s) {
+		this->copy(s.c_str(), s.size());
+		return *this;
+	}
+	StackString& operator=(const string_view &s)
+	{
+		this->copy(s.c_str(), s.size());
+		return *this;
+	}
+	StackString& operator=(const SubStrSV &s);
+};
 #endif /* STRINGVIEW_HPP_ */

@@ -10,17 +10,17 @@
 
 #include "../Keyword.hpp"
 #include "../PRNG.hpp"
-class SRandomAction: public Keyword {
+class SRandomAction: public OpKeyword {
 public:
-	SRandomAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	SRandomAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "srand";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime->callOnFrame(frame,exp.data);
+	    double input = runtime.callOnFrame(frame,exp.data);
 	    double ib = input/100000;
 	    input *= 100000;
 	    input += ib;
@@ -38,11 +38,11 @@ public:
 	    }
 	    double hash = PRNG::ascalPRNG();
 		frame->initialOperands.push(hash);
-        if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"srand("<<(input/100000)<<") = "<<ParsingUtil::to_string(hash)<<'\n';
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+        frame->index = exp.end;
 	}
 };
 

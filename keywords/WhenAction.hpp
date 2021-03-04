@@ -9,14 +9,17 @@
 #define KEYWORDS_WHENACTION_HPP_
 
 #include "../Keyword.hpp"
-class WhenAction: public Keyword {
+class WhenAction: public OpKeyword {
+	private:
+	const uint32_t bufSize = 8192;
+	char buffer[8192];
 public:
-	WhenAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	WhenAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "when";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    //parse expression, start from substr when go up until substr end is found
 	    //extract substring, and save the other parts of the expression
@@ -27,6 +30,7 @@ public:
 		static const int invalidIndex = 2000000000;
 	    const int startIndex = frame->index;
 
+        const string_view exp = string_view(frame->exp);
 	    int endIndex = frame->index;
 	    /*this block locates the end keyword for the ascal when block*/{
 	    int i = endIndex;
@@ -42,8 +46,8 @@ public:
 	    	i++;
 	    }
 	    }
-	    std::string endOfExp = frame->exp.substr(endIndex+3,frame->exp.length());
-	    std::string value;
+	    //string_view endOfExp = string_view(frame->exp).substr(endIndex+3,frame->exp.length());
+	    string_view value;
 	    int index = startIndex + 4;
 	    //should always start after when is finished to build boolean expression
 
@@ -61,26 +65,26 @@ public:
 	            index++;
 	        }
 	        uint32_t startOfBoolExp = index;
-	        while(frame->exp[index] && index < endIndex && index < thenIndex)
+	        while(frame->exp.size() > index && index < endIndex && index < thenIndex)
 	        {
 	            index++;
 	        }
-	        std::string booleanExpression = frame->exp.substr(startOfBoolExp,index-startOfBoolExp);
+	        string_view booleanExpression = exp.substr(startOfBoolExp,index-startOfBoolExp);
 	        if(booleanExpression.size() == 0)
 	        {
 	            throw std::string("Error no boolean expression provided in when.\n");
 	        }
 
-	        if(*(*boolsettings)["o"])
+		    if(*runtime.boolsettings["o"])
 	        {
 	            std::cout<<"Executing Boolean Expression: "<<booleanExpression<<'\n';
 	        }
 	        try{
-	            boolExpValue = runtime->callOnFrame(frame,booleanExpression);
+	            boolExpValue = runtime.callOnFrame(frame,booleanExpression);
 	        }
 	        catch(std::string &exception)
 	        {
-	            throw std::string("In When Action Calculating BooleanExpression: "+booleanExpression+"\n"+exception);
+	            throw std::string("In When Action Calculating BooleanExpression: "+booleanExpression.str()+"\n"+exception);
 	        }
 	    //false case simply set the index to the next instance of when+4
 	    //and repeat until true, or at end of case when
@@ -90,7 +94,7 @@ public:
 	            whenIndex = index - 5;
 	            if(whenIndex == -1 && elseIndex != invalidIndex)
 	            {
-	                value = ParsingUtil::getExpr(frame->exp.substr(elseIndex+4,endIndex-(elseIndex+4)),0,runtime->ascal_cin).data;
+	                value = ParsingUtil::getExprInStringSV(exp.substr(elseIndex+4,endIndex-(elseIndex+4)), 0, '{', '}', ';').data;
 	                index = endIndex;
 	            }
 
@@ -101,17 +105,38 @@ public:
 	            index += 5;
 	            thenIndex = frame->exp.find("when",index);
 	            thenIndex = thenIndex==-1?endIndex+1:thenIndex;
-	            value = ParsingUtil::getExpr(frame->exp.substr(index,std::min(std::min(endIndex,thenIndex),elseIndex)-index),0,runtime->ascal_cin).data;
+	            value = ParsingUtil::getExprInStringSV(exp.substr(index,std::min(std::min(endIndex,thenIndex),elseIndex)-index), 0, '{', '}', ';').data;
 	        }
 	        lastThen = thenIndex;
 	    } while(frame->exp[index] && boolExpValue == 0 && index < endIndex);
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	        std::cout<<"Executing Branch: "<<value<<" Params: "<<AscalExecutor::printMemory(*frame->getParamMemory()," = ",false,"|");
 	        std::cout<<"\n";
 	    }
-	    frame->index = 0;
-	    return "a"+value.substr(0,value.length()-1)+endOfExp;
+	    if(value.length()-1 > bufSize)
+	    {
+		    std::string s = (value).substr(0,value.length()-1).str();
+		    index = endIndex+3-s.length();
+		    frame->index = index;
+		    uint32_t i = 0;
+		    for(; index < endIndex+3; index++){
+		    	frame->exp[index] = s[i++];
+		    }
+	    }
+	    else
+	    {
+
+		    string_view s = (value).substr(0,value.length()-1);
+		    index = endIndex+3-s.length();
+		    frame->index = index;
+		    uint32_t i = 0;
+		    for(short j = 0; j < endIndex+3-index; j++)
+		    	buffer[j] = s[j];
+		    for(; index < endIndex+3; index++){
+		    	frame->exp[index] = buffer[i++];
+		    }
+	    }
 	}
 };
 

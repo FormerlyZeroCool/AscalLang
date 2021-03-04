@@ -9,14 +9,14 @@
 #define KEYWORDS_INPUTACTION_HPP_
 
 #include "../Keyword.hpp"
-class InputAction: public Keyword {
+class InputAction: public OpKeyword {
 public:
-	InputAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	InputAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "input";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	        const int startOfPrint = frame->exp.find("\"")+1;
 	        int endOfPrint = frame->exp.find("\"",startOfPrint);
@@ -24,15 +24,15 @@ public:
 	        std::string usrPrompt;
 	        if(endOfPrint != -1)
 	        {
-	            usrPrompt = frame->exp.substr(startOfPrint,endOfPrint-startOfPrint);
+	            usrPrompt = frame->exp.substr(startOfPrint,endOfPrint-startOfPrint).str();
 	            int index = 0;
 	            SubStr subexp("",0,0);
 	            while(usrPrompt[index] && usrPrompt[index] != '\"')
 	            {
 	                if(usrPrompt[index] == '(')
 	                {
-	                    SubStr subexp = ParsingUtil::getExpr(usrPrompt,index,runtime->ascal_cin,'(',')',';');
-	                    std::string value = ParsingUtil::to_string(runtime->callOnFrame(frame,subexp.data));
+	                    SubStr subexp = ParsingUtil::getExpr(usrPrompt,index,runtime.ascal_cin,'(',')',';');
+	                    std::string value = ParsingUtil::to_string(runtime.callOnFrame(frame,subexp.data));
 	                    std::string first = usrPrompt.substr(0,index);
 	                    std::string last = usrPrompt.substr(index+subexp.end-3,frame->exp.size());
 	                    usrPrompt = first+value+last;
@@ -52,24 +52,24 @@ public:
 	            endOfPrint = frame->index+4;
 	        }
 	        std::string input;
-	        if(runtime->commandLineParams.index+1 < runtime->commandLineParams.argc)
+	        if(runtime.commandLineParams.index+1 < runtime.commandLineParams.argc)
 	        {
-	            input = std::string(runtime->commandLineParams.argv[++runtime->commandLineParams.index]);
+	            input = std::string(runtime.commandLineParams.argv[++runtime.commandLineParams.index]);
 	        }
 	        else
 	        {
 	            std::cout<<usrPrompt;
-	        	std::streambuf* currentBuffer = runtime->ascal_cin.rdbuf();
-	        	runtime->ascal_cin.rdbuf(runtime->stream_buffer_cin);
-	            getline(runtime->ascal_cin,input);
-	            runtime->ascal_cin.rdbuf(currentBuffer);
+	        	std::streambuf* currentBuffer = runtime.ascal_cin.rdbuf();
+	        	runtime.ascal_cin.rdbuf(runtime.stream_buffer_cin);
+	            getline(runtime.ascal_cin,input);
+	            runtime.ascal_cin.rdbuf(currentBuffer);
 	            if(input.size()==0)
 	            	throw 0;
 	        }
-	        frame->initialOperands.push(runtime->callOnFrame(frame,input));
-	        if(*(*boolsettings)["o"])
+	        frame->initialOperands.push(runtime.callOnFrame(frame,input));
+		    if(*runtime.boolsettings["o"])
 	          std::cout<<"Received "<<input<<" as input.\n";
-	    return "a"+frame->exp.substr(endOfPrint+1,frame->exp.size());
+	        frame->index = endOfPrint+1;
 
 	}
 };

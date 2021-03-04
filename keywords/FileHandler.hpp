@@ -16,12 +16,12 @@ class FileHandler {
 private:
 public:
 	FileHandler();
-	static void loadFile(AscalExecutor *runtime, const std::string &expr,int startIndex, std::istream &inputStream)
+	static void loadFile(AscalExecutor &runtime, string_view expr,int startIndex, std::istream &inputStream)
 	{
 	    std::ifstream inputFile;
 	    while(expr[startIndex] == ' ' || expr[startIndex] == ':')
 	        startIndex++;
-	    std::string filePath = expr.substr(startIndex,expr.find(';')-startIndex);
+	    std::string filePath = expr.substr(startIndex,expr.find(';')-startIndex).str();
 	    inputFile.open(filePath);
 	    if(!inputFile)
 	    {
@@ -53,17 +53,19 @@ public:
 	    {
 	        throw std::string("Malformed path: "+filePath);
 	    }
-	    if(*runtime->boolsettings["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"Loading file: "<<filePath<<"\n";
 	    }
 	    std::streambuf* cinrdbuf = inputStream.rdbuf();
 	    inputStream.rdbuf(inputFile.rdbuf());
-	    FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+	    FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(runtime, runtime.memMan);
 	    calledFunctionMemory->setIsDynamicAllocation(false);
 	    while(true)
 	    {
-	        getline(inputFile, calledFunctionMemory->exp);
+	    	std::string line;
+	        getline(inputFile, line);
+	        calledFunctionMemory->exp = line;
 	    	if(!inputFile)
 	    		break;
 	        //reset so it is like we are executing a new frame with shared memory, and if/else flag state
@@ -80,7 +82,7 @@ public:
 	        	if(calledFunctionMemory->exp[i] != '#')
 	        	{
 	        		//evaluate statement as an expression
-	        		runtime->calculateExpression(calledFunctionMemory);
+	        		runtime.calculateExpression(calledFunctionMemory);
 	        	}
 	        }
 	        //catch only ascal runtime exceptions, not exit signal exceptions, or anything from C++
@@ -92,7 +94,7 @@ public:
 	    delete calledFunctionMemory;
 	    inputFile.close();
 	    inputStream.rdbuf(cinrdbuf);
-	    if(*runtime->boolsettings["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"Finished loading file: "<<filePath<<"\n";
 	    }
