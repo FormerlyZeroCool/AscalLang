@@ -18,35 +18,46 @@ public:
 	}
 	void action(AscalFrame<double>* frame) override
 	{
-	                SubStr exPart = ParsingUtil::getExpr(frame->exp,frame->exp.find('=',frame->index)+1,runtime.ascal_cin);
-	                SubStr newVarPart = ParsingUtil::getVarName(frame->exp, frame->index+4);
-	                Object *parent = runtime.resolveNextObjectExpressionPartial(frame, newVarPart);
-	                Object var(runtime.memMan, newVarPart.data,exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1).str());
-	                var.compileInstructions();
-	                Object *obj = nullptr;
-	                if(parent)
-	                {
-	                	if(ParsingUtil::isDouble(var.id))
-	                		obj = &parent->setList(var, stoi(var.id));
-	                	else
-	                		obj = &parent->loadChild(var, runtime);
-	                }
-	                else if(runtime.memory.count(var.id) != 0)
-	                {
-	                    std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), (runtime.memory)[var.id]);
-	                    if(position != runtime.userDefinedFunctions.end())
-	                        runtime.userDefinedFunctions.erase(position);
-			    	    obj = &runtime.loadUserDefinedFn(var, runtime.memory);
-	                }
-	                else
-	                {
-			    	    obj = &runtime.loadUserDefinedFn(var, runtime.memory);
-	                }
-		    	    if(*runtime.boolsettings["o"])
-	                {
-	                    std::cout<<std::endl<<"New global function: "<<obj->id
-	                    		<< " exp: "<<obj->instructionsToFormattedString()<<std::endl;
-	                }
+        SubStr exPart = ParsingUtil::getExpr(frame->exp,frame->exp.find('=',frame->index)+1,runtime.ascal_cin);
+        uint32_t index = frame->index+4;
+        SubStrSV newVarPart = ParsingUtil::getVarNameSV(frame->exp, index);
+        Object *parent = runtime.resolveNextObjectExpressionPartial(frame, newVarPart);
+        Object *obj = nullptr;
+        if(parent)
+        {
+            if(ParsingUtil::isDouble(newVarPart.data)){
+                Object var(runtime.memMan, newVarPart.data.str(),exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1).str());
+                var.compileInstructions();
+                obj = &parent->setList(var, stoi(var.id));
+            }
+            else{
+                index = frame->index;
+                std::string newVarId = ParsingUtil::getVarName(frame->exp, index).data;
+                Object var(runtime.memMan, newVarId,exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1).str());
+                var.compileInstructions();
+                obj = &parent->loadChild(var, runtime);
+            }
+        }
+        else if(runtime.memory.count(newVarPart.data) != 0)
+        {
+            std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), (runtime.memory)[newVarPart.data]);
+            if(position != runtime.userDefinedFunctions.end())
+                runtime.userDefinedFunctions.erase(position);
+            Object var(runtime.memMan, newVarPart.data.str(),exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1).str());
+            var.compileInstructions();
+            obj = &runtime.loadUserDefinedFn(var, runtime.memory);
+        }
+        else
+        {
+            Object var(runtime.memMan, newVarPart.data.str(),exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1).str());
+            var.compileInstructions();
+            obj = &runtime.loadUserDefinedFn(var, runtime.memory);
+        }
+        if(*runtime.boolsettings["o"])
+        {
+            std::cout<<std::endl<<"New global function: "<<obj->id
+                    << " exp: "<<obj->instructionsToFormattedString()<<std::endl;
+        }
 	}
 };
 

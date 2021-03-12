@@ -220,6 +220,23 @@ std::string Object::instructionsToFormattedString(uint16_t indentationLevel) con
 	return data.str();
 }
 
+Object& Object::copyExceptID(const Object& o)
+{
+    if(this->instructions.size() == o.instructions.size())
+    {
+        for(uint32_t i = 0; i < this->instructions.size(); i++)
+        {
+            this->instructions[i] = o.instructions[i];
+        }
+    }
+    else
+        this->instructions = o.instructions;
+    this->objectList = o.objectList;
+    this->objectMap = o.objectMap;
+    this->parent = o.parent;
+    this->params = o.params;
+    return *this;
+}
 Object& Object::operator=(const Object& o)
 {
 	if(this->id.size() == o.id.size())
@@ -460,11 +477,10 @@ void Object::setDouble(long double d)
 {
 	if(this->instructions.size() < 14)
 	{
-		this->instructions = "01234567890123";
+		this->instructions = "              ";
 	}
-	char *c = (char*) this->instructions.c_str();
-	c[0] = 1;
-	long double *mem = (long double *) &c[1];
+    this->instructions[0] = '\1';
+	long double *mem = (long double *) &this->instructions[1];
 	*mem = d;
 
 }
@@ -530,15 +546,15 @@ std::string Object::toString()
 }
 Object::Object(MemoryManager<Object> &memMan, std::string &id):id(id), objectMap(memMan)
 {
-	instructions = "*12456789";
+	instructions = "              ";
 }
 Object::Object(MemoryManager<Object> &memMan, std::string &&id):id(id), objectMap(memMan)
 {
-	instructions = "*12456789";
+	instructions = "              ";
 }
 Object::Object(MemoryManager<Object> &memMan, std::string &id, std::string &param):id(id), objectMap(memMan)
 {
-	instructions = "*12456789";
+	instructions = "              ";
 	setParams(param);
 }
 Object::Object(MemoryManager<Object> &memMan, std::string &&id,std::string &&expression,std::string &param):id(id), objectMap(memMan)
@@ -574,7 +590,7 @@ Object::Object(MemoryManager<Object> &memMan, std::string &id,std::string &&expr
 }
 Object::Object(MemoryManager<Object> &memMan): objectMap(memMan)
 {
-	this->id = "";
+	this->id = "              ";
 }
 Object::~Object() {
 	// TODO Auto-generated destructor stub

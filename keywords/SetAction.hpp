@@ -23,7 +23,7 @@ public:
 		uint32_t index = frame->exp.find(keyWord,frame->index)+keyWord.size();
 	    SubStrSV varName = ParsingUtil::getVarNameSV(frame->exp, index);
 	    uint32_t startIndex = frame->exp.find("=",varName.end)+1;
-	    while(frame->exp[startIndex] && frame->exp[startIndex] == ' ')
+	    while(frame->exp.size() > startIndex && frame->exp[startIndex] == ' ')
 	        startIndex++;
 	    string_view subexp;
 	    {
@@ -56,7 +56,7 @@ public:
 	    {
 	    	SubStrSV rightHandObjectLookup = ParsingUtil::getVarNameSV(frame->exp, startIndex);
 	    	Object *rightObj = runtime.resolveNextExprSafe(frame, rightHandObjectLookup);
-	    	*obj = *rightObj;
+	    	obj->copyExceptID(*rightObj);
 		    if(*runtime.boolsettings["o"])
 		    {
 		    	std::cout<<"set "<<varName.data<<" = "<<obj->toString()<<"\n";

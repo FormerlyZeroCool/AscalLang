@@ -21,8 +21,9 @@ public:
 	}
 	void clear()
 	{
-		for(size_t i = 0; i < len; i++)
-			this->data->pop();
+        const size_t length = len;
+		for(size_t i = 0; i < length; i++)
+            this->pop();
 	}
 	~StackSegment()
 	{
@@ -45,7 +46,7 @@ public:
 		push(data);
 	}
 	void pop();
-	void pop_back() { data->pop(); }
+    void pop_back() { pop(); }
 	void top(t&data);
 	void top(t*&data);
 	bool isEmpty();
@@ -125,18 +126,18 @@ template <typename t>
 StackSegment<t>::StackSegment(stack<t> &dat): start(dat.size()), len(0), data(&dat) {}
 
 template <typename t>
-void StackSegment<t>:: push(const t &data)
+void StackSegment<t>::push(const t &data)
 {
 	this->len++;
 	this->data->push(data);
 }
 template <typename t>
-void StackSegment<t>:: push(const t &&data)
+void StackSegment<t>::push(const t &&data)
 {
 	this->push(data);
 }
 template <typename t>
-void StackSegment<t>:: pop()
+void StackSegment<t>::pop()
 {
 	if(len)
 	{

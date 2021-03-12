@@ -30,7 +30,7 @@ public:
 	    limitParams.setParams(limitExpr.data);
 	    if(limitParams.params.empty())
 	    	throw std::string("Error no limit in for loop condition");
-	    runtime.callOnFrame(frame, "loc "+itVar.data.str()+" = 0");
+        
 	    SubStr limitStr = limitParams.params.size()>1?limitParams.params[1]:limitParams.params[0];
 	    int startOfCodeBlock = limitExpr.start;
 	    SubStr codeBlock("",0,0);
@@ -46,7 +46,9 @@ public:
 	    executionFrame.setIsDynamicAllocation(false);
 	    executionFrame.setContext(frame->getContext());
 		double i = limitParams.params.size()>1?runtime.callOnFrame(frame,limitParams.params[0].data):0;
-		size_t itObj = (*frame->getLocalMemory()).getIndex(itVar.data);
+        runtime.callOnFrame(frame, "loc "+itVar.data.str()+" = 0");
+        size_t itObj = 0;
+        itObj = (*frame->getLocalMemory()).getIndex(itVar.data);
 	    if(ParsingUtil::firstChar(limitStr.data,'&'))
 	    {
 	    	uint32_t index = postRangeIndex+limitStr.start;

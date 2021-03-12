@@ -65,7 +65,8 @@ public:
 	Object& getListElement(size_t index,MemoryMap &memory);
 	bool operator==(const Object &o) const;
 	bool operator==(Object &o) const;
-	Object& operator=(const Object& o);
+    Object& operator=(const Object& o);
+    Object& copyExceptID(const Object& o);
 	std::string toString();
 	void compileInstructions();
 	template <typename string>

@@ -198,8 +198,8 @@ public:
         	uint16_t *jd = (uint16_t*) &j.id[1];
         	*jd = this->returnPointer->getParams()->size();
         	//std::cout<<"Param frame rtning: "<<result<<"\n";
+            j.setDouble(result);
         	Object &obj = this->returnPointer->getLocalMemory()->insert(j);
-        	obj.setDouble(result);
         	this->returnPointer->getParams()->push_back(&obj);
         }
     }

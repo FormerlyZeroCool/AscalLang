@@ -13,7 +13,7 @@
 template <typename t>
 class MemoryManager {
 private:
-	std::vector<t> data;
+	std::vector<t*> data;
 	stack<size_t> freelist;
 public:
 	MemoryManager();
@@ -50,22 +50,24 @@ t& MemoryManager<t>::alloc(t &record, size_t &addr)
 {
 	if(this->freelist.isEmpty())
 	{
-		this->data.push_back(record);
+        t* rec = new t(record);
+		this->data.push_back(rec);
 		addr = this->data.size()-1;
 	}
 	else
 	{
 		this->freelist.top(addr);
 		this->freelist.pop();
-		this->data[addr] = record;
+        *this->data[addr] = record;
 	}
-	return this->data[addr];
+    std::cout<<"alloced: "<<addr<<"\n"<<(this->data)[addr]->toString();
+	return *this->data[addr];
 }
 
 template <typename t>
 t& MemoryManager<t>::operator[](size_t index)
 {
-	return this->data[index];
+	return *this->data[index];
 }
 template <typename t>
 void MemoryManager<t>::dealloc(size_t address)

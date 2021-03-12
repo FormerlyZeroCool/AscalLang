@@ -17,13 +17,15 @@ struct SubStrSV;
 #else
 #include <string.h>
 #endif
+//class ObjectIDView;
 class string_view {
 protected:
 	char *ptr = nullptr;
 	uint32_t len = 0;
 public:
 	string_view();
-	string_view(const std::string &s);
+    string_view(const std::string &s);
+//    string_view(const ObjectIDView &s);
 	string_view(const std::string &s, const uint32_t start, const uint32_t end);
 	string_view(const string_view s, const uint32_t start, const uint32_t end);
 	string_view(const char *s, const uint32_t len);
@@ -122,7 +124,7 @@ private:
 			this->data.push(ptr[i++]);
 		}
 		this->data.push(0);
-		this->len = this->data.length();
+		this->len = this->data.length()-1;
 		this->ptr = &this->data[start];
 	}
 public:
