@@ -145,6 +145,9 @@ public:
 	  case '$':
 		  priority = 80;
 		  break;
+	  case '@':
+		  priority = 80;
+		  break;
 	  case 'P':
 		  priority = 80;
 		  break;
