@@ -481,13 +481,14 @@ void Object::setDouble(long double d)
 	}
 	char *c = (char*) this->instructions.c_str();
 	c[0] = 1;
-	long double *mem = (long double *) &c[1];
-	*mem = d;
+	memcpy(&c[1], &d, sizeof(long double));
 
 }
 long double Object::getDouble() const
 {
-	return *(long double*)(this->instructions.c_str()+1);
+	long double d;
+	memcpy(&d, this->instructions.c_str()+1, sizeof(long double));
+	return d;
 }
 bool Object::isDouble()
 {
