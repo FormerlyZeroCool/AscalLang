@@ -125,13 +125,13 @@ class stack : public std::vector<t>{
 
 public:
 	stack(){}
-	void push(const t &data);
-	void push(const t &&data);
-	void pop();
-	void top(t&data);
-	void top(t*&data);
-	bool isEmpty();
-	size_t length();
+	inline void push(const t &data);
+	inline void push(const t &&data);
+    inline void pop();
+	inline void top(t&data);
+	inline void top(t*&data);
+	inline bool isEmpty();
+	inline size_t length();
 };
 
 template <typename t>
@@ -147,10 +147,12 @@ void stack<t>::push(const t &&data)
 template <typename t>
 void stack<t>::pop()
 {
-	if(this->size() > 0)
+	//if(this->size() > 0)
 	{
 		this->pop_back();
 	}
+    //else
+      //  throw std::string("You popped an empty list!");
 }
 template <typename t>
 bool stack<t>::isEmpty()
@@ -165,7 +167,7 @@ size_t stack<t>::length()
 template <typename t>
 void stack<t>::top(t&data)
 {
-	if(this->size() > 0)
+	//if(this->size() > 0)
 	{
 		data = (*this)[this->size()-1];
 	}
@@ -174,7 +176,7 @@ void stack<t>::top(t&data)
 template <typename t>
 void stack<t>::top(t*&data)
 {
-	if(this->size() > 0)
+	//if(this->size() > 0)
 	{
 		data = &(*this)[this->size()-1];
 	}

@@ -10,10 +10,21 @@
 #include "Keyword.hpp"
 
 
-static const std::hash<std::string> hashfn;
+template <typename char_type>
+static uint64_t hashfnv(char_type &cptr, size_t len)
+{
+    static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
+    size_t hash = offset;
+    for(uint32_t i = 0; i < len; i++)
+    {
+        hash ^= (cptr[i]);
+        hash *= prime;
+    }
+    return hash;
+}
 static uint64_t hashFunctionCall(std::string &exp)
 {
-    return hashfn(exp);
+    return hashfnv(exp, exp.size());
 }
 static uint64_t h;
 static uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
@@ -21,7 +32,7 @@ static uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
     h = hash;
     for(auto *s:params)
     {
-        hash += hashfn(s->getInstructions());
+        hash += hashfnv(s->getInstructions(), s->getInstructions().size());
         hash ^= hash>>2;
         hash ^= hash<<5;
         hash ^= hash>>12;
@@ -75,8 +86,8 @@ void AscalExecutor::addKeyWord(Keyword *key)
 }
 void AscalExecutor::updateBoolSetting(AscalFrame<double>* frame)
     {
-
-        lastExp.pop();
+        if(!lastExp.isEmpty())
+            lastExp.pop();
         SubStr id = ParsingUtil::getVarName(frame->exp,frame->index);
         int endOfId = id.start+id.data.length();
         while(frame->exp[endOfId] == ' ')
@@ -90,7 +101,7 @@ void AscalExecutor::updateBoolSetting(AscalFrame<double>* frame)
         boolsettings[set.getCommand()] = newSetting;
         if(*boolsettings["o"])
         {
-            std::cout<<set.getName()<<" Status: "<<data<<"\n";
+            std::cout<<set.getName()<<" Status changed to: "<<(data?"On":"Off")<<"\n";
         }
     }
 AscalExecutor::~AscalExecutor() {
@@ -134,7 +145,7 @@ void AscalExecutor::loadInitialFunctions()
     loadFn(Object(memMan, "cosDeg","cos(toRad(theta))",""));
     loadFn(Object(memMan, "sec","1/cos(theta)",""));
     //Helpful functions
-    loadFn(Object(memMan, "fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
+    loadFn(Object(memMan, "fib","(x){loc first = 0;loc second = 1;loc int = 0;for counter in range(x){set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
     loadFn(Object(memMan, "fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};loc z = 0;memoize 1;set z = fr(x);memoize 0;z}",""));
     loadFn(Object(memMan, "rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
     loadFn(Object(memMan, "ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
@@ -544,10 +555,11 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 
                  if(Object *data = resolveNextObjectExpression(currentFrame, varName))
                  {
+                     varName.start = currentFrame->index;
                      startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
                      uint32_t endOfParams = data->setParams(currentFrame->exp, startOfparams);
-                     uint32_t startOfEnd = frame->index+varName.data.size()-1+endOfParams;
+                     uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
                      //std::cout<<"soe: "<<startOfEnd<<" vnsize: "<<varName.data.size()<<"start: "<<varName.start<<" eop: "<<endOfParams<<"\nvarName: "<<varName.data<<"\n";
                  //creates a new set of stack frames, one for the function/var and one for resolution,
                  //and calculation of each of it's parameters
@@ -559,6 +571,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
                  {
 
+                         varName.start = currentFrame->index;
                      if(currentFrame->exp[varName.end+1] == '.' || currentFrame->exp[varName.end+1] == '[')
                      {
                          std::stringstream error;
@@ -584,7 +597,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                      //(*currentFrame->getParamMemory())[paramVar->id] = paramVar;
                      //this->loadUserDefinedFn(*paramVar, *currentFrame->getParamMemory());
                      uint32_t endOfParams = paramVar->setParams(currentFrame->exp, startOfparams);
-                     uint32_t startOfEnd = frame->index+varName.data.length()-1+endOfParams;
+                     uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
                      createFrame(executionStack, currentFrame,
                              paramVar,startOfEnd,hashFunctionCall(paramVar->id));
                      goto new_frame_execution;
@@ -622,7 +635,8 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
               currentFrame->initialOperands.top(and2);
               currentFrame->initialOperands.pop();
               processOperands.push(and2);
-              currentFrame->initialOperators.pop();
+              if(!currentFrame->initialOperators.isEmpty())
+                    currentFrame->initialOperators.pop();
               //Send expression in parentheses to processStack for evaluation
               try{
                   and2 = processStack(processOperands,processOperators);
@@ -685,13 +699,12 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             }
             currentFrame->returnResult(data, memory);
         }
-        executionStack.pop();
-        frame->returnPointer = rtnptr;
-        cachedRtnObject = nullptr;
         if(currentFrame->isDynamicAllocation())
         {
             delete currentFrame;
         }
+        executionStack.pop();
+        cachedRtnObject = nullptr;
         currentFrame = nullptr;
     }
 
@@ -706,6 +719,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
         clearStackOnError(false, s, executionStack, currentFrame, frame);
         throw exitCode;
     }
+    frame->returnPointer = rtnptr;
     currentStack = nullptr;
     return data;
 }
@@ -873,7 +887,8 @@ double AscalExecutor::processStack(stack<double> &operands,stack<char> &operator
 
     //get result from processing expression
     operands.top(result);
-    operands.pop();
+    if(!operands.isEmpty())
+        operands.pop();
       return result;
 }
 

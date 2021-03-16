@@ -145,7 +145,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 		savedOperands.reserve(8192);
 		savedOperators.reserve(8192);
 		paramsStack.reserve(8192);
-		instructionsStack.reserve(8192*10);
+		instructionsStack.reserve(1<<22);
 		processOperands.reserve(8192);
 		processOperators.reserve(8192);
 		operands.reserve(8192);

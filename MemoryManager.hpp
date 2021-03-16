@@ -58,9 +58,10 @@ t& MemoryManager<t>::alloc(t &record, size_t &addr)
 	{
 		this->freelist.top(addr);
 		this->freelist.pop();
-        *this->data[addr] = record;
+        delete this->data[addr];
+        t* rec = new t(record);
+		this->data[addr] = rec;
 	}
-    std::cout<<"alloced: "<<addr<<"\n"<<(this->data)[addr]->toString();
 	return *this->data[addr];
 }
 

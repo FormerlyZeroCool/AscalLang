@@ -167,9 +167,17 @@ public:
     	}
     	if(clear)
     	{
-            while(!this->initialOperands.isEmpty() || !this->initialOperators.isEmpty())
+            while(!this->initialOperands.isEmpty() && !this->initialOperators.isEmpty())
             {
                 this->initialOperands.pop();
+                this->initialOperators.pop();
+            }
+            while(!this->initialOperands.isEmpty())
+            {
+                this->initialOperands.pop();
+            }
+            while(!this->initialOperators.isEmpty())
+            {
                 this->initialOperators.pop();
             }
     	}
@@ -227,7 +235,7 @@ public:
     {
     	if(this->returnPointer && obj)
     	{
-    		this->returnPointer->getParams()->push_back(obj);
+            this->returnPointer->getParams()->push_back(obj);
     	}
         else
         	throw std::string("Error cannot find Object passed as reference param.");
@@ -263,7 +271,9 @@ public:
     {
         if(this->returnPointer)
         {
+            this->initialOperands.clear();
             this->returnPointer->initialOperands.push_back(result);
+            this->initialOperands.resetStart();
         }
     }
 	char getType() override

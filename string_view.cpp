@@ -7,13 +7,11 @@
 
 #include "string_view.hpp"
 #include "SubStr.hpp"
-#include "MemoryMap.hpp"
 
 string_view::string_view() {}
 
 string_view::~string_view() {}
 
-//string_view::string_view(const ObjectIDView &s): string_view(s.str()) {}
 string_view& string_view::operator=(const std::string &s)
 {
 	this->ptr = (char*) s.c_str();

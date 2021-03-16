@@ -13,6 +13,7 @@
 #include <string>
 #include <unordered_map>
 #include <sstream>
+#include "ObjectKey.hpp"
 #include "SubStr.hpp"
 #include "string_view.hpp"
 #include "ParsingUtil.hpp"
@@ -65,7 +66,7 @@ public:
 	Object& getListElement(size_t index,MemoryMap &memory);
 	bool operator==(const Object &o) const;
 	bool operator==(Object &o) const;
-    Object& operator=(const Object& o);
+	Object& operator=(const Object& o);
     Object& copyExceptID(const Object& o);
 	std::string toString();
 	void compileInstructions();

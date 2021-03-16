@@ -15,13 +15,13 @@ AscalParameters::AscalParameters() {
 std::string AscalParameters::toString()
 {
 	std::string data;
-	for(std::string &s:*this)
+	for(auto &s:*this)
 	{
 		data += s+",";
 	}
 	return data;
-}*/
-
+}
+*/
 AscalParameters& AscalParameters::operator++()
 {
 	++useCount;

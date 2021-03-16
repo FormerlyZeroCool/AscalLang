@@ -9,14 +9,7 @@
 #include "Object.hpp"
 
 MemoryMap::MemoryMap(MemoryManager<Object> &data) : data(&data) {}
-Object& MemoryMap::iterator::operator*() const
-{
-    return man[intIt->second];
-}
-Object& MemoryMap::iterator::operator->() const
-{
-    return man[intIt->second];
-}
+
 bool MemoryMap::iterator::operator==(Object &o) const
 {
 	return **this == o;
@@ -35,7 +28,7 @@ Object& MemoryMap::insert(Object &s)
 
 	size_t addr = -1;
 	Object &obj = this->data->alloc(s, addr);
-    map[obj.id] = addr;
+	map[obj.id] = addr;
 
 	return obj;
 }
@@ -49,7 +42,7 @@ Object& MemoryMap::insert(string_view sv, Object &s)
 	}
 	size_t addr = -1;
 	Object &obj = this->data->alloc(s, addr);
-    map.insert(std::make_pair(sv, addr));
+	map.insert(std::make_pair(sv, addr));
 	return obj;
 }
 

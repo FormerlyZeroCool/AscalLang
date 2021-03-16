@@ -14,16 +14,27 @@ private:
 	size_t start, len;
 	stack<t> *data;
 public:
-	void setData(stack<t> &dat)
+    //only used while returning value from function into previous function's operand stack
+    inline void resetStart()
+    {
+        this->start = this->data->size();
+    }
+	inline void setData(stack<t> &dat)
 	{
 		data = &dat;
 		start = dat.size();
 	}
 	void clear()
 	{
+       // if(start+len == data->size() || !len)
+		{
         const size_t length = len;
 		for(size_t i = 0; i < length; i++)
             this->pop();
+        }
+        //else {
+          //  std::cout<<(start+len)<<" "<<data->size()<<("Error clearing segment not at top of stack\n");
+        //}
 	}
 	~StackSegment()
 	{
@@ -31,27 +42,30 @@ public:
 	}
 	StackSegment(stack<t> &dat);
 	StackSegment() {start = 0; len = 0; data = nullptr;}
-	t& operator[](size_t index)
+	inline t& operator[](size_t index)
 	{
-		return (*data)[index+start];
+        //if(index < len)
+            return (*data)[index+start];
+     //   else
+       //     throw std::string("Invalid access "+std::to_string(index));
 	}
-	void push(const t &data);
-	void push(const t &&data);
-	void push_back(const t &data)
+	inline void push(const t &data);
+	inline void push(const t &&data);
+    inline void push_back(const t &data)
 	{
 		push(data);
 	}
-	void push_back(const t &&data)
+	inline void push_back(const t &&data)
 	{
 		push(data);
 	}
-	void pop();
-    void pop_back() { pop(); }
-	void top(t&data);
-	void top(t*&data);
-	bool isEmpty();
-	size_t length();
-	size_t size() { return length(); }
+	inline void pop();
+    inline void pop_back() { pop(); }
+	inline void top(t&data);
+	inline void top(t*&data);
+	inline bool isEmpty();
+	inline size_t length();
+	inline size_t size() { return length(); }
 
 	template <typename u>
 	class iterator {
@@ -72,8 +86,7 @@ public:
 		}
 		u& operator*()
 		{
-			t &d = (*data)[index];
-			return d;
+			return (*data)[index];
 		}
 		u& operator->()
 		{
@@ -130,6 +143,8 @@ void StackSegment<t>::push(const t &data)
 {
 	this->len++;
 	this->data->push(data);
+    //if(start+len !=  this->data->size())
+      //  std::cout<<"Error pushing to segment not at top of stack\n";
 }
 template <typename t>
 void StackSegment<t>::push(const t &&data)
@@ -139,11 +154,12 @@ void StackSegment<t>::push(const t &&data)
 template <typename t>
 void StackSegment<t>::pop()
 {
-	if(len)
+	//if(len)
 	{
 		len--;
 		this->data->pop();
 	}
+    //else throw std::string("Error popping from empty stackstring");
 }
 template <typename t>
 void StackSegment<t>::top(t&data)
@@ -163,6 +179,6 @@ bool StackSegment<t>::isEmpty()
 template <typename t>
 size_t StackSegment<t>::length()
 {
-	return  this->data->size() - this->start;
+	return  len;
 }
 #endif /* STACKSEGMENT_HPP_ */

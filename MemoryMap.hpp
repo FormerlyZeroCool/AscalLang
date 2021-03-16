@@ -10,13 +10,11 @@
 #include <map>
 #include "string_view.hpp"
 #include "MemoryManager.hpp"
-
 class Object;
-
 class MemoryMap {
 private:
 	MemoryManager<Object> *data;
-    std::map<string_view, size_t> map;
+	std::map<string_view, size_t > map;
 public:
 	void clear();
 	void erase(string_view);
@@ -28,9 +26,15 @@ public:
 		MemoryManager<Object> &man;
 	public:
 		iterator(MemoryManager<Object> &man, std::map<string_view, size_t >::iterator intIt): intIt(intIt), man(man) {}
-        Object& operator*() const;
-        Object& operator->() const;
-        MemoryMap::iterator operator++()
+		Object& operator*() const
+		{
+			return man[intIt->second];
+		}
+		Object& operator->() const
+		{
+			return man[intIt->second];
+		}
+		MemoryMap::iterator operator++()
 		{
 			++intIt;
 			return *this;

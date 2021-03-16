@@ -58,7 +58,6 @@ public:
 	friend std::ostream& operator<<(std::ostream &o, const string_view &l);
 	virtual ~string_view();
 };
-static const std::hash<char> hashfnc;
 using sv = string_view;
 template <> struct std::hash<sv>
 {
@@ -69,7 +68,7 @@ template <> struct std::hash<sv>
   	size_t hash = offset;
   	for(uint32_t i = 0; i < x.length(); i++)
   	{
-  		hash ^= hashfnc(x[i]);
+  		hash ^= (x[i]);
   		hash *= prime;
   	}
   	return hash;
@@ -93,22 +92,22 @@ template <> struct std::equal_to<sv>
 
 class StackString: public string_view {
 private:
-	size_t start;
+    size_t start;
 	StackSegment<char> data;
 	bool managingMemory = true;
 	void loadThis(size_t len)
 	{
 		for(uint32_t i = 0; i < len; i++)
 		{
-			data.push((*this)[start+i]);
+			data.push((*this)[i]);
 		}
-		this->ptr = &data[start];
+		this->ptr = &data[0];
 		this->data.push(0);
 	}
 	void copy(const char *ptr, size_t len)
 	{
 		size_t i = 0;
-		this->start = data.size();
+		//this->start = data.size();
 		if(managingMemory)
 		while(i < this->size() && i < len)
 		{
@@ -135,10 +134,14 @@ public:
 	StackString(stack<char> data, const string_view s, const uint32_t start, const uint32_t end):
 		string_view(s, start, end), start(data.size()), data(data) { loadThis(this->size()); }
 	void setMemory(stack<char> &d) { data.setData(d); }
-	StackString& operator=(const std::string &s) {
-		this->copy(s.c_str(), s.size());
-		return *this;
-	}
+    StackString& operator=(const std::string &s) {
+        this->copy(s.c_str(), s.size());
+        return *this;
+    }
+    StackString& operator=(const std::vector<unsigned char> &s) {
+        this->copy((const char*) &s[0], s.size());
+        return *this;
+    }
 	StackString& operator=(const string_view &s)
 	{
 		this->copy(s.c_str(), s.size());
