@@ -7,30 +7,38 @@
 
 #include "string_view.hpp"
 #include "SubStr.hpp"
+#include "MemoryMap.hpp"
 
 string_view::string_view() {}
 
 string_view::~string_view() {}
 
+//string_view::string_view(const ObjectIDView &s): string_view(s.str()) {}
 string_view& string_view::operator=(const std::string &s)
 {
 	this->ptr = (char*) s.c_str();
 	this->len = s.size();
 	return *this;
-}
+}/*
 string_view& string_view::operator=(const string_view &s)
 {
-	this->ptr = s.ptr;
-	this->len = s.size();
-	return *this;
+    this->ptr = s.ptr;
+    this->len = s.size();
+    return *this;
 }
+string_view& string_view::operator=(const string_view &&s)
+{
+    *this = s;
+    return *this;
+}*/
 string_view& string_view::operator=(const SubStrSV &s)
 {
 	return *this = s.data;
 }
 string_view::string_view(const std::string &s)
 {
-	*this = s;
+    this->ptr = (char*) s.c_str();
+    this->len = s.size();
 }
 string_view::string_view(const std::string &s, const uint32_t start, const uint32_t end)
 {

@@ -32,11 +32,11 @@ public:
 	    	paramsForListElementFn = ParsingUtil::getFollowingExpr(frame->exp, frame->index, std::string(""));
 	    }
 	    std::stringstream fnDef;
-	    fnDef<<"loc "<<element->id<<"="<<element->getInstructions()<<";\n"<<element->id<<'('<<paramsForListElementFn.data<<')';
+	    fnDef<<"loc "<<element->getId()<<"="<<element->getInstructions()<<";\n"<<element->getId()<<'('<<paramsForListElementFn.data<<')';
 
 	    frame->initialOperands.push(runtime.callOnFrame(frame,fnDef.str()));
 
-	    runtime.callOnFrame(frame, "delete "+element->id);
+	    runtime.callOnFrame(frame, "delete "+element->getId().str());
 	    if(*runtime.boolsettings["o"])
 	    {
 	    	double t;

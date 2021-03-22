@@ -20,7 +20,7 @@ private:
 	    std::cout<<"All Functions in Memory:"<<std::endl;
 	    for(auto &value : runtime.memory)
 	    {
-	        std::cout<<std::endl<<"Function Name: "<<value.id<<"\nFunction Expression: "<<value.toString()<<std::endl;
+	        std::cout<<std::endl<<"Function Name: "<<value.getId()<<"\nFunction Expression: "<<value.toString()<<std::endl;
 	    }
 	    std::cout<<std::endl<<"End of All Functions in Memory."<<std::endl;
 	}
@@ -29,7 +29,7 @@ private:
 	    std::cout<<"User Defined Functions:"<<std::endl;
 	    for(Object & data:runtime.userDefinedFunctions)
 	    {
-	        std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<runtime.getObject(frame, data.id).toString()<<std::endl;
+	        std::cout<<std::endl<<"Function Name: "<<data.getId()<<std::endl<<"Function Expression: "<<runtime.getObject(frame, data.getId()).toString()<<std::endl;
 
 	    }
 	    std::cout<<std::endl<<"End of User Defined Functions."<<std::endl;
@@ -39,7 +39,7 @@ private:
 	    std::cout<<"System Defined Functions:"<<std::endl;
 	    for(Object & data:runtime.systemDefinedFunctions)
 	    {
-	        std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<data.instructionsToFormattedString()<<std::endl;
+	        std::cout<<std::endl<<"Function Name: "<<data.getId()<<std::endl<<"Function Expression: "<<data.instructionsToFormattedString()<<std::endl;
 	    }
 	    std::cout<<std::endl<<"End of System Defined Functions."<<std::endl;
 	}

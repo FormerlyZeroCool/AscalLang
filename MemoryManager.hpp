@@ -10,75 +10,82 @@
 #include <vector>
 #include <set>
 #include "stack.hpp"
-template <typename t>
+#include <boost/pool/pool.hpp>
+#include <boost/pool/object_pool.hpp>
+class Object;
 class MemoryManager {
 private:
-	std::vector<t*> data;
-	stack<size_t> freelist;
+    boost::pool<boost::default_user_allocator_malloc_free> small_obj_pool;
+    boost::pool<boost::default_user_allocator_malloc_free> medium_obj_pool;
+    boost::pool<boost::default_user_allocator_malloc_free> large_obj_pool;
+    boost::pool<boost::default_user_allocator_malloc_free> very_large_obj_pool;
+    boost::pool<boost::default_user_allocator_malloc_free> small_obj_id_pool;
+    boost::pool<boost::default_user_allocator_malloc_free> large_obj_id_pool;
+    boost::object_pool<Object> object_pool;
 public:
 	MemoryManager();
-	MemoryManager(size_t size);
-	t& operator[](size_t);
-	t& alloc(t &record, size_t &addr);
-	t& alloc(t &&record, size_t &addr);
-	void dealloc(size_t address);
 	~MemoryManager();
+    inline void* small_alloc();
+    inline void* medium_alloc();
+    inline void* large_alloc();
+    inline void* vlarge_alloc();
+    inline void* small_id_alloc();
+    inline void* large_id_alloc();
+    Object* constructObj(Object &obj);
+    inline void small_free(void *ptr);
+    inline void medium_free(void *ptr);
+    inline void large_free(void *ptr);
+    inline void vlarge_free(void *ptr);
+    inline void small_id_free(void *ptr);
+    inline void large_id_free(void *ptr);
+    void obj_free(Object *ptr);
 };
-
-template <typename t>
-MemoryManager<t>::MemoryManager() {
-	this->data.reserve(8192);
-	this->freelist.reserve(8192);
-}
-template <typename t>
-MemoryManager<t>::MemoryManager(size_t size) {
-	this->data.reserve(size);
-	this->freelist.reserve(size);
-}
-
-template <typename t>
-MemoryManager<t>::~MemoryManager() {
-}
-
-template <typename t>
-t& MemoryManager<t>::alloc(t &&record, size_t &addr)
+void* MemoryManager::small_alloc()
 {
-	return alloc(record, addr);
+    return this->small_obj_pool.malloc();
 }
-template <typename t>
-t& MemoryManager<t>::alloc(t &record, size_t &addr)
+void* MemoryManager::medium_alloc()
 {
-	if(this->freelist.isEmpty())
-	{
-        t* rec = new t(record);
-		this->data.push_back(rec);
-		addr = this->data.size()-1;
-	}
-	else
-	{
-		this->freelist.top(addr);
-		this->freelist.pop();
-        delete this->data[addr];
-        t* rec = new t(record);
-		this->data[addr] = rec;
-	}
-	return *this->data[addr];
+    return this->medium_obj_pool.malloc();
 }
-
-template <typename t>
-t& MemoryManager<t>::operator[](size_t index)
+void* MemoryManager::large_alloc()
 {
-	return *this->data[index];
+    return this->large_obj_pool.malloc();
 }
-template <typename t>
-void MemoryManager<t>::dealloc(size_t address)
+void* MemoryManager::vlarge_alloc()
 {
-	/*if(std::find(freelist.begin(), freelist.end(), address) != freelist.end())
-	{
-		std::cout<<"addr: "<<address<<"\nobj: "<<data[address].toString()<<"\n";
-		//throw std::string("Error adding to freelist address twice");
-	}else*/
-	this->freelist.push(address);
+    return this->very_large_obj_pool.malloc();
 }
-
+void* MemoryManager::small_id_alloc()
+{
+    return this->small_obj_id_pool.malloc();
+}
+void* MemoryManager::large_id_alloc()
+{
+    return this->large_obj_id_pool.malloc();
+}
+void MemoryManager::small_free(void *ptr)
+{
+    this->small_obj_pool.free(ptr);
+}
+void MemoryManager::medium_free(void *ptr)
+{
+    this->medium_obj_pool.free(ptr);
+}
+void MemoryManager::large_free(void *ptr)
+{
+    this->large_obj_pool.free(ptr);
+}
+void MemoryManager::vlarge_free(void *ptr)
+{
+    this->very_large_obj_pool.free(ptr);
+}
+void MemoryManager::small_id_free(void *ptr)
+{
+    this->small_obj_id_pool.free(ptr);
+}
+void MemoryManager::large_id_free(void *ptr)
+{
+    this->large_obj_id_pool.free(ptr);
+}
 #endif /* MEMORYMANAGER_HPP_ */

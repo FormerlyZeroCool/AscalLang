@@ -378,7 +378,7 @@ bool ParsingUtil::isDouble(string &exp)
 {
     isADouble = true;
     periodCount = 0;
-    for(uint16_t i = (exp[0] == '-'); isADouble && i < exp.length(); i++)
+    for(uint16_t i = (exp[0] == '-'); isADouble && i < exp.size(); i++)
     {
         //to avoid branching I'm doing boolean arithmetic to determine if a string is a double
         periodCount += (exp[i] == '.');

@@ -28,7 +28,7 @@ public:
             if(ParsingUtil::isDouble(newVarPart.data)){
                 Object var(runtime.memMan, newVarPart.data.str(),exPart.data,frame->exp.substr(newVarPart.end + 1,exPart.start - 1).str());
                 var.compileInstructions();
-                obj = &parent->setList(var, stoi(var.id));
+                obj = &parent->setList(var, atoi(var.getId().c_str()));
             }
             else{
                 index = frame->index;
@@ -55,7 +55,7 @@ public:
         }
         if(*runtime.boolsettings["o"])
         {
-            std::cout<<std::endl<<"New global function: "<<obj->id
+            std::cout<<std::endl<<"New global function: "<<obj->getId()
                     << " exp: "<<obj->instructionsToFormattedString()<<std::endl;
         }
 	}

@@ -18,7 +18,6 @@ public:
 	}
 	void action(AscalFrame<double>* frame) override
 	{
-		std::cout<<"In while\n";
 	    int index = frame->index+5;
 	    while(frame->exp[index] == ' ')
 	        index++;

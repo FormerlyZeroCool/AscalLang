@@ -26,7 +26,7 @@ public:
 	    frame->initialOperands.push(obj->getListSize());
 	    if(*runtime.boolsettings["o"])
 	    {
-	    	std::cout<<"arrLen(&"<<obj->id<<") = "<<obj->getListSize()<<'\n';
+	    	std::cout<<"arrLen(&"<<obj->getId()<<") = "<<obj->getListSize()<<'\n';
 	    }
 	    frame->index = exp.end;
 	}

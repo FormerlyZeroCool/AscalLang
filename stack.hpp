@@ -147,12 +147,12 @@ void stack<t>::push(const t &&data)
 template <typename t>
 void stack<t>::pop()
 {
-	//if(this->size() > 0)
+	if(this->size() > 0)
 	{
 		this->pop_back();
 	}
-    //else
-      //  throw std::string("You popped an empty list!");
+    else
+        throw std::string("You popped an empty list!");
 }
 template <typename t>
 bool stack<t>::isEmpty()
@@ -167,7 +167,7 @@ size_t stack<t>::length()
 template <typename t>
 void stack<t>::top(t&data)
 {
-	//if(this->size() > 0)
+	if(this->size() > 0)
 	{
 		data = (*this)[this->size()-1];
 	}
@@ -176,7 +176,7 @@ void stack<t>::top(t&data)
 template <typename t>
 void stack<t>::top(t*&data)
 {
-	//if(this->size() > 0)
+	if(this->size() > 0)
 	{
 		data = &(*this)[this->size()-1];
 	}

@@ -27,7 +27,7 @@ public:
 	    Object newObj(runtime.memMan, "",ParsingUtil::to_string(value),"");
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
 	    runtime.resolveNextExprSafe(frame, vns)->setList(newObj, indexToSet);
-	    (runtime.memory)[string_view("null")].getInstructions() = MAX;
+	    (runtime.memory)[string_view("null")].copyToInstructions(MAX);
 	    if(*runtime.boolsettings["o"])
 	    {
 	    	double t;

@@ -13,48 +13,109 @@
 #include <string>
 #include <unordered_map>
 #include <sstream>
-#include "ObjectKey.hpp"
 #include "SubStr.hpp"
 #include "string_view.hpp"
 #include "ParsingUtil.hpp"
 #include "MemoryMap.hpp"
 
+union member {
+    Object **ptr;
+    double *number;
+    uint64_t *asInt;
+    unsigned char *dna;
+};
+struct Record {
+    member data;
+    unsigned char &byteCode;
+    Record(unsigned char *ptr): byteCode(*ptr)
+    {
+        data.dna = &ptr[1];
+    }
+    Record(const unsigned char *ptr): byteCode(*(unsigned char*)ptr)
+    {
+        data.dna = (unsigned char*) &ptr[1];
+    }
+    bool isDouble()
+    {
+        return byteCode == 1;
+    }
+    bool isObj()
+    {
+        return byteCode == 3;
+    }
+    bool isStr()
+    {
+        return byteCode == 4;
+    }
+    bool isList()
+    {
+        return byteCode == 5;
+    }
+    //list 5
+};
+template < class T >
+inline std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
+{
+    for (typename std::vector<T>::const_iterator ii = v.begin(); ii != v.end(); ++ii)
+    {
+        os << *ii;
+    }
+    return os;
+}
 class Object {
 private:
-	std::string instructions;
+    uint32_t instructionBufferSizeId = 0, IdBufferSizeId = 0;
+    void extracted(const string_view &exp, const string_view &id);
+    
+    void loadData(string_view id, string_view exp);
+    void loadInstructions(string_view exp);
+    void loadId(string_view id);
+    void deallocateMemory(void *ptr, const size_t bufSize, void *idptr, const uint32_t idbufSize);
+    void deallocateInstructions(void *ptr, const size_t bufSize);
+    void deallocateId(void *ptr, const size_t bufSize);
 	MemoryMap objectMap;
-	std::vector<Object> objectList;
+    uint32_t listSize = 0;
+    uint32_t flagRegisters = 0;
 	std::string toString(uint16_t depth);
     Object *parent = nullptr;
+    string_view instructions;
 public:
-	std::string id;
+    //sizeID codes
+    static const uint32_t SMALL_EXP, MEDIUM_EXP, LARGE_EXP, VERYLARGE_EXP, MALLOC_EXP, SMALL_ID, LARGE_ID, MALLOC_ID;
+    string_view id;
+    string_view getId() { return id; }
+    void copyToId(string_view);
+    void copyToInstructions(string_view);
 	std::vector<SubStrSV> params;
 	Object* getThis();
 	//returns end index of params in string
-	void setDouble(long double d);
-	long double getDouble() const;
-	bool isDouble();
+    inline void setDouble(double d);
+    inline double getDouble() const;
+	inline bool isDouble();
+    inline Object& getObjectAtIndex(uint32_t index);
 	int setParams(string_view param, uint32_t = 0);
-	Object(MemoryManager<Object> &memMan);
-	Object(MemoryManager<Object> &memMan, std::string &id);
-	Object(MemoryManager<Object> &memMan, std::string &&id);
-	Object(MemoryManager<Object> &memMan, std::string &id, std::string &param);
-	Object(MemoryManager<Object> &memMan, std::string &id,std::string &expression,std::string &param);
-	Object(MemoryManager<Object> &memMan, std::string &&id,std::string &&expression,std::string &param);
-	Object(MemoryManager<Object> &memMan, std::string &id,std::string &expression,std::string &&param);
-	Object(MemoryManager<Object> &memMan, std::string &id,std::string &&expression,std::string &&param);
-	Object(MemoryManager<Object> &memMan, std::string &&id,std::string &&expression,std::string &&param);
-	Object(MemoryManager<Object> &memMan, std::string &&id,const std::string &expression,std::string &&param);
-	void addInstruction(std::string expression);
+    void resizeInstructions(uint32_t);
+    Object(const Object&);
+	Object(MemoryManager &memMan);
+	Object(MemoryManager &memMan, std::string &id);
+	Object(MemoryManager &memMan, std::string &&id);
+	Object(MemoryManager &memMan, std::string &id, std::string &param);
+	Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &param);
+	Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &param);
+	Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &&param);
+	Object(MemoryManager &memMan, std::string &id,std::string &&expression,std::string &&param);
+	Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &&param);
+	Object(MemoryManager &memMan, std::string &&id,const std::string &expression,std::string &&param);
 	std::string instructionsToFormattedString() const ;
 	std::string instructionsToFormattedString(uint16_t depth) const;
-	std::string& getInstructions();
+	const string_view& getInstructions();
 	std::string listToString(MemoryMap &memory);
 	Object& getMapUnsafe(string_view id);
 	Object& operator[](string_view id);
 	Object& operator[](size_t index);
 	Object& loadChild(Object &data, AscalExecutor &);
-	bool isList();
+    bool isList();
+    bool isObjList();
 	void clearList();
 	void pushList(Object &data);
 	void pushList(Object &&data);
@@ -66,7 +127,7 @@ public:
 	Object& getListElement(size_t index,MemoryMap &memory);
 	bool operator==(const Object &o) const;
 	bool operator==(Object &o) const;
-	Object& operator=(const Object& o);
+    Object& operator=(const Object& o);
     Object& copyExceptID(const Object& o);
 	std::string toString();
 	void compileInstructions();
@@ -79,4 +140,26 @@ public:
 	virtual ~Object();
 };
 
+bool Object::isDouble()
+{
+    return this->instructions[0] == 1;
+}
+void Object::setDouble(double d)
+{
+    this->instructions[0] = '\1';
+    this->instructions.resize(sizeof(double)+1);
+    memcpy(&this->instructions[1], &d, sizeof(double));
+}
+double Object::getDouble() const
+{
+    double number = 0;
+    memcpy(&number, &this->instructions[1], sizeof(uint64_t));
+    return number;
+}
+Object& Object::getObjectAtIndex(uint32_t index)
+{
+    Object *obj = nullptr;
+    memcpy(&obj, &this->instructions[1+index*(sizeof(uint64_t))], sizeof(Object*));
+    return *obj;
+}
 #endif /* OBJECT_HPP_ */

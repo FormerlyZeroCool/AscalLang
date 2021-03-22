@@ -57,6 +57,7 @@ public:
 	    	SubStrSV rightHandObjectLookup = ParsingUtil::getVarNameSV(frame->exp, startIndex);
 	    	Object *rightObj = runtime.resolveNextExprSafe(frame, rightHandObjectLookup);
 	    	obj->copyExceptID(*rightObj);
+            
 		    if(*runtime.boolsettings["o"])
 		    {
 		    	std::cout<<"set "<<varName.data<<" = "<<obj->toString()<<"\n";

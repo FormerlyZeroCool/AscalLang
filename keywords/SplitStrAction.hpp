@@ -32,10 +32,10 @@ public:
 	    string_view filter(&params[1].data[0]+strStart, strEnd-1);
 	    //at this point string start, and end point to the appropriate places in the parameter
 	    Object arr = obj->splitString(filter, runtime.memory);
-	    (*frame->getLocalMemory())[arr.id] = arr;
+	    (*frame->getLocalMemory())[arr.getId()] = arr;
 	    if(*runtime.boolsettings["o"])
 	    {
-	    	std::cout<<"split string("<<arr.id<<") added to memory\n";
+	    	std::cout<<"split string("<<arr.getId()<<") added to memory\n";
 	    }
 	}
 };

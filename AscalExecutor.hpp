@@ -36,8 +36,15 @@
 #include "ParsingUtil.hpp"
 #include "string_view.hpp"
 #include "MemoryMap.hpp"
+#include <boost/pool/object_pool.hpp>
 template <typename t>
 class AscalFrame;
+template <typename t>
+class FunctionFrame;
+template <typename t>
+class ParamFrame;
+template <typename t>
+class ParamFrameFunctionPointer;
 class Keyword;
 struct CommandLineParams{
 	char ** argv;
@@ -70,6 +77,9 @@ stack<char> instructionStack;
 //end stack frame shred memory
 std::unordered_map<uint64_t,double> memoPad;
 AscalFrame<double>* cachedRtnObject = nullptr;
+    boost::object_pool<ParamFrame<double> > pFramePool;
+    boost::object_pool<ParamFrameFunctionPointer<double> > fpFramePool;
+    boost::object_pool<FunctionFrame<double> > fFramePool;
 public:
 /////////////////////////////
 //Program Global Memory Declaration
@@ -77,7 +87,7 @@ stack<double> operands;
 stack<char> operators;
 stack<char> instructionsStack;
 stack<Object* > paramsStack;
-MemoryManager<Object> memMan;
+MemoryManager memMan;
 MemoryMap memory;
 CommandLineParams commandLineParams;
 std::streambuf* stream_buffer_cin;
@@ -90,6 +100,7 @@ stack<std::string> lastExp;
 stack<std::string> undoneExp;
 std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
+void deleteFrame(AscalFrame<double> *frame);
 AscalFrame<double>* getCachedRtnObject()
 {
 	return this->cachedRtnObject;
@@ -137,90 +148,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	{
 		return commandLineParams;
 	}
-	AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): memory(memMan), rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
-	{
-
-		ascal_cin.rdbuf(streambuf);
-		loadInitialFunctions();
-		savedOperands.reserve(8192);
-		savedOperators.reserve(8192);
-		paramsStack.reserve(8192);
-		instructionsStack.reserve(1<<22);
-		processOperands.reserve(8192);
-		processOperators.reserve(8192);
-		operands.reserve(8192);
-		operators.reserve(8192);
-		instructionStack.reserve(8192);
-		commandLineParams.argc = argc;
-		commandLineParams.argv = argv;
-		commandLineParams.index = 1;
-		{
-		setting<bool> set(
-	            /*name*/
-	                "Show Operations that the interpreter uses while executing code",
-	            /*command line command*/
-	                "o",
-	            /*variable*/
-	                false);
-
-	        boolsettings[set.getCommand()] = set;
-
-	        set = setting<bool> (
-	                /*name*/
-	                    "Auto print results of calculations",
-	                /*command line command*/
-	                    "p",
-	                /*variable*/
-	                    true);
-
-	        boolsettings[set.getCommand()] = set;
-
-	        set = setting<bool> (
-	                /*name*/
-	                    "Use scientific notation for output of numbers larger than 999,999",
-	                /*command line command*/
-	                    "sci",
-	                /*variable*/
-	                    true);
-
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Debug Ascal Mode",
-	            /*command line command*/
-	                "d",
-	            /*variable*/
-	                false);
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Keep Interpreter listening for input to stdin",
-	            /*command line command*/
-	                "l",
-	            /*variable*/
-	                true);
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Auto Memoize all function calls to improve multiple recursive function performance,\nwill cause erroneous calculations if not using pure mathematical functions.",
-	            /*command line command*/
-	                "memoize",
-	            /*variable*/
-	                false);
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Print time taken to run calculation",
-	            /*command line command*/
-	                "t",
-	            /*variable*/
-	                false);
-	        boolsettings[set.getCommand()] = set;
-	        }//bracket to remove set variable from program memory
-	          /*
-	           * End of initialization values in settings hashmap
-	           * */
-	}
+    AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf);
 	template <typename string1, typename string2>
 	static std::string printMemory(std::map<string1,Object*> &memory,string2 delimiter,bool justKey = true,
 	        std::string secondDelimiter = "\n")

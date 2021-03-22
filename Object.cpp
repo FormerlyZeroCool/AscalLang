@@ -8,6 +8,9 @@
 #include "Object.hpp"
 #include "AscalExecutor.hpp"
 
+//sizeID codes
+const uint32_t Object::SMALL_EXP = 32, Object::MEDIUM_EXP = 128, Object::LARGE_EXP = 1024, Object::VERYLARGE_EXP = 4096, //Object::MALLOC_EXP = -1,
+Object::SMALL_ID = 8, Object::LARGE_ID = 64;//, Object::MALLOC_ID = -1;
 
 	void Object::compileInstructions()
 	{
@@ -44,7 +47,7 @@
 		//std::cout<<"Compiled str: "<<compiled.str()<<"\n";
 		return compiled.str();
 		**/
-		return this->instructions;
+		return std::string(this->instructions.str());
 	}
 	struct codeRec {
 		string_view boolExp;
@@ -71,7 +74,7 @@
 	            startOfCodeBlock++;
 	        }
 	        index = startOfCodeBlock;
-	        string_view booleanExpression(this->instructions, startOfBoolExp, index);
+	        string_view booleanExpression((char*) &this->instructions[0], startOfBoolExp, index);
 	        if(booleanExpression.size() == 0)
 	        {
 	            throw std::string("Error no boolean expression provided in if.\n");
@@ -186,7 +189,7 @@ std::string Object::instructionsToFormattedString(uint16_t indentationLevel) con
 
 	//newLine(data,indentationLevel);
 	//indentationLevel++;
-
+    if(this->instructions[0] != 5)
 		for(size_t i = 0; i < instructions.size(); i++)
 		{
 			const char &c = this->instructions[i];
@@ -206,63 +209,26 @@ std::string Object::instructionsToFormattedString(uint16_t indentationLevel) con
 			}
 			else if(c == 1)
 			{
-				long double *d = (long double*) (&this->instructions[i+1]);
-				i += sizeof(long double);
-				data << ParsingUtil::to_string(*d);
+                Record rec((unsigned char*)&this->instructions[0]);
+				i += sizeof(double);
+                double d;
+                memcpy(&d, rec.data.dna, sizeof(uint64_t));
+				data << ParsingUtil::to_string(d);
 			}
 			else
 				data<<(c);
 			if(c == '{')
 				newLine(data,indentationLevel);
 		}
+    else {
+        data<<"[]";
+        newLine(data,indentationLevel);
+    }
 		newLine(data,indentationLevel);
 
 	return data.str();
 }
 
-Object& Object::copyExceptID(const Object& o)
-{
-	if(this->instructions.size() == o.instructions.size())
-	{
-		for(uint32_t i = 0; i < this->instructions.size(); i++)
-		{
-			this->instructions[i] = o.instructions[i];
-		}
-	}
-	else
-		this->instructions = o.instructions;
-    this->objectList = o.objectList;
-    this->objectMap = o.objectMap;
-    this->parent = o.parent;
-    this->params = o.params;
-    return *this;
-}
-Object& Object::operator=(const Object& o)
-{
-	if(this->id.size() == o.id.size())
-	{
-		for(uint32_t i = 0; i < this->id.size(); i++)
-		{
-			this->id[i] = o.id[i];
-		}
-	}
-	else
-		this->id = o.id;
-	if(this->instructions.size() == o.instructions.size())
-	{
-		for(uint32_t i = 0; i < this->instructions.size(); i++)
-		{
-			this->instructions[i] = o.instructions[i];
-		}
-	}
-	else
-		this->instructions = o.instructions;
-	this->objectList = o.objectList;
-	this->objectMap = o.objectMap;
-	this->parent = o.parent;
-	this->params = o.params;
-	return *this;
-}
 std::string Object::toString(uint16_t depth)
 {
 	std::stringstream s;
@@ -273,15 +239,16 @@ std::string Object::toString(uint16_t depth)
 	s<<"Obj Name: ("<<this->id<<")"<<this;
 	newLine(s, depth);
 	s<<"Instructions: "<<this->instructionsToFormattedString(depth);
-	if(this->objectList.size())
+	if(this->getListSize())
 	{
 		depth++;
 		newLine(s, depth);
 		s<<"List len: "<<this->getListSize();
 		s<<" data: [";
 		depth++;
-		for(auto &obj:this->objectList)
+        for(size_t i = 0; i < this->getListSize(); i++)
 		{
+            auto &obj = this->getObjectAtIndex(i);
 			newLine(s, depth);
 			s<<obj.toString(depth);
 		}
@@ -313,15 +280,11 @@ std::string Object::toString(uint16_t depth)
 	s<<"}";
 	return s.str();
 }
-std::string& Object::getInstructions()
+const string_view& Object::getInstructions()
 {
 	return  instructions;
 }
 
-void Object::addInstruction(std::string expression)
-{
-	instructions = expression;
-}
 bool cmpVector(const std::vector<std::string>& a,const std::vector<std::string>& b)
 {
 	bool equal = true;
@@ -339,56 +302,58 @@ bool cmpVector(const std::vector<std::string>& a,const std::vector<std::string>&
 }
 bool Object::operator==(const Object &o) const
 {
-	bool equal = id.compare(o.id) == 0;
+	bool equal = (id == o.id);
 	return equal;
 }
 bool Object::operator==(Object &o) const
 {
-	bool equal = id.compare(o.id) == 0;
+	bool equal = (id == o.id);
 	return equal;
 }
 
 bool Object::isList()
 {
-	return this->objectList.size();
+	return this->listSize;
+}
+
+bool Object::isObjList()
+{
+    return this->instructions[0] == 5;
 }
 size_t Object::getListSize()
 {
-	return this->objectList.size();
+	return this->listSize;
 }
 Object& Object::getListElement(size_t index, MemoryMap &memory)
 {
 	if(index < this->getListSize())
-		return this->objectList[index];
+		return (*this)[index];
 	return memory[string_view("null")];
 }
-void Object::pushList(Object &data)
+Object& Object::operator[](size_t index)
 {
-	data.id = std::to_string(this->objectList.size())+this->id;
-	data.parent = this;
-	this->objectList.push_back(data);
+    if(this->listSize > index){
+        return getObjectAtIndex(index);
+    }
+    else
+        throw std::string("Invalid index: "+std::to_string(index)+" in object: "+this->toString());
 }
+
 void Object::pushList(Object &&data)
 {
-	data.id = std::to_string(this->objectList.size())+this->id;
-	data.parent = this;
-	this->objectList.push_back(data);
+	this->pushList(data);
 }
 Object& Object::setList(Object &data, size_t index)
 {
-	if(this->objectList.size() < index)
-		throw std::string("Out of range in list: "+this->id);
-	else if(this->objectList.size() < index)
+	if(this->listSize < index)
+		throw std::string("Out of range in list: "+this->id.str());
+	else if(this->listSize == index)
 		this->pushList(data);
 	else
-		this->objectList[index] = data;
+		(*this)[index] = data;
 	return data;
 }
 
-void Object::clearList()
-{
-	this->objectList.clear();
-}
 
 Object& Object::getMapUnsafe(string_view id)
 {
@@ -399,21 +364,14 @@ Object& Object::operator[](string_view id)
 	if(this->objectMap.count(id) > 0)
 		return this->objectMap[id];
 	else
-		throw std::string("Error invalid field ("+id.str()+") in object "+this->id);
-}
-Object& Object::operator[](size_t index)
-{
-	if(this->objectList.size() > index)
-		return this->objectList[index];
-	else
-		throw std::string("Invalid index: "+std::to_string(index)+" in object: "+this->toString());
+		throw std::string("Error invalid field ("+id.str()+") in object "+this->id.str());
 }
 std::string Object::listToString(MemoryMap &memory)
 {
 	std::stringstream str;
     for(size_t i = 0; i <= this->getListSize(); i++)
     {
-    	char letter = (char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
+        char letter = 0;//(char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
     	if(isprint(letter))
     		str<<letter;
     }
@@ -423,14 +381,14 @@ void Object::printList(MemoryMap &memory)
 {
     for(size_t i = 0; i <= this->getListSize(); i++)
     {
-    		std::cout<<(char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
+    		//std::cout<<(char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
     }
 }
 void Object::loadString(string_view s)
 {
 	clearList();
 	uint16_t last = s[0],cur = s[0];
-    for(size_t i = 1; i < s.size(); i++)
+    for(uint32_t i = 1; i < s.size(); i++)
     {
     	last = cur;
     	cur = s[i];
@@ -453,7 +411,9 @@ Object Object::splitString(string_view filter, MemoryMap &memory)
 	std::stringstream data;
 	for(size_t i = 0; i < this->getListSize(); i++)
 	{
-		data<<(char) stoi(this->getListElement(i, memory).instructions);
+        //just getting double will probably be a bug unless we make sure every variable even in lists is in double form
+        //temporary fix to get compiling for testing other issues need to revise
+		data<<(char) (this->getListElement(i, memory).getDouble());
 	}
 	std::string datastr = data.str();
 	string_view dataAsSV(datastr);
@@ -473,27 +433,6 @@ Object Object::splitString(string_view filter, MemoryMap &memory)
 	return splitArr;
 }
 
-void Object::setDouble(long double d)
-{
-	if(this->instructions.size() < 14)
-	{
-		this->instructions = "01234567890123";
-	}
-	char *c = (char*) this->instructions.c_str();
-	c[0] = 1;
-	memcpy(&c[1], &d, sizeof(long double));
-
-}
-long double Object::getDouble() const
-{
-	long double d;
-	memcpy(&d, this->instructions.c_str()+1, sizeof(long double));
-	return d;
-}
-bool Object::isDouble()
-{
-	return this->instructions[0] == 1;
-}
 int Object::setParams(string_view param, uint32_t start)
 {
     params.clear();
@@ -546,55 +485,279 @@ std::string Object::toString()
 {
 	return toString(0);
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &id):id(id), objectMap(memMan)
+void Object::deallocateId(void *ptr, const size_t bufSize)
 {
-	instructions = "*12456789";
+    switch (bufSize){
+        case (Object::SMALL_ID):
+            this->objectMap.getMemMan().small_id_free(ptr);
+            break;
+        case (Object::LARGE_ID):
+            this->objectMap.getMemMan().large_id_free(ptr);
+            break;
+        default:
+            free(ptr);
+    }
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &&id):id(id), objectMap(memMan)
+void Object::deallocateInstructions(void *ptr, const size_t bufSize)
 {
-	instructions = "*12456789";
+    switch (bufSize) {
+        case (Object::SMALL_EXP):
+            this->objectMap.getMemMan().small_free(ptr);
+            break;
+        case (Object::MEDIUM_EXP):
+            this->objectMap.getMemMan().medium_free(ptr);
+            break;
+        case (Object::LARGE_EXP):
+            this->objectMap.getMemMan().large_free(ptr);
+            break;
+        case (Object::VERYLARGE_EXP):
+            this->objectMap.getMemMan().vlarge_free(ptr);
+            break;
+        default:
+            free(static_cast<void*>(ptr));
+            break;
+    };
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &id, std::string &param):id(id), objectMap(memMan)
+void Object::deallocateMemory(void* ptr, const size_t bufSize, void *idptr, const uint32_t idbufSize)
 {
-	instructions = "*12456789";
+    deallocateId(idptr, idbufSize);
+    deallocateInstructions(ptr, bufSize);
+}
+void Object::pushList(Object &data)
+{
+    static const uint32_t objSize = sizeof(uint64_t);
+    if(1+this->listSize*(objSize)+8 < this->instructionBufferSizeId)
+    {
+        this->instructions[0] = 5;
+        data.id = std::to_string(listSize)+this->id.str();
+        data.parent = this;
+        Object *obj = this->objectMap.getMemMan().constructObj(data);
+        memcpy((unsigned char*) &this->instructions[1+this->listSize*(objSize)], &obj, sizeof(Object*));
+        //for(uint32_t i = 0; i < this->instructions.size(); i++)
+        //{
+        //    std::cout<<(int16_t) this->instructions[i]<< ",";
+        //}
+        
+        listSize++;
+    }
+    else
+    {
+        if(this->instructionBufferSizeId < data.instructions.size() + this->instructions.size())
+        {
+            this->instructions.resize(this->instructions.size() + data.instructions.size());
+        }
+        else
+        {
+            void *ptr = (void*) this->instructions.c_str();
+            const size_t bufSize = this->instructionBufferSizeId;
+            //sets the id pointer to be the same as the front of the newly allocated block
+            this->resizeInstructions(this->instructions.size() + data.instructions.size());
+            this->deallocateInstructions(ptr, bufSize);
+        }
+        pushList(data);
+    }
+}
+void Object::resizeInstructions(uint32_t newSize)
+{
+    if(newSize <= Object::MEDIUM_EXP)
+    {
+        this->instructionBufferSizeId = Object::MEDIUM_EXP;
+        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().medium_alloc()), newSize);
+    }
+    else if(newSize <= Object::LARGE_EXP)
+    {
+        this->instructionBufferSizeId = Object::LARGE_EXP;
+        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().large_alloc()), newSize);
+    }
+    else if(newSize <= Object::VERYLARGE_EXP)
+    {
+        this->instructionBufferSizeId = Object::VERYLARGE_EXP;
+        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().vlarge_alloc()), newSize);
+    }
+    else
+    {
+        this->instructionBufferSizeId = newSize;
+        this->instructions = string_view(static_cast<const char*>(malloc(newSize)), newSize);
+    }
+}
+Object& Object::copyExceptID(const Object& o)
+{
+    copyToInstructions(o.instructions);
+    this->objectMap = o.objectMap;
+    this->parent = o.parent;
+    this->params = o.params;
+    return *this;
+}
+void Object::copyToId(string_view id)
+{
+    if(id.size() <= this->IdBufferSizeId)
+    {
+        memcpy(&this->id[0], &id[0], id.size());
+        this->id.resize(id.size());
+    }
+    else
+    {
+        void *ptr = (void*) this->id.c_str();
+        const uint32_t bufSize = this->IdBufferSizeId;
+        this->loadId(id);
+        this->deallocateId(ptr, bufSize);
+    }
+}
+void Object::copyToInstructions(string_view ins)
+{
+    if(this->instructionBufferSizeId >= ins.size())
+    {
+        memcpy(&this->instructions[0], &ins[0], ins.size());
+    }
+    else
+    {
+       void *ptr = (void*) this->instructions.c_str();
+        const uint32_t bufSize = this->instructionBufferSizeId;
+        this->loadInstructions(ins);
+        this->deallocateInstructions(ptr, bufSize);
+    }
+}
+Object& Object::operator=(const Object& o)
+{
+    this->copyToId(o.id);
+    this->copyToInstructions(o.instructions);
+    this->objectMap = o.objectMap;
+    this->parent = o.parent;
+    this->params = o.params;
+    return *this;
+}
+//need to make a copy constructor for the objectMap
+Object::Object(const Object &o): objectMap(o.objectMap)
+{
+    loadData(o.id, o.instructions);
+}
+Object::Object(MemoryManager &memMan, std::string &id): objectMap(memMan)
+{
+    loadData(id,std::string("                "));
+}
+Object::Object(MemoryManager &memMan, std::string &&id): objectMap(memMan)
+{
+    loadData(id,std::string("                "));
+}
+Object::Object(MemoryManager &memMan, std::string &id, std::string &param): objectMap(memMan)
+{
+    loadData(id,std::string("                "));
 	setParams(param);
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &&id,std::string &&expression,std::string &param):id(id), objectMap(memMan)
+Object::Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &param): objectMap(memMan)
 {
+    loadData(id, expression);
 	setParams(param);
-	instructions = expression;
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &&id,const std::string &expression,std::string &&param):id(id), objectMap(memMan)
+Object::Object(MemoryManager &memMan, std::string &&id,const std::string &expression,std::string &&param): objectMap(memMan)
 {
+    loadData(id, expression);
 	setParams(param);
-	instructions = expression;
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &id,std::string &expression,std::string &param):id(id), objectMap(memMan)
+Object::Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &param): objectMap(memMan)
 {
+    loadData(id, expression);
 	setParams(param);
-	instructions = expression;
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &id,std::string &expression,std::string &&param):id(id), objectMap(memMan)
+Object::Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &&param): objectMap(memMan)
 {
+    loadData(id, expression);
 	setParams(param);
-	instructions = expression;
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &&id,std::string &&expression,std::string &&param):id(id), objectMap(memMan)
+Object::Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &&param): objectMap(memMan)
 {
+    loadData(id, expression);
 	setParams(param);
-	instructions = expression;
 	//instructions = compileInstructions(0);
 }
-Object::Object(MemoryManager<Object> &memMan, std::string &id,std::string &&expression,std::string &&param):id(id), objectMap(memMan)
+Object::Object(MemoryManager &memMan, std::string &id,std::string &&expression,std::string &&param): objectMap(memMan)
 {
+    loadData(id, expression);
 	setParams(param);
-	instructions = expression;
 }
-Object::Object(MemoryManager<Object> &memMan): objectMap(memMan)
+Object::Object(MemoryManager &memMan): objectMap(memMan)
 {
-	this->id = "";
+	loadData(std::string("                "),std::string(""));
 }
 Object::~Object() {
-	// TODO Auto-generated destructor stub
+    clearList();
+    deallocateId((void*) this->id.c_str(), this->IdBufferSizeId);
+    deallocateInstructions((void*) this->instructions.c_str(), this->instructionBufferSizeId);
+    //deallocateMemory(this->inp, this->instructionBufferSizeId, this->idp, this->IdBufferSizeId);
+}
+void Object::clearList()
+{
+    /*
+    for(size_t i = 0; i < this->listSize; i++)
+    {
+        delete &(*this)[i];
+    }
+     */
+    if(this->isObjList())
+    {
+        uint64_t index = 0;
+        for(uint32_t i = 0; i < this->getListSize(); i++)
+        {
+            Object *obj = nullptr;
+            memcpy(&obj, &this->instructions[1+i*(sizeof(uint64_t))], sizeof(double));
+            objectMap.getMemMan().obj_free(obj);
+        }
+    }
 }
 
+//does not free old memory!!!
+//only allocates appropriate sized buffer, then copies data supplied in params to new buffer
+void Object::loadInstructions(string_view exp)
+{
+    if(exp.size() <= Object::SMALL_EXP)
+    {
+        this->instructionBufferSizeId = Object::SMALL_EXP;
+        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().small_alloc()), exp.size());
+    }
+    else if(exp.size() <= Object::MEDIUM_EXP)
+    {
+        this->instructionBufferSizeId = Object::MEDIUM_EXP;
+        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().medium_alloc()), exp.size());
+    }
+    else if(exp.size() <= Object::LARGE_EXP)
+    {
+        this->instructionBufferSizeId = Object::LARGE_EXP;
+        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().large_alloc()), exp.size());
+    }
+    else if(exp.size() <= Object::VERYLARGE_EXP)
+    {
+        this->instructionBufferSizeId = Object::VERYLARGE_EXP;
+        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().vlarge_alloc()), exp.size());
+    }
+    else
+    {
+        this->instructionBufferSizeId = exp.size();
+        this->instructions = string_view(static_cast<const char*>(malloc(exp.size())), exp.size());
+    }
+    memcpy((char*) this->instructions.c_str(), (char*) exp.c_str(), exp.size());
+}
+void Object::loadId(string_view id)
+{
+    if(id.size() <= Object::SMALL_ID-1)
+    {
+        this->IdBufferSizeId = Object::SMALL_ID;
+        this->id = string_view(static_cast<const char*>(this->objectMap.getMemMan().small_id_alloc()), id.size());
+    }
+    else if(id.size() <= Object::LARGE_ID-1)
+    {
+        this->IdBufferSizeId = Object::LARGE_ID;
+        this->id = string_view(static_cast<const char*>(this->objectMap.getMemMan().large_id_alloc()), id.size());
+    }
+    else
+    {
+        this->IdBufferSizeId = id.size();
+        this->id = string_view(static_cast<const char*>(malloc(id.size())), id.size());
+    }
+    memcpy((char*) this->id.c_str(), id.c_str(), id.size());
+    this->id[id.size()] = 0;
+}
+void Object::loadData(string_view id, string_view exp)
+{
+    loadId(id);
+    loadInstructions(exp);
+}

@@ -8,8 +8,15 @@
 #include "MemoryMap.hpp"
 #include "Object.hpp"
 
-MemoryMap::MemoryMap(MemoryManager<Object> &data) : data(&data) {}
-
+MemoryMap::MemoryMap(MemoryManager &data) : data(&data) {}
+Object& MemoryMap::iterator::operator*() const
+{
+    return *intIt->second;
+}
+Object& MemoryMap::iterator::operator->() const
+{
+    return *intIt->second;
+}
 bool MemoryMap::iterator::operator==(Object &o) const
 {
 	return **this == o;
@@ -18,37 +25,43 @@ size_t MemoryMap::size()
 {
 	return this->map.size();
 }
+
 Object& MemoryMap::insert(Object &s)
 {
+    Object* obj = nullptr;
 	if(this->map.count(s.id))
 	{
-		size_t address = this->map[s.id];
-		this->data->dealloc(address);
+        obj = this->map[s.id];
+        *obj = s;
 	}
-
-	size_t addr = -1;
-	Object &obj = this->data->alloc(s, addr);
-	map[obj.id] = addr;
-
-	return obj;
+    else
+    {
+        obj = this->getMemMan().constructObj(s);
+        this->map[obj->getId()] = obj;
+    }
+	return *obj;
 }
+//Dangerous, user needs to manage the string views memory
 Object& MemoryMap::insert(string_view sv, Object &s)
 {
-	if(this->map.count(s.id))
-	{
-		size_t address = this->map[s.id];
-		this->data->dealloc(address);
-
-	}
-	size_t addr = -1;
-	Object &obj = this->data->alloc(s, addr);
-	map.insert(std::make_pair(sv, addr));
-	return obj;
+    Object* obj = nullptr;
+    string_view id = s.getId();
+    if(this->map.count(id))
+    {
+        obj = this->map[sv];
+        *obj = s;
+    }
+    else
+    {
+        obj = this->getMemMan().constructObj(s);
+        this->map[sv] = obj;
+    }
+	return *obj;
 }
 
 Object& MemoryMap::operator[](string_view s)
 {	if(map.count(s))
-		return (*data)[map[s]];
+		return *map[s];
 	else
 	{
 		Object o(*data ,s.str(),"","");
@@ -58,7 +71,7 @@ Object& MemoryMap::operator[](string_view s)
 }
 Object& MemoryMap::find(string_view s)
 {
-	return (*data)[map.find(s)->second];
+	return *map.find(s)->second;
 }
 size_t MemoryMap::count(string_view s)
 {
@@ -68,37 +81,35 @@ void MemoryMap::erase(string_view s)
 {
 	if(this->map.count(s))
 	{
-		this->data->dealloc(this->map[s]);
+		this->getMemMan().obj_free(this->map[s]);
 		this->map.erase(s);
 	}
 }
+/*
+void MemoryMap::erase(uint64_t addr)
+{
+    this->data->dealloc(addr);
+}
+ */
 void MemoryMap::clear()
 {
-	std::set<size_t> cleared;
+	std::set<Object* > cleared;
 	for(auto &[key,value] : this->map)
 	{
 		if(!cleared.count(value))
 		{
-			this->data->dealloc(value);
+            this->getMemMan().obj_free(value);
 			cleared.insert(value);
 		}
 	}
-}
-size_t MemoryMap::getIndex(string_view s)
-{
-	return this->map.find(s)->second;
-}
-Object& MemoryMap::getObject(size_t index)
-{
-	return (*this->data)[index];
 }
 MemoryMap::~MemoryMap()
 {
 	clear();
 }
-MemoryMap::iterator MemoryMap::begin() { return MemoryMap::iterator(*data, map.begin()); }
-MemoryMap::iterator MemoryMap::end() { return MemoryMap::iterator(*data, map.end()); }
-MemoryManager<Object>& MemoryMap::getMemMan()
+MemoryMap::iterator MemoryMap::begin() { return MemoryMap::iterator(map.begin()); }
+MemoryMap::iterator MemoryMap::end() { return MemoryMap::iterator(map.end()); }
+MemoryManager& MemoryMap::getMemMan()
 {
 	return *data;
 }

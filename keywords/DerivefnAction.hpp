@@ -34,7 +34,7 @@ public:
 	    //end of your code is defining the string derivative
 	    std::string derivative;
 	    std::stringstream call;
-	    call<<"let "<<function->id<<"prime"<<degree<<" = "<<function->getInstructions();
+	    call<<"let "<<function->getId()<<"prime"<<degree<<" = "<<function->getInstructions();
 	    //Saves function that when it is a first derivative of f looks like
 	    //fprime1 = first derivative of f
 	    runtime.callOnFrame(frame, call.str());

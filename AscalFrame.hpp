@@ -197,14 +197,25 @@ public:
     	this->initialOperators.setData(runtime.operators);
     	this->exp.setMemory(runtime.instructionsStack);
     }
+    ParamFrame(AscalExecutor &runtime, AscalFrame<double>* base)
+    {
+        this->params = base->getParams();
+        this->paramMemory = base->getParamMemory();
+        this->localMemory = base->getLocalMemory();
+        this->initialOperands.setData(runtime.operands);
+        this->initialOperators.setData(runtime.operators);
+        this->exp.setMemory(runtime.instructionsStack);
+    }
     void returnResult(t result, MemoryMap& globalMemory) override
     {
         if(this->returnPointer)
         {
         	Object j(globalMemory.getMemMan(), "   ");
-        	j.id[0] = 2;
-        	uint16_t *jd = (uint16_t*) &j.id[1];
-        	*jd = this->returnPointer->getParams()->size();
+            string_view id = j.getId();
+        	id[0] = 2;
+        	uint16_t *jd = (uint16_t*) &id[1];
+            short index = this->returnPointer->getParams()->size();
+        	memcpy(jd, ((char*)&index)+1, sizeof(uint64_t));
         	//std::cout<<"Param frame rtning: "<<result<<"\n";
             j.setDouble(result);
         	Object &obj = this->returnPointer->getLocalMemory()->insert(j);
@@ -222,14 +233,24 @@ class ParamFrameFunctionPointer: public AscalFrame<t> {
 public:
     Object *obj;
     ParamFrameFunctionPointer(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory):
-    	obj(nullptr)
+        obj(nullptr)
     {
         this->params = params;
         this->paramMemory = paramMemory;
         this->localMemory = localMemory;
-    	this->initialOperands.setData(runtime.operands);
-    	this->initialOperators.setData(runtime.operators);
-    	this->exp.setMemory(runtime.instructionsStack);
+        this->initialOperands.setData(runtime.operands);
+        this->initialOperators.setData(runtime.operators);
+        this->exp.setMemory(runtime.instructionsStack);
+    }
+    ParamFrameFunctionPointer(AscalExecutor &runtime, AscalFrame<double> *base):
+        obj(nullptr)
+    {
+        this->params = base->getParams();
+        this->paramMemory = base->getParamMemory();
+        this->localMemory = base->getLocalMemory();
+        this->initialOperands.setData(runtime.operands);
+        this->initialOperators.setData(runtime.operators);
+        this->exp.setMemory(runtime.instructionsStack);
     }
     void returnResult(t result, MemoryMap& globalMemory) override
     {
@@ -255,7 +276,7 @@ private:
 	MemoryMap localMem;
 	AscalParameters param;
 public:
-    FunctionFrame(AscalExecutor &runtime, MemoryManager<Object> &memMan) : localMem(memMan)
+    FunctionFrame(AscalExecutor &runtime, MemoryManager &memMan) : localMem(memMan)
     {
     	param.setMemory(runtime.paramsStack);
         this->params = &param;

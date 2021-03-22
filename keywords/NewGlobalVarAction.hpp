@@ -28,8 +28,9 @@ public:
 	        if(parent)
 	        {
 			    Object *newObj = nullptr;
-	        	if(ParsingUtil::isDouble(var.id))
-	        		newObj = &parent->setList(var, stoi(var.id));
+                string_view id = var.getId();
+	        	if(ParsingUtil::isDouble(id))
+	        		newObj = &parent->setList(var, atoi(id.c_str()));
 	        	else
 	        		newObj = &parent->loadChild(var, runtime);
 
@@ -52,7 +53,7 @@ public:
 	    	    double value = runtime.callOnFrame(frame, exPart.data);
 	    	    var.setDouble(value);
 	        	//delete old  reference from list not really needed
-	    	    std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), runtime.memory[var.id]);
+	    	    std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), runtime.memory[var.getId()]);
 	    	                            if(position != runtime.userDefinedFunctions.end())
 	    	                            	runtime.userDefinedFunctions.erase(position);
 	    	    //set var defined's value in hash map

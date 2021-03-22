@@ -53,12 +53,12 @@ SubStrSV ParsingUtil::getVarNameSV(const std::string &s,uint32_t &index)
 SubStrSV ParsingUtil::getVarNameSV(string_view s,uint32_t &index)
 {
     int begin = index;
-    while(s.length() > index && !isalpha(s[index]))
+    while(s.length() > index && !ParsingUtil::isalpha(s[index]))
     {
         begin++;
         index++;
     }
-    while(s.length()>index && (isalpha(s[index]) || ParsingUtil::isNumeric(s[index])))
+    while(s.length()>index && (ParsingUtil::isalpha(s[index]) || ParsingUtil::isNumeric(s[index])))
     {
     	index++;
     }

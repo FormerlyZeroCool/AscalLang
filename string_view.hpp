@@ -30,6 +30,10 @@ public:
 	string_view(const string_view s, const uint32_t start, const uint32_t end);
 	string_view(const char *s, const uint32_t len);
 	const char* c_str() const { return ptr; }
+    void resize(uint32_t newLen)
+    {
+        len = newLen;
+    }
 	uint32_t size() const
 	{
 		return this->len;
@@ -45,7 +49,10 @@ public:
 	std::string operator+(const string_view &s) const;
 	std::string operator+(const std::string &s) const;
 	string_view& operator=(const std::string &s);
-	string_view& operator=(const string_view &s);
+    /*
+    string_view& operator=(const string_view &s);
+    string_view& operator=(const string_view &&s);
+     */
 	string_view& operator=(const SubStrSV &s);
 	bool operator==(const string_view &s) const;
 	bool operator<(const string_view &s) const;

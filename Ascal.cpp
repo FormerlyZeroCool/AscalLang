@@ -12,10 +12,11 @@
 	}
 	double Ascal::execExpression(std::string &exp)
 	{
-		AscalFrame<double> *frame = (AscalFrame<double> *)new FunctionFrame<double>(runtime, runtime.memMan);
-		frame->exp = exp;
+		FunctionFrame<double> frame(runtime, runtime.memMan);
+        frame.setIsDynamicAllocation(false);
+		frame.exp = exp;
 	try{
-		return runtime.calcWithOptions(frame);
+		return runtime.calcWithOptions(&frame);
 	}
     catch(std::string &exception)
     {

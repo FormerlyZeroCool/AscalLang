@@ -26,15 +26,14 @@ public:
 	}
 	void clear()
 	{
-       // if(start+len == data->size() || !len)
-		{
+        if(start+len == data->size() || !len){
         const size_t length = len;
 		for(size_t i = 0; i < length; i++)
             this->pop();
         }
-        //else {
-          //  std::cout<<(start+len)<<" "<<data->size()<<("Error clearing segment not at top of stack\n");
-        //}
+        else {
+            std::cout<<(start+len)<<" "<<data->size()<<("Error clearing segment not at top of stack\n");
+        }
 	}
 	~StackSegment()
 	{
@@ -44,10 +43,10 @@ public:
 	StackSegment() {start = 0; len = 0; data = nullptr;}
 	inline t& operator[](size_t index)
 	{
-        //if(index < len)
+        if(index < len)
             return (*data)[index+start];
-     //   else
-       //     throw std::string("Invalid access "+std::to_string(index));
+        else
+            throw std::string("Invalid access "+std::to_string(index));
 	}
 	inline void push(const t &data);
 	inline void push(const t &&data);
@@ -143,8 +142,8 @@ void StackSegment<t>::push(const t &data)
 {
 	this->len++;
 	this->data->push(data);
-    //if(start+len !=  this->data->size())
-      //  std::cout<<"Error pushing to segment not at top of stack\n";
+    if(start+len !=  this->data->size())
+        std::cout<<"Error pushing to segment not at top of stack\n";
 }
 template <typename t>
 void StackSegment<t>::push(const t &&data)
@@ -154,12 +153,12 @@ void StackSegment<t>::push(const t &&data)
 template <typename t>
 void StackSegment<t>::pop()
 {
-	//if(len)
+	if(len)
 	{
 		len--;
 		this->data->pop();
 	}
-    //else throw std::string("Error popping from empty stackstring");
+    else throw std::string("Error popping from empty stackstring");
 }
 template <typename t>
 void StackSegment<t>::top(t&data)

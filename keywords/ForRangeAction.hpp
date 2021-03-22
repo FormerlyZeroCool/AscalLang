@@ -47,8 +47,8 @@ public:
 	    executionFrame.setContext(frame->getContext());
 		double i = limitParams.params.size()>1?runtime.callOnFrame(frame,limitParams.params[0].data):0;
         runtime.callOnFrame(frame, "loc "+itVar.data.str()+" = 0");
-        size_t itObj = 0;
-        itObj = (*frame->getLocalMemory()).getIndex(itVar.data);
+        Object *itObj = 0;
+        itObj = &(*frame->getLocalMemory()).find(itVar.data);
 	    if(ParsingUtil::firstChar(limitStr.data,'&'))
 	    {
 	    	uint32_t index = postRangeIndex+limitStr.start;
@@ -69,7 +69,7 @@ public:
 	                    }
 	                    try{
 	                        //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
-	                    	frame->getLocalMemory()->getObject(itObj) = list->getListElement(i, runtime.memory);
+	                    	itObj->copyExceptID(list->getListElement(i, runtime.memory));
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);
@@ -99,7 +99,7 @@ public:
 	                    }
 	                    try{
 	                        //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
-	                    	frame->getLocalMemory()->getObject(itObj) = list->getListElement(i, runtime.memory);
+                            itObj->copyExceptID(list->getListElement(i, runtime.memory));
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);
@@ -132,7 +132,7 @@ public:
 	    	            }
 	    	            try{
 	    	                //(*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
-	    	            	frame->getLocalMemory()->getObject(itObj).setDouble(i);
+	    	            	itObj->setDouble(i);
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);
@@ -159,7 +159,7 @@ public:
 	    	            }
 	    	            try{
 	    	                //(*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
-	    	            	frame->getLocalMemory()->getObject(itObj).setDouble(i);
+	    	            	itObj->setDouble(i);
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);
