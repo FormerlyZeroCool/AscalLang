@@ -543,7 +543,8 @@ void Object::pushList(double data)
         void *ptr = this->inp;
         const uint32_t bufSize = this->instructionBufferSizeId;
         //sets the id pointer to be the same as the front of the newly allocated block
-        this->resizeInstructions(++this->instructionBufferSizeId);
+        this->resizeInstructions(this->instructionBufferSizeId*2);
+        memcpy(&this->instructions[0], ptr, bufSize);
         this->deallocateInstructions(ptr, bufSize);
         pushList(data);
     }/*
@@ -578,6 +579,7 @@ void Object::pushList(Object &data)
             const uint32_t bufSize = this->instructionBufferSizeId;
             //sets the id pointer to be the same as the front of the newly allocated block
             this->resizeInstructions(this->instructions.size() + data.instructions.size());
+            memcpy(&this->instructions[0], ptr, bufSize);
             this->deallocateInstructions(ptr, bufSize);
         }
         pushList(data);
