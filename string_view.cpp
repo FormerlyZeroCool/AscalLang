@@ -136,7 +136,8 @@ bool string_view::operator<(const string_view &s) const
     bool isLessThan = false;
 	bool checking = true;
 	uint32_t i = 0;
-	while(!isLessThan && checking && i < s.length() && i < (*this).length())
+    uint32_t max = std::min(s.length(), (*this).length());
+	while(!isLessThan && checking && i < max)
 	{
 	    if((*this)[i] < s[i])
 	        isLessThan = true;

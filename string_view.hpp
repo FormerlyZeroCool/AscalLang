@@ -10,6 +10,7 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 #include "StackSegment.hpp"
 struct SubStrSV;
 #if defined(WIN32) || defined(_WIN32)
@@ -101,7 +102,6 @@ class StackString: public string_view {
 private:
     size_t start;
 	StackSegment<char> data;
-	bool managingMemory = true;
 	void loadThis(size_t len)
 	{
 		for(uint32_t i = 0; i < len; i++)
@@ -111,15 +111,10 @@ private:
 		this->ptr = &data[0];
 		this->data.push(0);
 	}
-	void copy(const char *ptr, size_t len)
+	void copy(const char *ptr, uint32_t len)
 	{
-		size_t i = 0;
-		//this->start = data.size();
-		if(managingMemory)
-		while(i < this->size() && i < len)
-		{
-			this->ptr[i] = ptr[i++];
-		}
+		uint32_t i = 0;
+		memcpy(this->ptr, ptr, std::min(this->size(), len));
 		while(i < this->size() && i >= len)
 		{
 			this->data.pop();
