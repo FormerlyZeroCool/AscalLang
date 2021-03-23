@@ -49,7 +49,7 @@ public:
         else
         {
             SubStrSV rightVarStart = ParsingUtil::getVarNameSV(frame->exp,startOfExp);
-            Object *newVar = runtime.resolveNextObjectExpression(frame, rightVarStart);
+            Object *newVar = runtime.resolveNextObjectExpression(frame, rightVarStart).data;
             if(newVar)
             {
                 runtime.loadUserDefinedFn(*newVar, *frame->getLocalMemory());

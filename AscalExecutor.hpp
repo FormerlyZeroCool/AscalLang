@@ -36,7 +36,7 @@
 #include "ParsingUtil.hpp"
 #include "string_view.hpp"
 #include "MemoryMap.hpp"
-#include <boost/pool/object_pool.hpp>
+
 template <typename t>
 class AscalFrame;
 template <typename t>
@@ -46,6 +46,10 @@ class ParamFrame;
 template <typename t>
 class ParamFrameFunctionPointer;
 class Keyword;
+struct expressionResolution {
+    Object *data;
+    bool error = true;
+};
 struct CommandLineParams{
 	char ** argv;
 	int argc;
@@ -123,7 +127,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	void clearStackOnError(bool printStack, std::string &error, stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
 
 	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName);
-	Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);
+    expressionResolution resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);
 	Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);
 	Object& getObject(AscalFrame<double>* frame, string_view functionName);
 	Object* getObjectNoError(AscalFrame<double>* frame, string_view functionName);

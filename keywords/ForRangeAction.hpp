@@ -53,7 +53,7 @@ public:
 	    {
 	    	uint32_t index = postRangeIndex+limitStr.start;
 	    	SubStrSV limitPartial = ParsingUtil::getVarNameSV(frame->exp, index);
-	    	limitStr.start = limitStr.data.find("&")+1;
+	    	limitStr.start = limitStr.data.find("&", frame->index)+1;
 
 
 	    	Object *list = runtime.resolveNextExprSafe(frame, limitPartial);
@@ -69,7 +69,12 @@ public:
 	                    }
 	                    try{
 	                        //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
-	                    	itObj->copyExceptID(list->getListElement(i, runtime.memory));
+                            if(list->isDoubleList())
+                            {
+                                itObj->setDouble(list->getDoubleAtIndex(i));
+                            }
+                            else
+                                itObj->copyExceptID(list->getListElement(i, runtime.memory));
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);
@@ -99,7 +104,12 @@ public:
 	                    }
 	                    try{
 	                        //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
-                            itObj->copyExceptID(list->getListElement(i, runtime.memory));
+                            if(list->isDoubleList())
+                            {
+                                itObj->setDouble(list->getDoubleAtIndex(i));
+                            }
+                            else
+                                itObj->copyExceptID(list->getListElement(i, runtime.memory));
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);

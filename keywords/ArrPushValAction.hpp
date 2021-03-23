@@ -25,7 +25,7 @@ public:
 	    double valueToPush = runtime.callOnFrame(frame,params[1].data);
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
 	    Object *list = runtime.resolveNextExprSafe(frame, vns);
-	    list->pushList(Object(runtime.memMan, "", ParsingUtil::to_string(valueToPush), ""));
+	    list->pushList(valueToPush);
 	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"pushed value "<<params[1].data<<" to list "<<params[0].data<<" at position: "<<(list->getListSize())<<"\n";

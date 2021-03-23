@@ -10,6 +10,7 @@
 #include "Keyword.hpp"
 
 
+
 template <typename char_type>
 static uint64_t hashfnv(char_type &cptr, size_t len)
 {
@@ -30,19 +31,15 @@ static uint64_t hashFunctionCall(string_type &exp)
 static uint64_t h;
 static uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
+    static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
     h = hash;
     for(auto *s:params)
     {
-        hash += hashfnv(s->getInstructions(), s->getInstructions().size());
-        hash ^= hash>>2;
-        hash ^= hash<<5;
-        hash ^= hash>>12;
-        hash ^= hash<<18;
-        hash ^= hash>>21;
-        hash ^= hash<<26;
-        hash ^= hash<<29;
+        hash ^= hashfnv(s->getInstructions(), s->getInstructions().size());
+        hash ^= hashfnv(s->getInstructions(), s->getInstructions().size())>>16;
+        hash *= prime;
     }
-    return hash+h;
+    return hash^(h>>5);
 }
 static uint64_t hash(AscalFrame<double>* currentFrame)
 {
@@ -146,9 +143,7 @@ void AscalExecutor::loadInitialFunctions()
     loadFn(Object(memMan, "cosDeg","cos(toRad(theta))",""));
     loadFn(Object(memMan, "sec","1/cos(theta)",""));
     //Helpful functions
-    loadFn(Object(memMan, "fib","(x){loc first = 0;loc second = 1;loc int = 0;for counter in range(x){set int = second;set second = second+first;set first = int;};first}",""));
-    
-    loadFn(Object(memMan, "fibw","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
+    loadFn(Object(memMan, "fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
     loadFn(Object(memMan, "fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};loc z = 0;memoize 1;set z = fr(x);memoize 0;z}",""));
     loadFn(Object(memMan, "rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
     loadFn(Object(memMan, "ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
@@ -401,7 +396,7 @@ void AscalExecutor::createFrame(stack<AscalFrame<double>* > &executionStack, Asc
                 uint32_t frameIndexBackup = currentFrame->index;
                 SubStr startOfParam = ParsingUtil::getVarName(obj->params[i].data.substr(startingIndex), startingIndex);
                 startOfParam.end = obj->params[i].start+startOfParam.data.size();
-                pFrame->obj = resolveNextObjectExpression(currentFrame, startOfParam);
+                pFrame->obj = resolveNextObjectExpression(currentFrame, startOfParam).data;
                 currentFrame->index = frameIndexBackup;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
@@ -425,6 +420,7 @@ void AscalExecutor::deleteFrame(AscalFrame<double> *frame)
             break;
             
         default:
+            throw std::string("Error, no deallocation strategy for frame, this is a system bug, contact developer on github @ github.com/andrewrubinstein");
             break;
     }
 }
@@ -530,7 +526,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                 {
                     SubStr ptr("",0,currentFrame->index-1);
                     bool adjust = currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index+1] == '&';
-                    Object *objectResolved = resolveNextObjectExpression(currentFrame, ptr, returnedObj);
+                    Object *objectResolved = resolveNextObjectExpression(currentFrame, ptr, returnedObj).data;
                     if(!returnedObj)
                         throw std::string("could not resolve field in returned object: "+returnedObj->getId().str());
                     else
@@ -656,20 +652,20 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  varName.end+1:currentFrame->exp.size();
                  //Variable handling section
                  currentFrame->index = varName.start;
-
-                 if(Object *data = resolveNextObjectExpression(currentFrame, varName))
+                 expressionResolution resolution = resolveNextObjectExpression(currentFrame, varName);
+                 if(resolution.data)
                  {
                      varName.start = currentFrame->index;
                      startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
-                     uint32_t endOfParams = data->setParams(currentFrame->exp, startOfparams);
+                     uint32_t endOfParams = resolution.data->setParams(currentFrame->exp, startOfparams);
                      uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
                      //std::cout<<"soe: "<<startOfEnd<<" vnsize: "<<varName.data.size()<<"start: "<<varName.start<<" eop: "<<endOfParams<<"\nvarName: "<<varName.data<<"\n";
                  //creates a new set of stack frames, one for the function/var and one for resolution,
                  //and calculation of each of it's parameters
                  //also returns function/var's value to this function's initialOperands stack
                      createFrame(executionStack, currentFrame,
-                                data,startOfEnd,hashFunctionCall(data->id));
+                                resolution.data,startOfEnd,hashFunctionCall(resolution.data->id));
                      goto new_frame_execution;
                  }
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
@@ -709,13 +705,21 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  else
                  {
                     #if THROWERRORS == 1
-                     if(ParsingUtil::cmpstr(varName.data.str(),std::string("inf")))
-                         throw std::string("Arithmetic Overflow in column: "+ParsingUtil::to_string(i));
-                     else if(ParsingUtil::cmpstr(varName.data.str(),std::string("nan")))
-                         throw std::string("Error Undefined result calculated");
-                     else
-                         throw std::string("Invalid reference: "+varName.data.str()+" in column: "+ParsingUtil::to_string(i));
+                     if(resolution.error)
+                     {
+                         if(ParsingUtil::cmpstr(varName.data.str(),std::string("inf")))
+                             throw std::string("Arithmetic Overflow in column: "+ParsingUtil::to_string(i));
+                         else if(ParsingUtil::cmpstr(varName.data.str(),std::string("nan")))
+                             throw std::string("Error Undefined result calculated");
+                         else
+                             throw std::string("Invalid reference: "+varName.data.str()+" in column: "+ParsingUtil::to_string(i));
                     #endif
+                     }
+                     else
+                     {
+                         i = frame->index;
+                     }
+                     
                  }
              }
 
@@ -1038,7 +1042,7 @@ Object* AscalExecutor::getObjectNoError(AscalFrame<double>* frame, string_view f
 
 Object* AscalExecutor::resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName)
 {
-    Object* obj = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr);
+    Object* obj = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data;
     if(!obj)
     {
         throw std::string("Error Resolving object expression near index: "+ParsingUtil::to_string(varName.start)+" last parsed var name: "+varName.data.str());
@@ -1057,9 +1061,10 @@ Object* AscalExecutor::resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV v
 
 //if following char is not . or [ then return currently pointed to object otherwise loop
 
-Object* AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj)
+expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj)
 {
     frame->index = varName.end+1;
+    expressionResolution result;
     if(!obj)
     {
         obj = getObjectNoError(frame, varName.data);
@@ -1089,9 +1094,21 @@ Object* AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, Su
                 SubStrSV lStr = ParsingUtil::getExprInStringSV(frame->exp, index, '[',']',';');
                 varName.data = lStr.data;
                 double lookup = this->callOnFrame(frame, lStr.data);
-                obj = &(*obj)[lookup];
-                frame->index = index+1;
-                varName.end = index+lStr.data.size();
+                if(obj->isObjList())
+                {
+                    obj = &(*obj)[lookup];
+                    frame->index = index+1;
+                    varName.end = index+lStr.data.size();
+                }
+                else
+                {
+                    frame->initialOperands.push(obj->getDoubleAtIndex(lookup));
+                    result.error = false;
+                    obj = nullptr;
+                    frame->index = index+1;
+                    varName.end = index+lStr.data.size();
+                    varName.data.resize(0);
+                }
             }
             //else dictionary based lookup by string
             else if(frame->exp.size() > frame->index)
@@ -1101,7 +1118,7 @@ Object* AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, Su
                 {
                     varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
                     frame->index = varName.start;
-                    obj = &(*obj)[AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr)->listToString(memory)];
+                    obj = &(*obj)[AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data->listToString(memory)];
                     varName.end++;
                 }
                 //By string literal
@@ -1123,7 +1140,8 @@ Object* AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, Su
     } while(obj && parsing);
     varName.start = varName.end - varName.data.size() + 1;
     frame->index = varName.end - varName.data.size() + 1;
-    return obj;
+    result.data = obj;
+    return result;
 }
 Object* AscalExecutor::resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV varName, Object *obj)
 {
@@ -1164,7 +1182,7 @@ Object* AscalExecutor::resolveNextObjectExpressionPartial(AscalFrame<double>* fr
                     {
                         varName = ParsingUtil::getVarNameSV(frame->exp, ++frame->index);
                         frame->index = varName.start;
-                        varName.data = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr)->listToString(memory);
+                        varName.data = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data->listToString(memory).data();
                         frame->index = varName.end+1;
                         while(frame->index < frame->exp.size() && frame->exp[frame->index++]){}
                         possible = &obj->getMapUnsafe(varName.data);

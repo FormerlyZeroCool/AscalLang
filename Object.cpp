@@ -8,6 +8,7 @@
 #include "Object.hpp"
 #include "AscalExecutor.hpp"
 
+const uint8_t Object::initialOffset = sizeof(double);
 //sizeID codes
 const uint32_t Object::SMALL_EXP = 32, Object::MEDIUM_EXP = 128, Object::LARGE_EXP = 1024, Object::VERYLARGE_EXP = 4096, //Object::MALLOC_EXP = -1,
 Object::SMALL_ID = 16, Object::LARGE_ID = 64;//, Object::MALLOC_ID = -1;
@@ -523,21 +524,46 @@ void Object::deallocateMemory(void* ptr, const size_t bufSize, void *idptr, cons
     deallocateId(idptr, idbufSize);
     deallocateInstructions(ptr, bufSize);
 }
+
+bool Object::isDoubleList()
+{
+    return this->instructions[0] == 6;
+}
+void Object::pushList(double data)
+{
+    static const uint16_t objSize = sizeof(double);
+    if(initialOffset+this->listSize*(objSize) < this->instructionBufferSizeId)
+    {
+        this->instructions[0] = 6;
+        memcpy(&this->instructions[initialOffset+this->listSize*(objSize)], &data, objSize);
+        listSize++;
+    }
+    else
+    {
+        void *ptr = this->inp;
+        const uint32_t bufSize = this->instructionBufferSizeId;
+        //sets the id pointer to be the same as the front of the newly allocated block
+        this->resizeInstructions(++this->instructionBufferSizeId);
+        this->deallocateInstructions(ptr, bufSize);
+        pushList(data);
+    }/*
+    else
+    {
+        Object obj(this->objectMap.getMemMan(), std::to_string(listSize)+this->id.str());
+        obj.setDouble(data);
+        this->pushList(obj);
+    }*/
+}
 void Object::pushList(Object &data)
 {
-    static const uint32_t objSize = sizeof(uint64_t);
-    if(1+this->listSize*(objSize)+8 < this->instructionBufferSizeId)
+    static const uint16_t objSize = sizeof(Object*);
+    if(initialOffset+this->listSize*(objSize) < this->instructionBufferSizeId)
     {
         this->instructions[0] = 5;
         data.id = std::to_string(listSize)+this->id.str();
         data.parent = this;
         Object *obj = this->objectMap.getMemMan().constructObj(data);
-        memcpy((unsigned char*) &this->instructions[1+this->listSize*(objSize)], &obj, sizeof(Object*));
-        //for(uint32_t i = 0; i < this->instructions.size(); i++)
-        //{
-        //    std::cout<<(int16_t) this->instructions[i]<< ",";
-        //}
-        
+        memcpy(&this->instructions[initialOffset+this->listSize*(objSize)], &obj, objSize);
         listSize++;
     }
     else
@@ -549,7 +575,7 @@ void Object::pushList(Object &data)
         else
         {
             void *ptr = this->inp;
-            const size_t bufSize = this->instructionBufferSizeId;
+            const uint32_t bufSize = this->instructionBufferSizeId;
             //sets the id pointer to be the same as the front of the newly allocated block
             this->resizeInstructions(this->instructions.size() + data.instructions.size());
             this->deallocateInstructions(ptr, bufSize);
@@ -703,7 +729,7 @@ void Object::clearList()
         for(uint32_t i = 0; i < this->getListSize(); i++)
         {
             Object *obj = nullptr;
-            memcpy(&obj, &this->instructions[1+i*(sizeof(uint64_t))], sizeof(double));
+            memcpy(&obj, &this->instructions[initialOffset+i*(sizeof(uint64_t))], sizeof(double));
             objectMap.getMemMan().obj_free(obj);
         }
     }

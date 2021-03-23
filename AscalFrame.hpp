@@ -214,7 +214,8 @@ public:
             string_view id = j.getId();
         	id[0] = 2;
             uint8_t index = this->returnPointer->getParams()->size();
-        	memcpy(&id[1], ((char*)&index), sizeof(uint8_t));
+            memcpy(&id[1], ((char*)&index), sizeof(uint8_t));
+        	//std::cout<<"Param frame rtning: "<<result<<"\n";
             j.setDouble(result);
         	Object &obj = this->returnPointer->getLocalMemory()->insert(j);
         	this->returnPointer->getParams()->push_back(&obj);

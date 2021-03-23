@@ -82,6 +82,7 @@ private:
     void deallocateId(void *ptr, const size_t bufSize);
 	std::string toString(uint16_t depth);
 public:
+    static const uint8_t initialOffset;
     //sizeID codes
     static const uint32_t SMALL_EXP, MEDIUM_EXP, LARGE_EXP, VERYLARGE_EXP, MALLOC_EXP, SMALL_ID, LARGE_ID, MALLOC_ID;
     string_view id;
@@ -94,6 +95,18 @@ public:
     inline void setDouble(double d);
     inline double getDouble() const;
 	inline bool isDouble();
+    double getDoubleAtIndex(uint32_t index)
+    {
+        if(index < this->getListSize())
+        {
+            //double result = 0;
+            //memcpy(&result, &this->instructions[initialOffset + index*sizeof(double)], sizeof(double));
+            //return result;
+            return *(double*) &this->instructions[initialOffset + index*sizeof(double)];
+        }
+        else
+            throw std::string("Error invalid index: "+std::to_string(index));
+    }
     inline Object& getObjectAtIndex(uint32_t index);
 	int setParams(string_view param, uint32_t = 0);
     void resizeInstructions(uint32_t);
@@ -117,10 +130,12 @@ public:
 	Object& operator[](size_t index);
 	Object& loadChild(Object &data, AscalExecutor &);
     bool isList();
+    bool isDoubleList();
     bool isObjList();
 	void clearList();
 	void pushList(Object &data);
-	void pushList(Object &&data);
+    void pushList(Object &&data);
+    void pushList(double data);
 	Object& setList(Object &data, size_t index);
 	Object splitString(string_view filter, MemoryMap &);
 	void loadString(string_view s);
@@ -149,19 +164,19 @@ bool Object::isDouble()
 void Object::setDouble(double d)
 {
     this->instructions[0] = '\1';
-    this->instructions.resize(sizeof(double)+1);
-    memcpy(&this->instructions[1], &d, sizeof(double));
+    this->instructions.resize(sizeof(double)+initialOffset);
+    memcpy(&this->instructions[initialOffset], &d, sizeof(double));
 }
 double Object::getDouble() const
 {
     double number = 0;
-    memcpy(&number, &this->instructions[1], sizeof(uint64_t));
+    memcpy(&number, &this->instructions[initialOffset], sizeof(uint64_t));
     return number;
 }
 Object& Object::getObjectAtIndex(uint32_t index)
 {
     Object *obj = nullptr;
-    memcpy(&obj, &this->instructions[1+index*(sizeof(uint64_t))], sizeof(Object*));
+    memcpy(&obj, &this->instructions[initialOffset+index*(sizeof(uint64_t))], sizeof(Object*));
     return *obj;
 }
 #endif /* OBJECT_HPP_ */
