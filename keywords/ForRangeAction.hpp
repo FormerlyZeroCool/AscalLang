@@ -46,9 +46,9 @@ public:
 	    executionFrame.setIsDynamicAllocation(false);
 	    executionFrame.setContext(frame->getContext());
 		double i = limitParams.params.size()>1?runtime.callOnFrame(frame,limitParams.params[0].data):0;
-        runtime.callOnFrame(frame, "loc "+itVar.data.str()+" = 0");
-        Object *itObj = 0;
-        itObj = &(*frame->getLocalMemory()).find(itVar.data);
+        Object itObjRef(runtime.memMan, itVar.data.str());
+        frame->getParamMemory()->insert(std::make_pair(string_view(itObjRef.id), &itObjRef));
+        Object *itObj = &itObjRef;
 	    if(ParsingUtil::firstChar(limitStr.data,'&'))
 	    {
 	    	uint32_t index = postRangeIndex+limitStr.start;
@@ -74,12 +74,16 @@ public:
                                 itObj->setDouble(list->getDoubleAtIndex(i));
                             }
                             else
-                                itObj->copyExceptID(list->getListElement(i, runtime.memory));
+                                itObj = &(list->getListElement(i, runtime.memory));
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);
 	                        executionFrame.setZeroFlag(false);
 	                        runtime.calculateExpression(&executionFrame);
+                            if(list->isDoubleList())
+                            {
+                                list->setDoubleAtIndex(i, itObj->getDouble());
+                            }
 	                    }
 	                    catch(std::string &exception)
 	                    {
@@ -109,12 +113,16 @@ public:
                                 itObj->setDouble(list->getDoubleAtIndex(i));
                             }
                             else
-                                itObj->copyExceptID(list->getListElement(i, runtime.memory));
+                                itObj = &(list->getListElement(i, runtime.memory));
 	                        executionFrame.index = 0;
 	                        executionFrame.level = 0;
 	                        executionFrame.setIsFirstRun(true);
 	                        executionFrame.setZeroFlag(false);
 	                        runtime.calculateExpression(&executionFrame);
+                            if(list->isDoubleList())
+                            {
+                                list->setDoubleAtIndex(i, itObj->getDouble());
+                            }
 	                    }
 	                    catch(std::string &exception)
 	                    {

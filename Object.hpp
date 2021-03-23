@@ -93,6 +93,15 @@ public:
 	Object* getThis();
 	//returns end index of params in string
     inline void setDouble(double d);
+    inline void setDoubleAtIndex(uint32_t index, double d)
+    {
+        if(index < this->getListSize())
+        {
+            memcpy(&this->instructions[initialOffset + index*sizeof(double)], &d, sizeof(double));
+        }
+        else
+            throw std::string("Error invalid index: "+std::to_string(index));
+    }
     inline double getDouble() const;
 	inline bool isDouble();
     double getDoubleAtIndex(uint32_t index)

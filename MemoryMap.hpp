@@ -16,7 +16,7 @@ class Object;
 class MemoryMap {
 private:
 	MemoryManager *data;
-    std::map<string_view, Object* > map;
+    std::map<string_view, Object* , std::less<string_view> > map;
 public:
     MemoryMap(MemoryManager &data);
     MemoryMap(const MemoryMap &m) = default;
