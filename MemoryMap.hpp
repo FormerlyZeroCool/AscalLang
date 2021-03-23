@@ -17,6 +17,7 @@ class MemoryMap {
 private:
 	MemoryManager *data;
     std::map<string_view, Object* , std::less<string_view> > map;
+    uint32_t hashKey(string_view key);
 public:
     MemoryMap(MemoryManager &data);
     MemoryMap(const MemoryMap &m) = default;
@@ -32,6 +33,8 @@ public:
     size_t size();
     //Prefferred methods to insert
     Object& insert(Object &obj);
+    Object& insert(string_view id, string_view exp);
+    Object& insert(string_view id);
     //Dangerous, user needs to manage the string views memory
     Object& insert(string_view s, Object &obj);
 	class iterator {

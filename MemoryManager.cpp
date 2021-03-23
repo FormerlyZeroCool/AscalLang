@@ -15,6 +15,10 @@ Object* MemoryManager::constructObj(Object &obj)
 {
     return this->object_pool.construct(obj);
 }
+Object* MemoryManager::constructObj(string_view id, string_view exp)
+{
+    return this->object_pool.construct(*this, id, exp);
+}
 void MemoryManager::obj_free(Object *ptr)
 {
     this->object_pool.destroy(ptr);

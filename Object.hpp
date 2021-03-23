@@ -130,9 +130,11 @@ public:
 	Object(MemoryManager &memMan, std::string &id,std::string &&expression,std::string &&param);
 	Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &&param);
 	Object(MemoryManager &memMan, std::string &&id,const std::string &expression,std::string &&param);
+    Object(MemoryManager &memMan, string_view id);
+    Object(MemoryManager &memMan, string_view &id, string_view &exp);
 	std::string instructionsToFormattedString() const ;
 	std::string instructionsToFormattedString(uint16_t depth) const;
-	const string_view& getInstructions();
+    inline const string_view& getInstructions() { return  instructions; }
 	std::string listToString(MemoryMap &memory);
 	Object& getMapUnsafe(string_view id);
 	Object& operator[](string_view id);

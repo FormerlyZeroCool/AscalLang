@@ -210,14 +210,12 @@ public:
     {
         if(this->returnPointer)
         {
-        	Object j(globalMemory.getMemMan(), "  ");
-            string_view id = j.getId();
+            char id[2];
         	id[0] = 2;
-            uint8_t index = this->returnPointer->getParams()->size();
-            memcpy(&id[1], ((char*)&index), sizeof(uint8_t));
+            id[1] = this->returnPointer->getParams()->size();
+            Object &obj = this->returnPointer->getLocalMemory()->insert(string_view(id, 2), string_view(id, 0));
         	//std::cout<<"Param frame rtning: "<<result<<"\n";
-            j.setDouble(result);
-        	Object &obj = this->returnPointer->getLocalMemory()->insert(j);
+            obj.setDouble(result);
         	this->returnPointer->getParams()->push_back(&obj);
         }
     }

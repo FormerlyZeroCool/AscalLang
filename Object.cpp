@@ -281,11 +281,6 @@ std::string Object::toString(uint16_t depth)
 	s<<"}";
 	return s.str();
 }
-const string_view& Object::getInstructions()
-{
-	return  instructions;
-}
-
 bool cmpVector(const std::vector<std::string>& a,const std::vector<std::string>& b)
 {
 	bool equal = true;
@@ -710,6 +705,16 @@ Object::Object(MemoryManager &memMan, std::string &id,std::string &&expression,s
 Object::Object(MemoryManager &memMan): objectMap(memMan)
 {
 	loadData(std::string("                "),std::string(""));
+}
+Object::Object(MemoryManager &memMan, string_view id): objectMap(memMan)
+{
+    char c = 0;
+    string_view exp(&c, 0);
+    loadData(id, exp);
+}
+Object::Object(MemoryManager &memMan, string_view &id, string_view &exp): objectMap(memMan)
+{
+    loadData(id, exp);
 }
 Object::~Object() {
     clearList();

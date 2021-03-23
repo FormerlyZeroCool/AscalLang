@@ -9,6 +9,7 @@
 #define MEMORYMANAGER_HPP_
 #include <vector>
 #include <set>
+#include "string_view.hpp"
 #include "stack.hpp"
 #include <boost/pool/pool.hpp>
 #include <boost/pool/object_pool.hpp>
@@ -32,6 +33,7 @@ public:
     inline void* small_id_alloc();
     inline void* large_id_alloc();
     Object* constructObj(Object &obj);
+    Object* constructObj(string_view id, string_view exp);
     inline void small_free(void *ptr);
     inline void medium_free(void *ptr);
     inline void large_free(void *ptr);

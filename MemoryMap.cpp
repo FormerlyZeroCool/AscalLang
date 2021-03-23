@@ -25,7 +25,28 @@ size_t MemoryMap::size()
 {
 	return this->map.size();
 }
-
+Object& MemoryMap::insert(string_view id)
+{
+    char c = 0;
+    string_view exp(&c, 0);
+    return *this->getMemMan().constructObj(id, exp);
+}
+Object& MemoryMap::insert(string_view id, string_view exp)
+{
+    Object* obj = nullptr;
+    if(this->map.count(id))
+    {
+        obj = this->map[id];
+        obj->copyToId(id);
+        obj->copyToInstructions(exp);
+    }
+    else
+    {
+        obj = this->getMemMan().constructObj(id, exp);
+        this->map[obj->getId()] = obj;
+    }
+    return *obj;
+}
 Object& MemoryMap::insert(Object &s)
 {
     Object* obj = nullptr;
@@ -64,8 +85,7 @@ Object& MemoryMap::operator[](string_view s)
 		return *map[s];
 	else
 	{
-		Object o(*data ,s.str(),"","");
-		Object &obj = insert(o);
+		Object &obj = insert(s);
 		return obj;
 	}
 }
@@ -93,13 +113,13 @@ void MemoryMap::erase(uint64_t addr)
  */
 void MemoryMap::clear()
 {
-	std::set<Object* > cleared;
+	//std::set<Object* > cleared;
 	for(auto &[key,value] : this->map)
 	{
-		if(!cleared.count(value))
+		//if(!cleared.count(value))
 		{
             this->getMemMan().obj_free(value);
-			cleared.insert(value);
+			//cleared.insert(value);
 		}
 	}
 }
