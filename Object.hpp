@@ -64,7 +64,14 @@ inline std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
 }
 class Object {
 private:
-    uint32_t instructionBufferSizeId = 0, IdBufferSizeId = 0;
+    void *inp = nullptr, *idp = nullptr;
+    uint32_t instructionBufferSizeId = 0;
+    uint16_t IdBufferSizeId = 0;
+    uint16_t flagRegisters = 0;
+    uint32_t listSize = 0;
+    MemoryMap objectMap;
+    Object *parent = nullptr;
+    string_view instructions;
     void extracted(const string_view &exp, const string_view &id);
     
     void loadData(string_view id, string_view exp);
@@ -73,12 +80,7 @@ private:
     void deallocateMemory(void *ptr, const size_t bufSize, void *idptr, const uint32_t idbufSize);
     void deallocateInstructions(void *ptr, const size_t bufSize);
     void deallocateId(void *ptr, const size_t bufSize);
-	MemoryMap objectMap;
-    uint32_t listSize = 0;
-    uint32_t flagRegisters = 0;
 	std::string toString(uint16_t depth);
-    Object *parent = nullptr;
-    string_view instructions;
 public:
     //sizeID codes
     static const uint32_t SMALL_EXP, MEDIUM_EXP, LARGE_EXP, VERYLARGE_EXP, MALLOC_EXP, SMALL_ID, LARGE_ID, MALLOC_ID;

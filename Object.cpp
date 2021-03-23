@@ -10,7 +10,7 @@
 
 //sizeID codes
 const uint32_t Object::SMALL_EXP = 32, Object::MEDIUM_EXP = 128, Object::LARGE_EXP = 1024, Object::VERYLARGE_EXP = 4096, //Object::MALLOC_EXP = -1,
-Object::SMALL_ID = 8, Object::LARGE_ID = 64;//, Object::MALLOC_ID = -1;
+Object::SMALL_ID = 16, Object::LARGE_ID = 64;//, Object::MALLOC_ID = -1;
 
 	void Object::compileInstructions()
 	{
@@ -548,7 +548,7 @@ void Object::pushList(Object &data)
         }
         else
         {
-            void *ptr = (void*) this->instructions.c_str();
+            void *ptr = this->inp;
             const size_t bufSize = this->instructionBufferSizeId;
             //sets the id pointer to be the same as the front of the newly allocated block
             this->resizeInstructions(this->instructions.size() + data.instructions.size());
@@ -562,22 +562,26 @@ void Object::resizeInstructions(uint32_t newSize)
     if(newSize <= Object::MEDIUM_EXP)
     {
         this->instructionBufferSizeId = Object::MEDIUM_EXP;
-        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().medium_alloc()), newSize);
+        this->inp = this->objectMap.getMemMan().medium_alloc();
+        this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
     else if(newSize <= Object::LARGE_EXP)
     {
         this->instructionBufferSizeId = Object::LARGE_EXP;
-        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().large_alloc()), newSize);
+        this->inp = this->objectMap.getMemMan().large_alloc();
+        this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
     else if(newSize <= Object::VERYLARGE_EXP)
     {
         this->instructionBufferSizeId = Object::VERYLARGE_EXP;
-        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().vlarge_alloc()), newSize);
+        this->inp = this->objectMap.getMemMan().vlarge_alloc();
+        this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
     else
     {
         this->instructionBufferSizeId = newSize;
-        this->instructions = string_view(static_cast<const char*>(malloc(newSize)), newSize);
+        this->inp = malloc(newSize);
+        this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
 }
 Object& Object::copyExceptID(const Object& o)
@@ -597,7 +601,7 @@ void Object::copyToId(string_view id)
     }
     else
     {
-        void *ptr = (void*) this->id.c_str();
+        void *ptr = this->idp;
         const uint32_t bufSize = this->IdBufferSizeId;
         this->loadId(id);
         this->deallocateId(ptr, bufSize);
@@ -611,7 +615,7 @@ void Object::copyToInstructions(string_view ins)
     }
     else
     {
-       void *ptr = (void*) this->instructions.c_str();
+       void *ptr = this->inp;
         const uint32_t bufSize = this->instructionBufferSizeId;
         this->loadInstructions(ins);
         this->deallocateInstructions(ptr, bufSize);
@@ -681,8 +685,8 @@ Object::Object(MemoryManager &memMan): objectMap(memMan)
 }
 Object::~Object() {
     clearList();
-    deallocateId((void*) this->id.c_str(), this->IdBufferSizeId);
-    deallocateInstructions((void*) this->instructions.c_str(), this->instructionBufferSizeId);
+    deallocateId(this->idp, this->IdBufferSizeId);
+    deallocateInstructions(this->inp, this->instructionBufferSizeId);
     //deallocateMemory(this->inp, this->instructionBufferSizeId, this->idp, this->IdBufferSizeId);
 }
 void Object::clearList()
@@ -712,27 +716,32 @@ void Object::loadInstructions(string_view exp)
     if(exp.size() <= Object::SMALL_EXP)
     {
         this->instructionBufferSizeId = Object::SMALL_EXP;
-        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().small_alloc()), exp.size());
+        this->inp = this->objectMap.getMemMan().small_alloc();
+        this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
     else if(exp.size() <= Object::MEDIUM_EXP)
     {
         this->instructionBufferSizeId = Object::MEDIUM_EXP;
-        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().medium_alloc()), exp.size());
+        this->inp = this->objectMap.getMemMan().medium_alloc();
+        this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
     else if(exp.size() <= Object::LARGE_EXP)
     {
         this->instructionBufferSizeId = Object::LARGE_EXP;
-        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().large_alloc()), exp.size());
+        this->inp = this->objectMap.getMemMan().large_alloc();
+        this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
     else if(exp.size() <= Object::VERYLARGE_EXP)
     {
         this->instructionBufferSizeId = Object::VERYLARGE_EXP;
-        this->instructions = string_view(static_cast<const char*>(this->objectMap.getMemMan().vlarge_alloc()), exp.size());
+        this->inp = this->objectMap.getMemMan().vlarge_alloc();
+        this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
     else
     {
         this->instructionBufferSizeId = exp.size();
-        this->instructions = string_view(static_cast<const char*>(malloc(exp.size())), exp.size());
+        this->inp = malloc(exp.size());
+        this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
     memcpy((char*) this->instructions.c_str(), (char*) exp.c_str(), exp.size());
 }
@@ -741,17 +750,20 @@ void Object::loadId(string_view id)
     if(id.size() <= Object::SMALL_ID-1)
     {
         this->IdBufferSizeId = Object::SMALL_ID;
-        this->id = string_view(static_cast<const char*>(this->objectMap.getMemMan().small_id_alloc()), id.size());
+        this->idp =this->objectMap.getMemMan().small_id_alloc();
+        this->id = string_view(static_cast<const char*>(this->idp), id.size());
     }
     else if(id.size() <= Object::LARGE_ID-1)
     {
         this->IdBufferSizeId = Object::LARGE_ID;
-        this->id = string_view(static_cast<const char*>(this->objectMap.getMemMan().large_id_alloc()), id.size());
+        this->idp = this->objectMap.getMemMan().large_id_alloc();
+        this->id = string_view(static_cast<const char*>(this->idp), id.size());
     }
     else
     {
         this->IdBufferSizeId = id.size();
-        this->id = string_view(static_cast<const char*>(malloc(id.size())), id.size());
+        this->idp = malloc(id.size());
+        this->id = string_view(static_cast<const char*>(this->idp), id.size());
     }
     memcpy((char*) this->id.c_str(), id.c_str(), id.size());
     this->id[id.size()] = 0;
