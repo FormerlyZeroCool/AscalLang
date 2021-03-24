@@ -30,20 +30,20 @@ public:
     string_view(const std::string &s, const uint32_t start, const uint32_t end);
     string_view(const string_view s, const uint32_t start, const uint32_t end);
     string_view(const char *s, const uint32_t len);
-    const char* c_str() const { return ptr; }
-    void resize(uint32_t newLen)
+    inline const char* c_str() const { return ptr; }
+    inline void resize(uint32_t newLen)
     {
         len = newLen;
     }
-    uint32_t size() const
+    inline uint32_t size() const
     {
         return this->len;
     }
-    uint32_t length() const
+    inline uint32_t length() const
     {
         return this->size();
     }
-    char& operator[](uint32_t index) const
+    inline char& operator[](uint32_t index) const
     {
         return ptr[index];
     }
@@ -111,21 +111,31 @@ private:
         this->ptr = &data[0];
         this->data.push(0);
     }
+    void pop()
+    {
+        this->data.pop();
+        len--;
+    }
+    void push(char data)
+    {
+        this->data.push(data);
+        len++;
+    }
     void copy(const char *ptr, uint32_t len)
     {
         uint32_t i = 0;
         memcpy(this->ptr, ptr, std::min(this->size(), len));
-        while(i < this->size() && i >= len)
+        while(this->size() > len)
         {
-            this->data.pop();
+            this->pop();
             i++;
         }
         while(i >= this->size() && i < len)
         {
-            this->data.push(ptr[i++]);
+            this->push(ptr[i++]);
         }
-        this->data.push(0);
-        this->len = this->data.length()-1;
+        this->push(0);
+        this->len = len;
         this->ptr = &this->data[start];
     }
 public:

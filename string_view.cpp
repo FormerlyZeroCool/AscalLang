@@ -130,24 +130,33 @@ bool string_view::operator==(const string_view &s) const
 		equal = s[i] == (*this)[i];
 	return equal;
 }
-
+int strCmp(const char* s1, const char* s2)
+{
+    while(*s1 && (*s1 == *s2))
+    {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+}
 bool string_view::operator<(const string_view &s) const
 {
-    bool isLessThan = false;
-	bool checking = true;
-	uint32_t i = 0;
-    uint32_t max = std::min(s.length(), (*this).length());
-	while(!isLessThan && checking && i < max)
-	{
-	    if((*this)[i] < s[i])
-	        isLessThan = true;
-	    else if((*this)[i] > s[i])
-	        checking = false;
-	    i++;
-	}
-	isLessThan = isLessThan || (checking && s.length() > (*this).length());
-
-	return isLessThan;
+	const char *s1 = this->c_str();
+	const char *s2 = s.c_str();
+	const char s1t = (*this)[this->size()];
+	const char s2t = (s)[s.size()];
+	(*this)[this->size()] = 0;
+	s[s.size()] = 0;
+    while(*s1 && (*s1 == *s2))
+    {
+        s1++;
+        s2++;
+    }
+	
+    const bool result = ( *s2  > *s1 );
+	(*this)[this->size()] = s1t;
+	s[s.size()] = s2t;
+    return result;
 }
 
 std::string string_view::operator+(const string_view &s) const
