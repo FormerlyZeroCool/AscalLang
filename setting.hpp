@@ -9,7 +9,7 @@ private:
 	t dat;
 	//Currently unused
 	std::string name;
-	//Currently unused
+	//Used to print desciption when updating setting
 	std::string message;
 	//Used as key in settings hashtable
 	std::string command;

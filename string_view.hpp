@@ -30,20 +30,20 @@ public:
     string_view(const std::string &s, const uint32_t start, const uint32_t end);
     string_view(const string_view s, const uint32_t start, const uint32_t end);
     string_view(const char *s, const uint32_t len);
-    inline const char* c_str() const { return ptr; }
-    inline void resize(uint32_t newLen)
+    const char* c_str() const { return ptr; }
+    void resize(uint32_t newLen)
     {
         len = newLen;
     }
-    inline uint32_t size() const
+    uint32_t size() const
     {
         return this->len;
     }
-    inline uint32_t length() const
+    uint32_t length() const
     {
         return this->size();
     }
-    inline char& operator[](uint32_t index) const
+    char& operator[](uint32_t index) const
     {
         return ptr[index];
     }
@@ -109,25 +109,25 @@ private:
             data.push((*this)[i]);
         }
         this->ptr = &data[0];
+        this->len = (uint32_t) len;
         this->data.push(0);
     }
-    void pop()
+    inline uint32_t min(uint32_t a, uint32_t b)
     {
-        this->data.pop();
-        len--;
+        return a<b?a:b;
     }
-    void push(char data)
+    inline void push(char c)
     {
-        this->data.push(data);
+        data.push(c);
         len++;
     }
     void copy(const char *ptr, uint32_t len)
     {
-        uint32_t i = 0;
-        memcpy(this->ptr, ptr, std::min(this->size(), len));
-        while(this->size() > len)
+        uint32_t i = min(this->size(), len);
+        memcpy(this->ptr, ptr, i);
+        while(i < this->size() && this->size() >= len)
         {
-            this->pop();
+            this->data.pop();
             i++;
         }
         while(i >= this->size() && i < len)
@@ -135,17 +135,23 @@ private:
             this->push(ptr[i++]);
         }
         this->push(0);
-        this->len = len;
-        this->ptr = &this->data[start];
+        this->ptr = &this->data[0];
     }
 public:
     StackString(): string_view((char*)nullptr, 0), start(0) {}
     StackString(stack<char> data, const std::string &s): start(data.size()), data(data) { loadThis(s.size()); }
+    
     StackString(stack<char> data, const std::string &s, const uint32_t start, const uint32_t end):
         string_view(s, start, end), start(data.size()), data(data) { loadThis(this->size()); }
+    
     StackString(stack<char> data, const string_view s, const uint32_t start, const uint32_t end):
         string_view(s, start, end), start(data.size()), data(data) { loadThis(this->size()); }
-    void setMemory(stack<char> &d) { data.setData(d); }
+    
+    void setMemory(stack<char> &d) { data.setData(d);
+        this->data.push(0);
+        this->ptr = &this->data[0];
+        this->len++;
+    }
     StackString& operator=(const std::string &s) {
         this->copy(s.c_str(), s.size());
         return *this;

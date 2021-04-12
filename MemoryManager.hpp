@@ -9,6 +9,7 @@
 #define MEMORYMANAGER_HPP_
 #include <vector>
 #include <set>
+#include <map>
 #include "string_view.hpp"
 #include "stack.hpp"
 #include <boost/pool/pool.hpp>

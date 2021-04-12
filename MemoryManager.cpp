@@ -6,6 +6,10 @@
  */
 #include "MemoryManager.hpp"
 #include "Object.hpp"
+typedef std::allocator<std::map<int, std::string, std::less<int>>::value_type> MyAlloc;
+typedef boost::pool_allocator<std::map<int, std::string, std::less<int>>::value_type> MyAlloc2;
+
+std::map<int, std::string, std::less<int>, MyAlloc> m;
 
 MemoryManager::MemoryManager(): small_obj_pool(Object::SMALL_EXP), medium_obj_pool(Object::MEDIUM_EXP), large_obj_pool(Object::LARGE_EXP), very_large_obj_pool(Object::VERYLARGE_EXP),
     small_obj_id_pool(Object::SMALL_ID), large_obj_id_pool(Object::LARGE_ID) {}

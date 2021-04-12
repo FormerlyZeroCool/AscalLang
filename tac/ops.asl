@@ -90,10 +90,10 @@ let k = (x){
 }
 
 let isprime = (x){
-  loc counter = 3
+  loc counter = 2
   set x = abs(floor(x));
-  cloc max = sqrt(x)
-  cloc prime = when ((x-1)%2 = 0)then 1 else 0 end
+  cloc max = floor(1+sqrt(x))
+  loc prime = 1
   while (counter<max)*prime{
     when x%counter = 0 then set prime = 0 else 0 end
     set counter = counter+1

@@ -14,7 +14,7 @@ public:
 	JumpZF(AscalExecutor &runtime):
 	OpKeyword(runtime)
 	{
-		this->keyWord = "jumpZF";
+		this->keyWord = "kumpZF";
 	}
 	void action(AscalFrame<double>* frame) override
 	{

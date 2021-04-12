@@ -114,29 +114,8 @@ public:
 	        std::cout<<"Executing Branch: "<<value<<" Params: "<<AscalExecutor::printMemory(*frame->getParamMemory()," = ",false,"|");
 	        std::cout<<"\n";
 	    }
-	    if(value.length()-1 > bufSize)
-	    {
-		    std::string s = (value).substr(0,value.length()-1).str();
-		    index = endIndex+3-s.length();
-		    frame->index = index;
-		    uint32_t i = 0;
-		    for(; index < endIndex+3; index++){
-		    	frame->exp[index] = s[i++];
-		    }
-	    }
-	    else
-	    {
-
-		    string_view s = (value).substr(0,value.length()-1);
-		    index = endIndex+3-s.length();
-		    frame->index = index;
-		    uint32_t i = 0;
-		    for(short j = 0; j < endIndex+3-index; j++)
-		    	buffer[j] = s[j];
-		    for(; index < endIndex+3; index++){
-		    	frame->exp[index] = buffer[i++];
-		    }
-	    }
+        frame->initialOperands.push(runtime.callOnFrame(frame, value));
+        frame->index = endIndex+3;
 	}
 };
 

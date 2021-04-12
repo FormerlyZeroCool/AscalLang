@@ -74,13 +74,13 @@ private:
     string_view instructions;
     void extracted(const string_view &exp, const string_view &id);
     
-    void loadData(string_view id, string_view exp);
+    inline void loadData(string_view id, string_view exp);
     void loadInstructions(string_view exp);
     void loadId(string_view id);
     void deallocateMemory(void *ptr, const size_t bufSize, void *idptr, const uint32_t idbufSize);
     void deallocateInstructions(void *ptr, const size_t bufSize);
     void deallocateId(void *ptr, const size_t bufSize);
-	std::string toString(uint16_t depth);
+    std::string toString(uint16_t depth);
 public:
     static const uint8_t initialOffset;
     //sizeID codes
@@ -89,9 +89,9 @@ public:
     string_view getId() { return id; }
     void copyToId(string_view);
     void copyToInstructions(string_view);
-	std::vector<SubStrSV> params;
-	Object* getThis();
-	//returns end index of params in string
+    std::vector<SubStrSV> params;
+    Object* getThis();
+    //returns end index of params in string
     inline void setDouble(double d);
     inline void setDoubleAtIndex(uint32_t index, double d)
     {
@@ -103,69 +103,65 @@ public:
             throw std::string("Error invalid index: "+std::to_string(index));
     }
     inline double getDouble() const;
-	inline bool isDouble();
+    inline bool isDouble();
     double getDoubleAtIndex(uint32_t index)
     {
         if(index < this->getListSize())
         {
-            //double result = 0;
-            //memcpy(&result, &this->instructions[initialOffset + index*sizeof(double)], sizeof(double));
-            //return result;
-            return *(double*) &this->instructions[initialOffset + index*sizeof(double)];
+            double result = 0;
+            memcpy(&result, &this->instructions[initialOffset + index*sizeof(double)], sizeof(double));
+            return result;
         }
         else
             throw std::string("Error invalid index: "+std::to_string(index));
     }
     inline Object& getObjectAtIndex(uint32_t index);
-	int setParams(string_view param, uint32_t = 0);
+    int setParams(string_view param, uint32_t = 0);
     void resizeInstructions(uint32_t);
     Object(const Object&);
-	Object(MemoryManager &memMan);
-	Object(MemoryManager &memMan, std::string &id);
-	Object(MemoryManager &memMan, std::string &&id);
-	Object(MemoryManager &memMan, std::string &id, std::string &param);
-	Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &param);
-	Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &param);
-	Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &&param);
-	Object(MemoryManager &memMan, std::string &id,std::string &&expression,std::string &&param);
-	Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &&param);
-	Object(MemoryManager &memMan, std::string &&id,const std::string &expression,std::string &&param);
+    Object(MemoryManager &memMan);
+    Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &param);
+    Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &param);
+    Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &&param);
+    Object(MemoryManager &memMan, std::string &id,std::string &&expression,std::string &&param);
+    Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &&param);
+    Object(MemoryManager &memMan, std::string &&id,const std::string &expression,std::string &&param);
     Object(MemoryManager &memMan, string_view id);
-    Object(MemoryManager &memMan, string_view &id, string_view &exp);
-	std::string instructionsToFormattedString() const ;
-	std::string instructionsToFormattedString(uint16_t depth) const;
+    Object(MemoryManager &memMan, string_view id, string_view exp);
+    std::string instructionsToFormattedString() const ;
+    std::string instructionsToFormattedString(uint16_t depth) const;
     inline const string_view& getInstructions() { return  instructions; }
-	std::string listToString(MemoryMap &memory);
-	Object& getMapUnsafe(string_view id);
-	Object& operator[](string_view id);
-	Object& operator[](size_t index);
-	Object& loadChild(Object &data, AscalExecutor &);
+    std::string listToString(MemoryMap &memory);
+    Object& getMapUnsafe(string_view id);
+    Object& operator[](string_view id);
+    Object& operator[](size_t index);
+    Object& loadChild(Object &data, AscalExecutor &);
     bool isList();
     bool isDoubleList();
     bool isObjList();
-	void clearList();
-	void pushList(Object &data);
+    inline void clearList();
+    void pushList(Object &data);
     void pushList(Object &&data);
     void pushList(double data);
-	Object& setList(Object &data, size_t index);
-	Object splitString(string_view filter, MemoryMap &);
-	void loadString(string_view s);
-	void printList(MemoryMap &memory);
-	size_t getListSize();
-	Object& getListElement(size_t index,MemoryMap &memory);
-	bool operator==(const Object &o) const;
-	bool operator==(Object &o) const;
+    Object& setList(Object &data, size_t index);
+    Object splitString(string_view filter, MemoryMap &);
+    void loadString(string_view s);
+    void printList(MemoryMap &memory);
+    size_t getListSize();
+    Object& getListElement(size_t index,MemoryMap &memory);
+    bool operator==(const Object &o) const;
+    bool operator==(Object &o) const;
     Object& operator=(const Object& o);
     Object& copyExceptID(const Object& o);
-	std::string toString();
-	void compileInstructions();
-	template <typename string>
-	std::string compileInstructions(string &s, uint32_t start);
-	template <typename string>
-	std::stringstream& compileIf(string &s,std::stringstream &instStream, uint32_t &index);
-	template <typename string>
-	std::stringstream& compileWhen(string &s, std::stringstream &instStream, uint32_t &index);
-	virtual ~Object();
+    std::string toString();
+    void compileInstructions();
+    template <typename string>
+    std::string compileInstructions(string &s, uint32_t start);
+    template <typename string>
+    std::stringstream& compileIf(string &s,std::stringstream &instStream, uint32_t &index);
+    template <typename string>
+    std::stringstream& compileWhen(string &s, std::stringstream &instStream, uint32_t &index);
+    virtual ~Object();
 };
 
 bool Object::isDouble()
@@ -189,5 +185,23 @@ Object& Object::getObjectAtIndex(uint32_t index)
     Object *obj = nullptr;
     memcpy(&obj, &this->instructions[initialOffset+index*(sizeof(uint64_t))], sizeof(Object*));
     return *obj;
+}
+void Object::loadData(string_view id, string_view exp)
+{
+    loadId(id);
+    loadInstructions(exp);
+}
+void Object::clearList()
+{
+    if(this->isObjList())
+    {
+        uint64_t index = 0;
+        for(uint32_t i = 0; i < this->getListSize(); i++)
+        {
+            Object *obj = nullptr;
+            memcpy(&obj, &this->instructions[initialOffset+i*(sizeof(Object*))], sizeof(Object*));
+            objectMap.getMemMan().obj_free(obj);
+        }
+    }
 }
 #endif /* OBJECT_HPP_ */

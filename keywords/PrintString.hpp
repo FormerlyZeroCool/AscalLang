@@ -11,6 +11,8 @@
 #include "../AscalExecutor.hpp"
 #include "../ParsingUtil.hpp"
 class PrintString: public StKeyword {
+private:
+    ParsedStatementList params;
 public:
 	PrintString(AscalExecutor &runtime):
 		StKeyword(runtime)
@@ -20,11 +22,11 @@ public:
 
 	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    std::vector<SubStrSV> params = Object(runtime.memMan, "","",exp.data).params;
-	    if(params.size() < 1)
+	    SubStrSV exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord);
+	    ParsingUtil::ParseStatementList(exp.data, 0, params);
+	    if(params.statements.size() < 1)
 	    	throw std::string("loadStr (<object name>)");
-	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params.statements[0].start);
 	    Object *obj = runtime.resolveNextExprSafe(frame, vns);
 	    obj->printList(runtime.memory);
 	    if(*runtime.boolsettings["o"])

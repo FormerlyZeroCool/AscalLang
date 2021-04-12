@@ -12,6 +12,8 @@
 #include "../Vect2D.hpp"
 #include <utility>
 class PlotGUIAction: public StKeyword {
+private:
+    ParsedStatementList params;
 public:
 	PlotGUIAction(AscalExecutor &runtime):
 	StKeyword(runtime)
@@ -22,18 +24,18 @@ public:
 	{
 		static const std::string keyWord = "plotGUI";
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    std::vector<SubStrSV> params = Object(runtime.memMan, "","",exp.data).params;
-	    if(params.size() < 7)
+	    ParsingUtil::ParseStatementList(exp.data,0,params);
+	    if(params.statements.size() < 7)
 	    	throw std::string("plotGUI <fun1|fun2...>,<x lower bound>, <x upper bound>, <y upper bound>, <y lower bound>, <delta x, delta y>");
-	    std::string s = params[0].data.str();
+	    std::string s = params.statements[0].data.str();
 	    std::vector<std::string> functions = ParsingUtil::split(s, std::string("|"));
 	    //Here to aid potential future development
-	    double xMin = runtime.callOnFrame(frame, params[1].data);
-	    double xMax = runtime.callOnFrame(frame, params[1].data);
-	    double yMin = runtime.callOnFrame(frame, params[1].data);
-	    double yMax = runtime.callOnFrame(frame, params[1].data);
-	    double dx = runtime.callOnFrame(frame, params[1].data);
-	    double dy = runtime.callOnFrame(frame, params[1].data);
+	    double xMin = runtime.callOnFrame(frame, params.statements[1].data);
+	    double xMax = runtime.callOnFrame(frame, params.statements[1].data);
+	    double yMin = runtime.callOnFrame(frame, params.statements[1].data);
+	    double yMax = runtime.callOnFrame(frame, params.statements[1].data);
+	    double dx = runtime.callOnFrame(frame, params.statements[1].data);
+	    double dy = runtime.callOnFrame(frame, params.statements[1].data);
 
 	    //int pid = fork();
 	    //if(!pid)

@@ -9,18 +9,19 @@
 #define KEYWORDS_LENACTION_HPP_
 
 #include "../Keyword.hpp"
-class LenAction: public Keyword {
+class LenAction: public OpKeyword {
 public:
 	LenAction(AscalExecutor &runtime):
-	Keyword(runtime)
+	OpKeyword(runtime)
 	{
 		this->keyWord = "arrLen";
 	}
 
 	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    SubStr objname = ParsingUtil::getVarName(exp.data, 0);
+	    SubStr exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord);
+        uint32_t index = frame->index+this->keyWord.size();
+	    SubStr objname = ParsingUtil::getVarNameSV(exp.data, index);
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size());
 	    Object *obj = runtime.resolveNextExprSafe(frame, vns);
 	    frame->initialOperands.push(obj->getListSize());

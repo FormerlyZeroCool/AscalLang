@@ -10,6 +10,8 @@
 
 #include "../Keyword.hpp"
 class ArrGetValAction: public OpKeyword {
+private:
+    ParsedStatementList params;
 public:
 	ArrGetValAction(AscalExecutor &runtime):
 		OpKeyword(runtime)
@@ -19,11 +21,11 @@ public:
 	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    std::vector<SubStrSV> params = Object(runtime.memMan, "","",exp.data).params;
-	    if(params.size() < 2)
+	    ParsingUtil::ParseStatementList(exp.data,0,params);
+	    if(params.statements.size() < 2)
 	    	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
-	    double indexToGet = runtime.callOnFrame(frame,params[1].data);
-	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
+	    double indexToGet = runtime.callOnFrame(frame,params.statements[1].data);
+	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params.statements[0].start);
 	    Object *element = &runtime.resolveNextExprSafe(frame, vns)->getListElement(indexToGet, runtime.memory);
 	    SubStr paramsForListElementFn("", 0 , exp.end);
 	    if(exp.data[exp.end] == '(')
@@ -41,7 +43,7 @@ public:
 	    {
 	    	double t;
 	    	frame->initialOperands.top(t);
-	    	std::cout<<"got element at index: "<<params[1].data<<" from list "<<params[0].data<<" value: "<<(t)<<"\n";
+	    	std::cout<<"got element at index: "<<params.statements[1].data<<" from list "<<params.statements[0].data<<" value: "<<(t)<<"\n";
 	    }
 	    frame->index = paramsForListElementFn.end;
 	}

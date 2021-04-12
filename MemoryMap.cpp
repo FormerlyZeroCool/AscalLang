@@ -7,7 +7,6 @@
 
 #include "MemoryMap.hpp"
 #include "Object.hpp"
-
 MemoryMap::MemoryMap(MemoryManager &data) : data(&data) {}
 Object& MemoryMap::iterator::operator*() const
 {
@@ -105,22 +104,11 @@ void MemoryMap::erase(string_view s)
 		this->map.erase(s);
 	}
 }
-/*
-void MemoryMap::erase(uint64_t addr)
-{
-    this->data->dealloc(addr);
-}
- */
 void MemoryMap::clear()
 {
-	//std::set<Object* > cleared;
 	for(auto &[key,value] : this->map)
 	{
-		//if(!cleared.count(value))
-		{
-            this->getMemMan().obj_free(value);
-			//cleared.insert(value);
-		}
+		this->getMemMan().obj_free(value);
 	}
 }
 MemoryMap::~MemoryMap()
@@ -129,8 +117,3 @@ MemoryMap::~MemoryMap()
 }
 MemoryMap::iterator MemoryMap::begin() { return MemoryMap::iterator(map.begin()); }
 MemoryMap::iterator MemoryMap::end() { return MemoryMap::iterator(map.end()); }
-MemoryManager& MemoryMap::getMemMan()
-{
-	return *data;
-}
-

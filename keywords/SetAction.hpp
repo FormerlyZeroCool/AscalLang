@@ -18,9 +18,8 @@ public:
 	}
 	void action(AscalFrame<double>* frame) override
 	{
-
 		static const std::string keyWord = "set";
-		uint32_t index = frame->exp.find(keyWord,frame->index)+keyWord.size();
+		uint32_t index = frame->index+keyWord.size();
 	    SubStrSV varName = ParsingUtil::getVarNameSV(frame->exp, index);
 	    uint32_t startIndex = frame->exp.find("=",varName.end)+1;
 	    while(frame->exp.size() > startIndex && frame->exp[startIndex] == ' ')
@@ -31,11 +30,27 @@ public:
 	    	subexp = ParsingUtil::getExprInStringSV(frame->exp,startIndex, '{', '}', ';');
 	    	startIndex = sibk;
 	    }
-	    Object *obj = runtime.resolveNextExprSafe(frame, varName);
-
+	    expressionResolution res = runtime.resolveNextObjectExpression(frame, varName);
+        Object *obj = res.data;
+        if(!obj && res.parent)
+        {
+            frame->initialOperands.pop();
+            if(!ParsingUtil::isDouble(subexp))
+            {
+                res.parent->setDoubleAtIndex(res.listIndex, runtime.callOnFrame(frame,subexp));
+            }
+            else
+            {
+                char tmp = subexp[subexp.size()];
+                subexp[subexp.size()] = 0;
+                res.parent->setDoubleAtIndex(res.listIndex, atof(&subexp[0]));
+                subexp[subexp.size()] = tmp;
+            }
+        }
+        else
+        {
 	    if(!ParsingUtil::isObj(subexp))
 	    {
-	        //*obj = Object(runtime.memMan, obj->id,"      ","");
 	    	if(!ParsingUtil::isDouble(subexp))
 	    	{
 	    		obj->setDouble(runtime.callOnFrame(frame,subexp));
@@ -47,10 +62,10 @@ public:
 	    		obj->setDouble(atof(&subexp[0]));
 	    		subexp[subexp.size()] = tmp;
 	    	}
-    	    if(*runtime.boolsettings["o"])
-    	    {
-    	    	std::cout<<"set "<<varName.data<<" = "<< obj->getDouble()<<"\n";
-    	    }
+    	    //if(*runtime.boolsettings["o"])
+    	    //{
+    	    //	std::cout<<"set "<<varName.data<<" = "<< obj->getDouble()<<"\n";
+    	    //}
 	    }
 	    else
 	    {
@@ -63,6 +78,7 @@ public:
 		    	std::cout<<"set "<<varName.data<<" = "<<obj->toString()<<"\n";
 		    }
 	    }
+        }
 	}
 };
 

@@ -10,15 +10,13 @@
 #include "Keyword.hpp"
 
 
-
-template <typename char_type>
-static uint64_t hashfnv(char_type &cptr, size_t len)
+static uint64_t hashfnv(const char *cptr, size_t len)
 {
     static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
     size_t hash = offset;
     for(uint32_t i = 0; i < len; i++)
     {
-        hash ^= (cptr[i]);
+        hash ^= (cptr[i]) | ((unsigned int)cptr[i]<<8L);
         hash *= prime;
     }
     return hash;
@@ -26,41 +24,16 @@ static uint64_t hashfnv(char_type &cptr, size_t len)
 template <typename string_type>
 static uint64_t hashFunctionCall(string_type &exp)
 {
-    return hashfnv(exp, exp.size());
+    return hashfnv(exp.c_str(), exp.size());
 }
-static uint64_t h;
 static uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
-    static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
-    h = hash;
+    static const uint64_t prime = 0x100000001b3;
     for(auto *s:params)
     {
-        hash ^= hashfnv(s->getInstructions(), s->getInstructions().size());
-        hash ^= hashfnv(s->getInstructions(), s->getInstructions().size())>>16;
+        hash ^= hashfnv(s->getInstructions().c_str(), s->getInstructions().size());
         hash *= prime;
     }
-    return hash^(h>>5);
-}
-static uint64_t hash(AscalFrame<double>* currentFrame)
-{
-    uint64_t frameptr = (uint64_t) currentFrame;
-    uint64_t rtnptr =   (uint64_t) currentFrame->returnPointer;
-    uint64_t paramsptr = (uint64_t) currentFrame->getParamMemory();
-    uint64_t locvarptr = (uint64_t) currentFrame->getLocalMemory();
-    uint64_t hash = ((frameptr<<(1 + (15&rtnptr)))^currentFrame->memoPointer^paramsptr^locvarptr);
-    hash ^= paramsptr>>16;
-    hash ^= paramsptr<<16;
-    hash ^= rtnptr>>6;
-    hash ^= rtnptr<<26;
-    hash ^= currentFrame->memoPointer>>3;
-    hash ^= currentFrame->memoPointer<<20;
-    hash ^= hash>>5;
-    hash ^= hash<<10;
-    hash ^= hash>>15;
-    hash ^= hash<<20;
-    hash ^= hash<<28;
-    hash += frameptr<<8;
-    hash += currentFrame->memoPointer;
     return hash;
 }
 
@@ -90,7 +63,7 @@ void AscalExecutor::updateBoolSetting(AscalFrame<double>* frame)
         int endOfId = id.start+id.data.length();
         while(frame->exp[endOfId] == ' ')
             endOfId++;
-        SubStr expression = ParsingUtil::getVarNameOrNum<StackString, string_view>(frame->exp,endOfId);
+        SubStr expression = ParsingUtil::getVarNameOrNum<string_view, string_view>(frame->exp,endOfId);
         short value = expression.data.length()>0?callOnFrame(frame, expression.data):-1;
         setting<bool> set = boolsettings[id.data];
         //inverts setting value via operator overloads of = and *
@@ -329,7 +302,7 @@ double AscalExecutor::callOnFrameFormatted(AscalFrame<double>* callingFrame,std:
     double data = calcWithOptions(&executionFrame);
     return data;
 }
-void AscalExecutor::createFrame(stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, int i,uint64_t hash)
+void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, ParsedStatementList &params, int i,uint64_t hash)
 {
     //save index
     currentFrame->index = i;
@@ -356,7 +329,7 @@ void AscalExecutor::createFrame(stack<AscalFrame<double>* > &executionStack, Asc
         if(*boolsettings["o"])
         {
             std::stringstream data;
-            for(SubStrSV s:obj->params)
+            for(SubStrSV s:params.statements)
             {
                 data << s.data << ",";
             }
@@ -374,15 +347,15 @@ void AscalExecutor::createFrame(stack<AscalFrame<double>* > &executionStack, Asc
         newFrame->setContext(obj);
         //push new frame
         executionStack.push(newFrame);
-        for(int i = 0; i < obj->params.size(); i++)
+        for(int i = 0; i < params.statements.size(); i++)
         {
             uint8_t startingIndex = 0;
-            while(obj->params[i].data[startingIndex++] == ' '){};
-            if(obj->params[i].data[--startingIndex] != '&')
+            while(params.statements[i].data[startingIndex++] == ' '){};
+            if(params.statements[i].data[--startingIndex] != '&')
             {
                 //create and set new frame expression
                 ParamFrame<double>* pFrame = pFramePool.construct(*this, currentFrame);
-                pFrame->exp = obj->params[i].data;
+                pFrame->exp = params.statements[i].data;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //Context object ptr for this keyword resolution
@@ -394,8 +367,8 @@ void AscalExecutor::createFrame(stack<AscalFrame<double>* > &executionStack, Asc
             {
                 ParamFrameFunctionPointer<double>* pFrame = fpFramePool.construct(*this, currentFrame);
                 uint32_t frameIndexBackup = currentFrame->index;
-                SubStr startOfParam = ParsingUtil::getVarName(obj->params[i].data.substr(startingIndex), startingIndex);
-                startOfParam.end = obj->params[i].start+startOfParam.data.size();
+                SubStr startOfParam = ParsingUtil::getVarName(params.statements[i].data.substr(startingIndex), startingIndex);
+                startOfParam.end = params.statements[i].start+startOfParam.data.size();
                 pFrame->obj = resolveNextObjectExpression(currentFrame, startOfParam).data;
                 currentFrame->index = frameIndexBackup;
                 //Create new frame, and set return pointer
@@ -424,7 +397,8 @@ void AscalExecutor::deleteFrame(AscalFrame<double> *frame)
             break;
     }
 }
-void AscalExecutor::clearStackOnError(bool printStack, std::string &error, stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame)
+
+void AscalExecutor::clearStackOnError(bool printStack, std::string &error, StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame)
 {
      frame->returnPointer = cachedRtnObject;
             if(printStack)
@@ -460,7 +434,7 @@ void AscalExecutor::clearStackOnError(bool printStack, std::string &error, stack
             }
             this->cachedRtnObject = nullptr;
 }
-
+stack<AscalFrame<double>*> frameStack;
 double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 {
     //variable that is always a copy
@@ -476,8 +450,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
     frame->returnPointer = nullptr;
     //This loop handles parsing the numbers, and adding the data from the expression
     //to the stacks
-    stack<AscalFrame<double>* > executionStack;
-    executionStack.reserve(4096);
+    StackSegment<AscalFrame<double>* > executionStack(frameStack);
     currentStack = &executionStack;
     AscalFrame<double>* currentFrame = frame;
     executionStack.push(currentFrame);
@@ -536,13 +509,13 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 
                 uint32_t startOfparams = currentFrame->exp[currentFrame->index] =='('?
                     currentFrame->index:currentFrame->exp.size();
-                uint32_t endOfParams = returnedObj->setParams(currentFrame->exp, startOfparams);
-                uint32_t startOfEnd = returnedObj->params.size()==0?currentFrame->index:currentFrame->index+endOfParams-1;
+                ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer);
+                uint32_t startOfEnd = this->paramsBuffer.statements.size()==0?currentFrame->index:currentFrame->index+this->paramsBuffer.end-1;
                 //creates a new set of stack frames, one for the returned function/var and one for resolution,
                 //and calculation of each of it's parameters
                 //also returns function/var's value to this function's initialOperands stack
                 createFrame(executionStack, currentFrame,
-                            returnedObj,startOfEnd,hashFunctionCall(returnedObj->id));
+                            returnedObj,this->paramsBuffer,startOfEnd,hashFunctionCall(returnedObj->id));
                    goto new_frame_execution;
 
             }
@@ -658,14 +631,15 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                      varName.start = currentFrame->index;
                      startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
-                     uint32_t endOfParams = resolution.data->setParams(currentFrame->exp, startOfparams);
+                     uint32_t endOfParams =
+                     ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer).end;
                      uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
                      //std::cout<<"soe: "<<startOfEnd<<" vnsize: "<<varName.data.size()<<"start: "<<varName.start<<" eop: "<<endOfParams<<"\nvarName: "<<varName.data<<"\n";
                  //creates a new set of stack frames, one for the function/var and one for resolution,
                  //and calculation of each of it's parameters
                  //also returns function/var's value to this function's initialOperands stack
                      createFrame(executionStack, currentFrame,
-                                resolution.data,startOfEnd,hashFunctionCall(resolution.data->id));
+                                resolution.data, this->paramsBuffer,startOfEnd,hashFunctionCall(resolution.data->id));
                      goto new_frame_execution;
                  }
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
@@ -696,10 +670,11 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                      (*currentFrame->getParamMemory())[paramVar->id] = (paramVar);
                      //(*currentFrame->getParamMemory())[paramVar->id] = paramVar;
                      //this->loadUserDefinedFn(*paramVar, *currentFrame->getParamMemory());
-                     uint32_t endOfParams = paramVar->setParams(currentFrame->exp, startOfparams);
+                     uint32_t endOfParams =
+                     ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer).end;
                      uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
                      createFrame(executionStack, currentFrame,
-                             paramVar,startOfEnd,hashFunctionCall(paramVar->id));
+                             paramVar, this->paramsBuffer,startOfEnd,hashFunctionCall(paramVar->id));
                      goto new_frame_execution;
                  }
                  else
@@ -717,7 +692,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                      }
                      else
                      {
-                         i = frame->index;
+                         i = currentFrame->index;
                      }
                      
                  }
@@ -801,8 +776,8 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                 {
                     memoPad[currentFrame->memoPointer] = data;
                 }
-                if(currentFrame != frame && *boolsettings["o"] && std::to_string(data).length() != MAX.length()){
-                    std::cout<<"Returning value: "<<data<<'\n';
+                if(currentFrame->getContext() && *boolsettings["o"] && std::to_string(data).length() != MAX.length()){
+                    std::cout<<"Returning value: "<<data<<" from function: "<<currentFrame->getContext()->getId()<<'\n';
                 }
             }
             currentFrame->returnResult(data, memory);
@@ -1083,19 +1058,22 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
             varName = ParsingUtil::getVarNameSV(frame->exp, frame->index);
             parsing = frame->exp[varName.end+1] == '.';
             frame->index = varName.end+1 + parsing;
+            result.parent = obj;
             obj = &(*obj)[varName.data];
         }
         if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
         {
             //if index in array lookup
-            if((ParsingUtil::isNumeric(frame->exp[++frame->index]) || isalpha(frame->exp[frame->index])) && frame->index < frame->exp.size())
+            if(ParsingUtil::isalpha(frame->exp[frame->index+1]) || (ParsingUtil::isNumeric(frame->exp[1+frame->index])))
             {
-                int index = frame->index-1;
+                int index = frame->index;
                 SubStrSV lStr = ParsingUtil::getExprInStringSV(frame->exp, index, '[',']',';');
                 varName.data = lStr.data;
                 double lookup = this->callOnFrame(frame, lStr.data);
                 if(obj->isObjList())
                 {
+                    result.parent = obj;
+                    result.listIndex = lookup;
                     obj = &(*obj)[lookup];
                     frame->index = index+1;
                     varName.end = index+lStr.data.size();
@@ -1104,6 +1082,8 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                 {
                     frame->initialOperands.push(obj->getDoubleAtIndex(lookup));
                     result.error = false;
+                    result.parent = obj;
+                    result.listIndex = lookup;
                     obj = nullptr;
                     frame->index = index+1;
                     varName.end = index+lStr.data.size();
@@ -1118,6 +1098,7 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                 {
                     varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
                     frame->index = varName.start;
+                    result.parent = obj;
                     obj = &(*obj)[AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data->listToString(memory)];
                     varName.end++;
                 }
@@ -1127,7 +1108,8 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                     varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
                     frame->index = varName.end+1;
                     while(frame->index < frame->exp.size() && frame->exp[frame->index++] == ']'){}
-                    varName.end = frame->index ;
+                    varName.end = frame->index;
+                    result.parent = obj;
                     obj = &(*obj)[varName.data];
                 }
                 else

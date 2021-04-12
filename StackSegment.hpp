@@ -11,7 +11,7 @@
 template <typename t>
 class StackSegment {
 private:
-	size_t start, len;
+	uint32_t start, len;
 	stack<t> *data;
 public:
     //only used while returning value from function into previous function's operand stack
@@ -27,11 +27,11 @@ public:
 	void clear()
 	{
         if(start+len == data->size() || !len){
-        const size_t length = len;
-		for(size_t i = 0; i < length; i++)
-            this->pop();
+            for(size_t i = 0; i < len; i++)
+            this->data->pop();
+            this->len = 0;
         }
-        else {
+        else if(!data->isEmpty()){
             std::cout<<(start+len)<<" "<<data->size()<<("Error clearing segment not at top of stack\n");
         }
 	}
@@ -173,7 +173,7 @@ void StackSegment<t>::top(t*&data)
 template <typename t>
 bool StackSegment<t>::isEmpty()
 {
-	return this->start == this->data->size();
+	return len == 0;
 }
 template <typename t>
 size_t StackSegment<t>::length()

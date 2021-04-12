@@ -19,7 +19,7 @@ public:
 
 	void action(AscalFrame<double>* frame) override
 	{
-		uint32_t index = frame->exp.find("if",frame->index)!=-1?frame->exp.find("if",frame->index)+2:0;
+		uint32_t index = frame->index+2;
 	    while(frame->exp[index] == ' ')
 	    {
 	            index++;

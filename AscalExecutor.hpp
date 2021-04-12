@@ -37,6 +37,7 @@
 #include "string_view.hpp"
 #include "MemoryMap.hpp"
 
+
 template <typename t>
 class AscalFrame;
 template <typename t>
@@ -47,7 +48,9 @@ template <typename t>
 class ParamFrameFunctionPointer;
 class Keyword;
 struct expressionResolution {
-    Object *data;
+    Object *data = nullptr;
+    Object *parent = nullptr;
+    uint_fast32_t listIndex = -1;
     bool error = true;
 };
 struct CommandLineParams{
@@ -63,7 +66,7 @@ const std::string VERSION = "2.01";
 uint32_t frameCount = 1;
 uint32_t varCount = 0;
 
-stack<AscalFrame<double> *> *currentStack = nullptr;
+StackSegment<AscalFrame<double> *> *currentStack = nullptr;
 //Interpreter hash map for system keywords
 std::unordered_map<string_view, Keyword*> inputMapper;
 
@@ -84,6 +87,8 @@ AscalFrame<double>* cachedRtnObject = nullptr;
     boost::object_pool<ParamFrame<double> > pFramePool;
     boost::object_pool<ParamFrameFunctionPointer<double> > fpFramePool;
     boost::object_pool<FunctionFrame<double> > fFramePool;
+
+    ParsedStatementList paramsBuffer;
 public:
 /////////////////////////////
 //Program Global Memory Declaration
@@ -123,8 +128,8 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	double callOnFrameFormatted(AscalFrame<double>* callingFrame,std::string subExp);
 	double calculateExpression(AscalFrame<double>* frame);
 	double processStack(stack<double> &operands,stack<char> &operators);
-	void createFrame(stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, int i,uint64_t hash);
-	void clearStackOnError(bool printStack, std::string &error, stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
+    void createFrame(StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, ParsedStatementList &params, int i,uint64_t hash);
+	void clearStackOnError(bool printStack, std::string &error, StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
 
 	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName);
     expressionResolution resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);

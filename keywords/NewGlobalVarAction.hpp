@@ -46,7 +46,7 @@ public:
 	    		exPart.data[exPart.data.size()] = 0;
 	    		var.setDouble(atof(&exPart.data[0]));
 	    		exPart.data[exPart.data.size()] = tmp;
-			    runtime.loadUserDefinedFn(var, *frame->getLocalMemory());
+			    runtime.memory.insert(var);
 	        }
 	        else
 	        {

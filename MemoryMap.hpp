@@ -26,7 +26,11 @@ public:
 	void clear();
     void erase(string_view);
    // void erase(uint64_t);
-    MemoryManager& getMemMan();
+    inline MemoryManager& getMemMan()
+    {
+        return *data;
+    }
+
     Object& operator[](string_view);
     size_t count(string_view);
     Object& find(string_view);

@@ -16,6 +16,10 @@
 #include "string_view.hpp"
 
 class AscalExecutor;
+struct ParsedStatementList {
+    std::vector<SubStrSV> statements;
+    uint32_t end = 0;
+};
 static const std::string MAX = std::to_string(std::numeric_limits<double>::max());
 template <typename string_type>
 bool isObj(string_type &s);
@@ -23,17 +27,55 @@ class ParsingUtil {
 private:
 public:
 	ParsingUtil();
-	static char isalpha(char c) {
+	inline static char isalpha(char c) {
 	    return ((unsigned char)(c | 32U) - 97U) < 26U;
 	}
-	static bool isNumeric(char c)
+	inline static bool isNumeric(char c)
 	{
 	  return (c - 48U < 10U);
 	}
-	static char toLower(char c)
+	inline static char toLower(char c)
 	{
 		return c|32U;
 	}
+    static ParsedStatementList& ParseStatementList(const string_view param, uint32_t start, ParsedStatementList &list)
+    {
+        list.statements.clear();
+        uint32_t end = start,startBackup = start;
+        while(param.size() > start && param[start] != '(')// && !isalpha(param[start]) && param[start] != '-' && param[start] != '&' && !(param[start] < 58 && param[start]> 47))
+        {
+            ++start;
+            ++end;
+        }
+
+        start += param.size() > start;
+        end += param.size() > start;
+        int pCount = param.size() > start;
+        bool foundClosing = !pCount;
+        while(!foundClosing && param.size() > end)
+        {
+            pCount += (param[end] == '(') - (param[end] == ')');
+            if(pCount == 0)
+            {
+                foundClosing = true;
+            }
+            if((param[end] == ',' || foundClosing) && end > start && (pCount == 1 || (pCount == 0 && foundClosing)))
+            {
+                list.statements.push_back(SubStrSV(param.substr(start,end-start),start, end));
+                    start = end;
+                    while(param[start] == ',' || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
+                    {
+                        start++;
+                        end++;
+                    }
+
+            }
+
+            end++;
+        }
+        list.end = 1+end-startBackup;
+        return list;
+    }
 	template <typename string>
 	static double getNextDoubleS(const string &data,int &index);
 	template <typename string>
@@ -139,9 +181,17 @@ public:
 	    out_string_type result = s.substr(begin>s.length()?s.length():begin,count);
 	    return SubStrSV(result,begin, begin+result.length()-1);
 	}
-	static bool firstChar(std::string &s, char c)
+    //supply a function to test for what qualifies as a valid char as pred
+    template <typename string, typename predicate>
+    static char getFirstChar(string &s, predicate &pred, uint_fast32_t i = 0)
+    {
+        while(!pred(s[i])){ i++; }
+        return s[i];
+    }
+    template <typename string>
+	static bool firstChar(string &s, char c)
 	{
-		static uint32_t it;
+        uint32_t it;
 		for(it = 0; s[it] == ' '; it++){}
 
 		return s[it] == c;
