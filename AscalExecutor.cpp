@@ -121,7 +121,7 @@ void AscalExecutor::loadInitialFunctions()
     loadFn(Object(memMan, "rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
     loadFn(Object(memMan, "ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
     loadFn(Object(memMan, "fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
-    loadFn(Object(memMan, "gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else 0 end}",""));
+    loadFn(Object(memMan, "gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else b end}",""));
     loadFn(Object(memMan, "sumBetween","(numberzxa,numberzxb){"
             "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb-1)"
             "else sumOneTo(numberzxb)-sumOneTo(numberzxa-1) end}"
@@ -310,8 +310,8 @@ void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionSta
     {
         currentFrame->initialOperands.push(obj->getDouble());
         varCount++;
-        if(*boolsettings["o"])
-            std::cout<<"QReading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
+        //if(*boolsettings["o"])
+          //  std::cout<<"QReading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
     }
     else if(ParsingUtil::isDouble(obj->getInstructions()))
     {

@@ -210,7 +210,7 @@ std::string Object::instructionsToFormattedString(uint16_t indentationLevel) con
             }
             else if(c == 1)
             {
-                i += sizeof(double);
+                i += sizeof(double)+Object::initialOffset;
                 double d;
                 memcpy(&d, &this->instructions[Object::initialOffset], sizeof(double));
                 data << ParsingUtil::to_string(d);
