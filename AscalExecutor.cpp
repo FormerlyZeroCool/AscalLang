@@ -310,8 +310,8 @@ void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionSta
     {
         currentFrame->initialOperands.push(obj->getDouble());
         varCount++;
-        //if(*boolsettings["o"])
-          //  std::cout<<"QReading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
+        if(*boolsettings["o"])
+            std::cout<<"QReading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
     }
     else if(ParsingUtil::isDouble(obj->getInstructions()))
     {
@@ -1076,7 +1076,7 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                     result.listIndex = lookup;
                     obj = &(*obj)[lookup];
                     frame->index = index+1;
-                    varName.end = index+lStr.data.size();
+                    varName.end = lStr.end;
                 }
                 else
                 {
@@ -1086,13 +1086,14 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                     result.listIndex = lookup;
                     obj = nullptr;
                     frame->index = index+1;
-                    varName.end = index+lStr.data.size();
+                    varName.end = lStr.end;
                     varName.data.resize(0);
                 }
             }
             //else dictionary based lookup by string
-            else if(frame->exp.size() > frame->index)
+            else if(frame->exp.size() > 1+frame->index)
             {
+                frame->index++;
                 //By variable name representing string to lookup
                 if(frame->exp[frame->index] == '&')
                 {
@@ -1121,7 +1122,7 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
         parsing = frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[';
     } while(obj && parsing);
     varName.start = varName.end - varName.data.size() + 1;
-    frame->index = varName.end - varName.data.size() + 1;
+    frame->index = varName.end;
     result.data = obj;
     return result;
 }
