@@ -25,7 +25,7 @@ protected:
     uint32_t len = 0;
 public:
     string_view();
-    string_view(const std::string &s);
+    string_view(const std::string &);
 //    string_view(const ObjectIDView &s);
     string_view(const std::string &s, const uint32_t start, const uint32_t end);
     string_view(const string_view s, const uint32_t start, const uint32_t end);
