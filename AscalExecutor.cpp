@@ -268,7 +268,7 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
            * */
 }
 
-double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame,const string_view subExp)
+double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame, const string_view subExp)
 {
     ParamFrame<double> executionFrame(*this, callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.returnPointer = callingFrame->returnPointer;
@@ -278,7 +278,7 @@ double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame,const string_
     const double data = this->calculateExpression(&executionFrame);
     return data;
 }
-double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame,const std::string &subExp)
+double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame, const std::string &subExp)
 {
     ParamFrame<double> executionFrame(*this, callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.returnPointer = callingFrame->returnPointer;
@@ -735,7 +735,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             //initialOperands stack
             else if(ParsingUtil::isNumeric(currentChar) ||
             (currentChar == '-' && ParsingUtil::isNumeric(currentFrame->exp[i+1]) &&
-                    ((i == 0) ||
+                    ((currentFrame->initialOperands.isEmpty()) ||
                             (i > 0 && (Calculator<double>::isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='('))
                             ))
                 || currentChar == '.')
@@ -1106,7 +1106,7 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                     varName.end++;
                 }
                 //By string literal
-                else if(frame->exp[frame->index] == '\"')
+                else if(frame->exp[frame->index+1] == '\"')
                 {
                     varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
                     frame->index = varName.end+1;
@@ -1128,7 +1128,7 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
     result.data = obj;
     return result;
 }
-Object* AscalExecutor::resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV varName, Object *obj)
+Object* AscalExecutor::resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV &varName, Object *obj)
 {
     //getvarname
     frame->index = varName.end+1;

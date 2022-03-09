@@ -34,8 +34,7 @@ public:
             }
             else{
                 index = frame->index;
-                std::string newVarId = ParsingUtil::getVarName(frame->exp, index).data;
-                Object var(runtime.memMan, newVarId,exPart.data);
+                Object var(runtime.memMan, newVarPart.data,exPart.data);
                 var.compileInstructions();
                 obj = &parent->loadChild(var, runtime);
             }

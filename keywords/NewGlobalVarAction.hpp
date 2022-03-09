@@ -20,9 +20,10 @@ public:
 	{
 		SubStr exPart = ParsingUtil::getExpr(frame->exp, frame->exp.find('=',frame->index)+1, runtime.ascal_cin);
 		    SubStr newVarPart = ParsingUtil::getVarName(frame->exp,frame->index+5);
+            SubStrSV newVarSV(newVarPart);
 	        Object *parent = nullptr;
 	        if(frame->getContext())
-	        	parent = runtime.resolveNextObjectExpressionPartial(frame, newVarPart, frame->getContext()->getThis());
+	        	parent = runtime.resolveNextObjectExpressionPartial(frame, newVarSV, frame->getContext()->getThis());
 		    Object var(runtime.memMan, newVarPart.data);
 
 	        if(parent)
