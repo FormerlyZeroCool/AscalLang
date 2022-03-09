@@ -132,7 +132,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	void clearStackOnError(bool printStack, std::string &error, StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
 
 	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName);
-    expressionResolution resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);
+    expressionResolution resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV &varName, Object *obj = nullptr);
 	Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV varName, Object *obj = nullptr);
 	Object& getObject(AscalFrame<double>* frame, string_view functionName);
 	Object* getObjectNoError(AscalFrame<double>* frame, string_view functionName);

@@ -128,6 +128,7 @@ public:
     Object(MemoryManager &memMan, std::string &&id,const std::string &expression,std::string &&param);
     Object(MemoryManager &memMan, string_view id);
     Object(MemoryManager &memMan, string_view id, string_view exp);
+    void setParent(Object *parent);
     std::string instructionsToFormattedString() const ;
     std::string instructionsToFormattedString(uint16_t depth) const;
     inline const string_view& getInstructions() { return  instructions; }

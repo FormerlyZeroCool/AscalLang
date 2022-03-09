@@ -368,8 +368,10 @@ void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionSta
                 ParamFrameFunctionPointer<double>* pFrame = fpFramePool.construct(*this, currentFrame);
                 uint32_t frameIndexBackup = currentFrame->index;
                 SubStr startOfParam = ParsingUtil::getVarName(params.statements[i].data.substr(startingIndex), startingIndex);
+                
+                SubStrSV sopView(startOfParam);
                 startOfParam.end = params.statements[i].start+startOfParam.data.size();
-                pFrame->obj = resolveNextObjectExpression(currentFrame, startOfParam).data;
+                pFrame->obj = resolveNextObjectExpression(currentFrame, sopView).data;
                 currentFrame->index = frameIndexBackup;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
@@ -498,8 +500,9 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                 if(currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index] == '[')
                 {
                     SubStr ptr("",0,currentFrame->index-1);
+                    SubStrSV svPtr(ptr);
                     bool adjust = currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index+1] == '&';
-                    Object *objectResolved = resolveNextObjectExpression(currentFrame, ptr, returnedObj).data;
+                    Object *objectResolved = resolveNextObjectExpression(currentFrame, svPtr, returnedObj).data;
                     if(!returnedObj)
                         throw std::string("could not resolve field in returned object: "+returnedObj->getId().str());
                     else
@@ -1034,7 +1037,7 @@ Object* AscalExecutor::resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV v
 
 //if following char is not . or [ then return currently pointed to object otherwise loop
 
-expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV varName, Object *obj)
+expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV &varName, Object *obj)
 {
     frame->index = varName.end+1;
     expressionResolution result;
@@ -1059,6 +1062,8 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
             result.parent = obj;
             obj = &(*obj)[varName.data];
         }
+        if(result.parent)
+            obj->setParent(result.parent);
         if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
         {
             //if index in array lookup
@@ -1116,8 +1121,7 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                 }
             }
         }
-        parsing = (frame->exp[frame->index] == '.' || frame->exp[frame->index] == '[');
-        frame->index += (frame->exp[frame->index] == '.' || frame->exp[frame->index] == '[');
+        parsing = (frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[');
     } while(obj && parsing);
     varName.start = varName.end;
     frame->index = varName.end;

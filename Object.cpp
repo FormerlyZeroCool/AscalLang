@@ -471,6 +471,10 @@ int Object::setParams(string_view param, uint32_t start)
     }
     return ++end-startBackup;
 }*/
+void Object::setParent(Object *p)
+{
+    this->parent = p;
+}
 Object& Object::loadChild(Object &data, AscalExecutor &runtime)
 {
     data.parent = this;
