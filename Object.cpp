@@ -210,7 +210,7 @@ std::string Object::instructionsToFormattedString(uint16_t indentationLevel) con
             }
             else if(c == 1)
             {
-                i += sizeof(double)+Object::initialOffset;
+                i += sizeof(double);
                 double d;
                 memcpy(&d, &this->instructions[Object::initialOffset], sizeof(double));
                 data << ParsingUtil::to_string(d);
@@ -488,6 +488,7 @@ std::string Object::toString()
 }
 void Object::deallocateId(void *ptr, const size_t bufSize)
 {
+    ptr = static_cast<void*>(static_cast<char*>(ptr));
     switch (bufSize){
         case (Object::SMALL_ID):
             this->objectMap.getMemMan().small_id_free(ptr);
@@ -501,6 +502,7 @@ void Object::deallocateId(void *ptr, const size_t bufSize)
 }
 void Object::deallocateInstructions(void *ptr, const size_t bufSize)
 {
+    ptr = static_cast<void*>(static_cast<char*>(ptr));
     switch (bufSize) {
         case (Object::SMALL_EXP):
             this->objectMap.getMemMan().small_free(ptr);
@@ -712,25 +714,25 @@ Object::~Object() {
 //only allocates appropriate sized buffer, then copies data supplied in params to new buffer
 void Object::loadInstructions(string_view exp)
 {
-    if(exp.size() <= Object::SMALL_EXP)
+    if(exp.size() < Object::SMALL_EXP)
     {
         this->instructionBufferSizeId = Object::SMALL_EXP;
         this->inp = this->objectMap.getMemMan().small_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
-    else if(exp.size() <= Object::MEDIUM_EXP)
+    else if(exp.size() < Object::MEDIUM_EXP)
     {
         this->instructionBufferSizeId = Object::MEDIUM_EXP;
         this->inp = this->objectMap.getMemMan().medium_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
-    else if(exp.size() <= Object::LARGE_EXP)
+    else if(exp.size() < Object::LARGE_EXP)
     {
         this->instructionBufferSizeId = Object::LARGE_EXP;
         this->inp = this->objectMap.getMemMan().large_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
-    else if(exp.size() <= Object::VERYLARGE_EXP)
+    else if(exp.size() < Object::VERYLARGE_EXP)
     {
         this->instructionBufferSizeId = Object::VERYLARGE_EXP;
         this->inp = this->objectMap.getMemMan().vlarge_alloc();
@@ -743,6 +745,7 @@ void Object::loadInstructions(string_view exp)
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
     memcpy((char*) this->instructions.c_str(), (char*) exp.c_str(), exp.size());
+    this->instructions[instructions.size()] = '\0';
 }
 void Object::loadId(string_view id)
 {

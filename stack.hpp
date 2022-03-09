@@ -130,6 +130,10 @@ public:
     inline void pop();
 	inline void top(t&data);
 	inline void top(t*&data);
+    inline t& get()
+    {
+        return (*this)[this->size()-1];
+    }
 	inline bool isEmpty();
 	inline size_t length();
 };

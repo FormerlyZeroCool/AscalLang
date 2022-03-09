@@ -14,15 +14,16 @@
 #include "stack.hpp"
 #include <boost/pool/pool.hpp>
 #include <boost/pool/object_pool.hpp>
+#include "Pool.hpp"
 class Object;
 class MemoryManager {
 private:
-    boost::pool<boost::default_user_allocator_malloc_free> small_obj_pool;
-    boost::pool<boost::default_user_allocator_malloc_free> medium_obj_pool;
-    boost::pool<boost::default_user_allocator_malloc_free> large_obj_pool;
-    boost::pool<boost::default_user_allocator_malloc_free> very_large_obj_pool;
-    boost::pool<boost::default_user_allocator_malloc_free> small_obj_id_pool;
-    boost::pool<boost::default_user_allocator_malloc_free> large_obj_id_pool;
+    Pool small_obj_pool;
+    Pool medium_obj_pool;
+    Pool large_obj_pool;
+    Pool very_large_obj_pool;
+    Pool small_obj_id_pool;
+    Pool large_obj_id_pool;
     boost::object_pool<Object> object_pool;
 public:
 	MemoryManager();

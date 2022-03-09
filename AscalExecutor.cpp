@@ -310,8 +310,8 @@ void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionSta
     {
         currentFrame->initialOperands.push(obj->getDouble());
         varCount++;
-        //if(*boolsettings["o"])
-          //  std::cout<<"QReading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
+        if(*boolsettings["o"])
+            std::cout<<"QReading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
     }
     else if(ParsingUtil::isDouble(obj->getInstructions()))
     {
@@ -628,7 +628,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  expressionResolution resolution = resolveNextObjectExpression(currentFrame, varName);
                  if(resolution.data)
                  {
-                     varName.start = currentFrame->index;
+                     varName.start = varName.end - varName.data.length() + 1;
                      startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
                      uint32_t endOfParams =
@@ -645,7 +645,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
                  {
                      
-                         varName.start = currentFrame->index;
+                         varName.start = varName.end - varName.data.length() + 1;
                      if(currentFrame->exp[varName.end+1] == '.' || currentFrame->exp[varName.end+1] == '[')
                      {
                          std::stringstream error;
@@ -668,8 +668,6 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                          paramVar->copyToId(varName.data.str());
                      }
                      (*currentFrame->getParamMemory())[paramVar->id] = (paramVar);
-                     //(*currentFrame->getParamMemory())[paramVar->id] = paramVar;
-                     //this->loadUserDefinedFn(*paramVar, *currentFrame->getParamMemory());
                      uint32_t endOfParams =
                      ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer).end;
                      uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
@@ -688,9 +686,9 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                              throw std::string("Error Undefined result calculated");
                          else
                              throw std::string("Invalid reference: "+varName.data.str()+" in column: "+ParsingUtil::to_string(i));
-                    #endif
                      }
                      else
+                    #endif
                      {
                          i = currentFrame->index;
                      }
@@ -1118,10 +1116,11 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                 }
             }
         }
-        parsing = frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[';
+        parsing = (frame->exp[frame->index] == '.' || frame->exp[frame->index] == '[');
+        frame->index += (frame->exp[frame->index] == '.' || frame->exp[frame->index] == '[');
     } while(obj && parsing);
-    varName.start = varName.end - varName.data.size() + 1;
-    frame->index = varName.end - varName.data.size() + 1;
+    varName.start = varName.end;
+    frame->index = varName.end;
     result.data = obj;
     return result;
 }

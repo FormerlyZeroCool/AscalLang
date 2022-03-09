@@ -27,14 +27,14 @@ class ParsingUtil {
 private:
 public:
 	ParsingUtil();
-	constexpr inline static char isalpha(const char c) {
+	inline static char isalpha(char c) {
 	    return ((unsigned char)(c | 32U) - 97U) < 26U;
 	}
-	constexpr inline static bool isNumeric(const char c)
+	inline static bool isNumeric(char c)
 	{
 	  return (c - 48U < 10U);
 	}
-	constexpr inline static char toLower(const char c)
+	inline static char toLower(char c)
 	{
 		return c|32U;
 	}

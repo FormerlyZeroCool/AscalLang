@@ -157,7 +157,7 @@ public:
     {
         this->index++;
         bool clear = false;
-        while(!clear && this->exp[index])
+        while(!clear && this->exp.size() > index)
         {
             if(isalpha(this->exp[index]) || (this->exp[index] >= 48 && this->exp[index] < 58) || Calculator<double>::isOperator(this->exp[index]))
             {

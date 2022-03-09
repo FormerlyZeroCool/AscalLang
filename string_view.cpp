@@ -56,7 +56,7 @@ string_view::string_view(const char *s, const uint32_t len)
 	this->len = len;
 }
 uint32_t findText(const char *original, const uint32_t olen, const char *lookup, const uint32_t llen)
-{
+{;
     if(!llen || !olen || llen>olen || !original || !lookup)
     {
         return -1;

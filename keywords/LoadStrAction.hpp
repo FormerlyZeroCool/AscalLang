@@ -31,7 +31,7 @@ public:
         size_t strStart = 0;
         while(params.statements[1].data.size() > strStart && params.statements[1].data[strStart++] != '\"'){}
         size_t strEnd = params.statements[1].data.length()>0?params.statements[1].data.length()-1:0;
-        while(params.statements[1].data.size() > strEnd && params.statements[1].data[strEnd--] != '\"'){}
+        while(params.statements[1].data.size() > strEnd && params.statements[1].data[strEnd] != '\"'){ strEnd++; }
         //at this point str start, and end point to the appropriate places in the parameter
         string_view s((char*)&params.statements[1].data[0]+strStart, strEnd);
         obj->loadString(s);
