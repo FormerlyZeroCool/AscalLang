@@ -17,7 +17,6 @@ int main()
         list.push_back(a.construct(i));
 
     for(auto el:list)
-    //if(el)
         std::cout<<*el<<" ";
 
     
