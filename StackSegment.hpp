@@ -158,7 +158,7 @@ void StackSegment<t>::pop()
 		len--;
 		this->data->pop();
 	}
-    else throw std::string("Error popping from empty stackstring");
+    else len = 0;
 }
 template <typename t>
 void StackSegment<t>::top(t&data)
@@ -173,7 +173,7 @@ void StackSegment<t>::top(t*&data)
 template <typename t>
 bool StackSegment<t>::isEmpty()
 {
-	return len == 0;
+	return len <= 0;
 }
 template <typename t>
 size_t StackSegment<t>::length()

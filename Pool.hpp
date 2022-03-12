@@ -74,13 +74,20 @@ class Pool_t {
     int_fast64_t poolSize;
     int_fast64_t index = 0;
 public:
-    Pool_t() {
-        this->poolSize = 1024;
-        
+    void init()
+    {   
         auto ptr = new Chunk[this->poolSize];
         blocks.push_back(ptr);
         this->initBlock(ptr, poolSize);
         last = ptr;
+    }
+    Pool_t() {
+        this->poolSize = 1024;
+        this->init();
+    }
+    Pool_t(int64_t blocks) {
+        this->poolSize = blocks;
+        this->init();
     }
     ~Pool_t()
     {

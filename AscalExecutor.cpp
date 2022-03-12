@@ -307,7 +307,8 @@ void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionSta
 {
     //save index
     currentFrame->index = i;
-    if(obj->isDouble())
+    if(obj->isList() | obj->isObjList()) {}
+    else if(obj->isDouble())
     {
         currentFrame->initialOperands.push(obj->getDouble());
         varCount++;
@@ -565,7 +566,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             while(!currentFrame->initialOperators.isEmpty())
                 currentFrame->initialOperators.pop();
          }
-         else if(ParsingUtil::isalpha(currentChar) && (frame->exp.size() < i+1 || ParsingUtil::isalpha(frame->exp[i+1]) || !Calculator<double>::isOperator(currentChar)))
+         else if(ParsingUtil::isalpha(currentChar) && (ParsingUtil::isalpha(frame->exp[i+1]) || !Calculator<double>::isOperator(currentChar)))
          {
              //This needs to be updated, and simplified it makes conditional jumps very expensive
              uint32_t ind = i;
@@ -681,7 +682,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                      {
                          paramVar->copyToId(varName.data.str());
                      }
-                     (*currentFrame->getParamMemory())[paramVar->id] = (paramVar);
+                     (*currentFrame->getParamMemory())[varName.data] = (paramVar);
                      uint32_t endOfParams =
                      ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer).end;
                      uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;

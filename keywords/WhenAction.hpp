@@ -13,11 +13,14 @@ class WhenAction: public OpKeyword {
 	private:
 	const uint32_t bufSize = 8192;
 	char buffer[8192];
+    std::string thenText, elseText;
 public:
 	WhenAction(AscalExecutor &runtime):
 	OpKeyword(runtime)
 	{
 		this->keyWord = "when";
+        this->thenText = "then";
+        this->elseText = "else";
 	}
 	void action(AscalFrame<double>* frame) override
 	{
@@ -62,10 +65,10 @@ public:
 	    int thenIndex;
 	    int whenIndex = startIndex;
 	    double boolExpValue;
-	    int elseIndex = frame->exp.find("else",frame->index);
+	    int elseIndex = frame->exp.find(this->elseText,frame->index);
 	    elseIndex = elseIndex==-1?invalidIndex:elseIndex;
         
-            thenIndex = frame->exp.find("then",index);
+            thenIndex = frame->exp.find(this->thenText,index);
             //Parsing boolean expression
             while(frame->exp[index] == ' ' && index < endIndex && index < thenIndex)
             {
@@ -89,7 +92,7 @@ public:
 	        }
             
             index += 5;//increment index past this when
-            thenIndex = frame->exp.find("when",index);//find next when
+            thenIndex = frame->exp.find(this->keyWord,index);//find next when
             thenIndex = thenIndex==-1?endIndex+1:thenIndex;//find end token of code block
             const int codeBlockEndIndex = std::min(std::min(endIndex,thenIndex),elseIndex);
             value = ParsingUtil::getExprInStringSV(exp.substr(index, codeBlockEndIndex - index), 0, '{', '}',';').data;//get code block
