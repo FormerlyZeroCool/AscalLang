@@ -20,8 +20,19 @@ class Pool {
     int_fast64_t poolSize;
     int_fast64_t index = 0;
 public:
-    Pool(int_fast32_t chunkSize): chunkSize(chunkSize) { poolSize = chunkSize<<12; poolPtr = std::malloc(poolSize); pool.push_back(poolPtr); }
+    Pool(int_fast32_t chunkSize): chunkSize(chunkSize) { 
+        pool.reserve(16);
+        freeList.reserve(4096);
+        poolSize = chunkSize<<12; 
+        poolPtr = std::malloc(poolSize); 
+        pool.push_back(poolPtr); 
+    }
     Pool(int_fast32_t chunkSize, int_fast64_t poolSize): chunkSize(chunkSize), poolSize(poolSize) { poolPtr = std::malloc(poolSize); pool.push_back(poolPtr); }
+    ~Pool()
+    {
+        for(auto block : this->pool)
+            free(block);
+    }
     void* malloc()
     {
         void* ptr = nullptr;
