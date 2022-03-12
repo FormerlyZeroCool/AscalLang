@@ -51,25 +51,33 @@ public:
 	    int index = startIndex + 4;
 	    //should always start after when is finished to build boolean expression
 
+        //find boolean expression after when
+        //find code block to exec if be evals to true
+        //find out if next is when, else, or end
+        //if when take when to end extract to function frame with parent of current push to stack set index to after end
+        //if else take code block after else and put on stack set index to after end
+        //if end set index to after end
+        //then push code block to be exec if true on stack
+        //then push conditional onto stack with boolean expression
 	    int thenIndex;
 	    int whenIndex = startIndex;
 	    double boolExpValue;
 	    int elseIndex = frame->exp.find("else",frame->index);
 	    elseIndex = elseIndex==-1?invalidIndex:elseIndex;
-	    int lastThen = 0;
-	    do {
-	        thenIndex = frame->exp.find("then",index);
-	        //Parsing boolean expression
-	        while(frame->exp[index] == ' ' && index < endIndex && index < thenIndex)
-	        {
-	            index++;
-	        }
-	        uint32_t startOfBoolExp = index;
-	        while(frame->exp.size() > index && index < endIndex && index < thenIndex)
-	        {
-	            index++;
-	        }
-	        string_view booleanExpression = exp.substr(startOfBoolExp,index-startOfBoolExp);
+        
+            thenIndex = frame->exp.find("then",index);
+            //Parsing boolean expression
+            while(frame->exp[index] == ' ' && index < endIndex && index < thenIndex)
+            {
+                index++;
+            }
+            uint32_t startOfBoolExp = index;
+            while(frame->exp.size() > index && index < endIndex && index < thenIndex)
+            {
+                index++;
+            }
+            string_view booleanExpression = exp.substr(startOfBoolExp,index-startOfBoolExp);
+        
 	        if(booleanExpression.size() == 0)
 	        {
 	            throw std::string("Error no boolean expression provided in when.\n");
@@ -79,42 +87,68 @@ public:
 	        {
 	            std::cout<<"Executing Boolean Expression: "<<booleanExpression<<'\n';
 	        }
-	        try{
-	            boolExpValue = runtime.callOnFrame(frame,booleanExpression);
-	        }
-	        catch(std::string &exception)
-	        {
-	            throw std::string("In When Action Calculating BooleanExpression: "+booleanExpression.str()+"\n"+exception);
-	        }
-	    //false case simply set the index to the next instance of when+4
-	    //and repeat until true, or at end of case when
-	        if(boolExpValue == 0)
-	        {
-	            index = frame->exp.find("when",index) + 5;
-	            whenIndex = index - 5;
-	            if(whenIndex == -1 && elseIndex != invalidIndex)
-	            {
-	                value = ParsingUtil::getExprInStringSV(exp.substr(elseIndex+4,endIndex-(elseIndex+4)), 0, '{', '}', ';').data;
-	                index = endIndex;
-	            }
-
-	        }
-	    //true case get sub expression associated with this when return value exit loop
-	        else
-	        {
-	            index += 5;
-	            thenIndex = frame->exp.find("when",index);
-	            thenIndex = thenIndex==-1?endIndex+1:thenIndex;
-	            value = ParsingUtil::getExprInStringSV(exp.substr(index,std::min(std::min(endIndex,thenIndex),elseIndex)-index), 0, '{', '}', ';').data;
-	        }
-	        lastThen = thenIndex;
-	    } while(frame->exp[index] && boolExpValue == 0 && index < endIndex);
+            
+            index += 5;//increment index past this when
+            thenIndex = frame->exp.find("when",index);//find next when
+            thenIndex = thenIndex==-1?endIndex+1:thenIndex;//find end token of code block
+            const int codeBlockEndIndex = std::min(std::min(endIndex,thenIndex),elseIndex);
+            value = ParsingUtil::getExprInStringSV(exp.substr(index, codeBlockEndIndex - index), 0, '{', '}',';').data;//get code block
+        if(codeBlockEndIndex == elseIndex)
+        {
+            frame->index = codeBlockEndIndex + 4;
+            string_view remainder = frame->exp.substr(codeBlockEndIndex + 4, endIndex - (codeBlockEndIndex + 4));
+                
+            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
+            executionFrame->returnPointer = frame;
+            executionFrame->exp = remainder;
+            executionFrame->setIsDynamicAllocation(true);
+            executionFrame->setContext(frame->getContext());
+            runtime.currentStack->push(executionFrame);
+        }
+        else if(codeBlockEndIndex == endIndex+1)
+        {
+                
+            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
+            executionFrame->returnPointer = frame;
+            executionFrame->exp = "";
+            executionFrame->setIsDynamicAllocation(true);
+            executionFrame->setContext(frame->getContext());
+            runtime.currentStack->push(executionFrame);
+        }
+        else
+        {
+            string_view remainder = frame->exp.substr(codeBlockEndIndex, 3 + endIndex - codeBlockEndIndex);
+                
+            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
+            executionFrame->returnPointer = frame;
+            executionFrame->exp = remainder;
+            executionFrame->setIsDynamicAllocation(true);
+            executionFrame->setContext(frame->getContext());
+            runtime.currentStack->push(executionFrame);
+        }
+                                                   
+        {
+            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
+            executionFrame->returnPointer = frame;
+            executionFrame->exp = value;
+            executionFrame->setIsDynamicAllocation(true);
+            executionFrame->setContext(frame->getContext());
+            runtime.currentStack->push(executionFrame);
+        }
+        {
+            AscalFrame<double> *executionFrame = runtime.cFramePool.construct(runtime, frame);
+            executionFrame->returnPointer = frame;
+            executionFrame->exp = booleanExpression;
+            executionFrame->setIsDynamicAllocation(true);
+            executionFrame->setContext(frame->getContext());
+            runtime.currentStack->push(executionFrame);
+        }
 	    if(*runtime.boolsettings["o"])
 	    {
 	        std::cout<<"Executing Branch: "<<value<<" Params: "<<AscalExecutor::printMemory(*frame->getParamMemory()," = ",false,"|");
 	        std::cout<<"\n";
 	    }
-        frame->initialOperands.push(runtime.callOnFrame(frame, value));
+        //frame->initialOperands.push(runtime.callOnFrame(frame, value));
         frame->index = endIndex+3;
 	}
 };
