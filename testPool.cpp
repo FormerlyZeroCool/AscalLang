@@ -17,7 +17,7 @@ int main()
         list.push_back(a.construct(i));
 
     for(auto el:list)
-        std::cout<<*el<<" ";
+        std::cout<<el<<": "<<*el<<"\n";
 
     
     for(auto el:list)
