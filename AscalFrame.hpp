@@ -150,7 +150,7 @@ public:
         return 'a';
     }
     virtual
-    void returnResult(t result, MemoryMap& globalMemory) = 0;
+    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) = 0;
     virtual
     ~AscalFrame() {};
     void clearStackIfAnotherStatementProceeds()
@@ -204,7 +204,7 @@ public:
         this->initialOperands.setData(runtime.operands);
         this->initialOperators.setData(runtime.operators);
     }
-    void returnResult(t result, MemoryMap& globalMemory) override
+    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer)
         {
@@ -222,6 +222,103 @@ public:
         return 'p';
     }
     ~ParamFrame(){};
+};
+template <typename t>
+class FunctionSubFrame: public AscalFrame<t> {
+private:
+public:
+    FunctionSubFrame(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
+    {
+        this->params = params;
+        this->paramMemory = paramMemory;
+        this->localMemory = localMemory;
+        this->initialOperands.setData(runtime.operands);
+        this->initialOperators.setData(runtime.operators);
+    }
+    FunctionSubFrame(AscalExecutor &runtime, AscalFrame<double>* base)
+    {
+        this->params = base->getParams();
+        this->paramMemory = base->getParamMemory();
+        this->localMemory = base->getLocalMemory();
+        this->initialOperands.setData(runtime.operands);
+        this->initialOperators.setData(runtime.operators);
+    }
+    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
+    {
+        if(this->returnPointer)
+        {
+            this->initialOperands.clear();
+            this->returnPointer->initialOperands.push_back(result);
+            this->initialOperands.resetStart();
+        }
+    }
+    char getType() override
+    {
+        return 's';
+    }
+    ~FunctionSubFrame(){};
+};
+template <typename t>
+class ConditionalFrame: public AscalFrame<t> {//before this on stack must be a function frame that is the remainder of the conditionals
+    //then the code block frame to be executed if this evalutaes to true, and then this
+private:
+public:
+    ConditionalFrame(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
+    {
+        this->params = params;
+        this->paramMemory = paramMemory;
+        this->localMemory = localMemory;
+        this->initialOperands.setData(runtime.operands);
+        this->initialOperators.setData(runtime.operators);
+    }
+    ConditionalFrame(AscalExecutor &runtime, AscalFrame<double>* base)
+    {
+        this->params = base->getParams();
+        this->paramMemory = base->getParamMemory();
+        this->localMemory = base->getLocalMemory();
+        this->initialOperands.setData(runtime.operands);
+        this->initialOperators.setData(runtime.operators);
+    }
+    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
+    {
+        if(this->returnPointer)
+        {
+            this->initialOperands.clear();
+            //this->returnPointer->initialOperands.push_back(result);
+            if(!result)
+            {
+                AscalFrame<double> *frameToBeRemoved = nullptr;
+                executionStack.top(frameToBeRemoved);
+                executionStack.pop();
+                
+                if(frameToBeRemoved && frameToBeRemoved->isDynamicAllocation())
+                    executionEnv.deleteFrame(frameToBeRemoved);
+            
+            }
+            else
+            {
+                AscalFrame<double> *frameToBeExec = nullptr;
+                executionStack.top(frameToBeExec);
+                executionStack.pop();
+                
+                AscalFrame<double> *frameToBeRemoved = nullptr;
+                executionStack.top(frameToBeRemoved);
+                executionStack.pop();
+                
+                if(frameToBeRemoved && frameToBeRemoved->isDynamicAllocation())
+                    executionEnv.deleteFrame(frameToBeRemoved);
+                
+                executionStack.push(frameToBeExec);
+                //remove remainder of unused conditionals, and possible branches put back this branch to top of stack when complete
+            }
+            this->initialOperands.resetStart();
+        }
+    }
+    char getType() override
+    {
+        return 'c';
+    }
+    ~ConditionalFrame(){};
 };
 template <typename t>
 class ParamFrameFunctionPointer: public AscalFrame<t> {
@@ -245,7 +342,7 @@ public:
         this->initialOperands.setData(runtime.operands);
         this->initialOperators.setData(runtime.operators);
     }
-    void returnResult(t result, MemoryMap& globalMemory) override
+    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer && obj)
         {
@@ -280,7 +377,7 @@ public:
         //bitwise or with the 2^5 bit 32 sets isFunction true
         this->flagRegisters |= 32;
     }
-    void returnResult(t result, MemoryMap& globalMemory) override
+    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer)
         {

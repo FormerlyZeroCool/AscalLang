@@ -188,6 +188,7 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
 
     ascal_cin.rdbuf(streambuf);
     loadInitialFunctions();
+    
     savedOperands.reserve(8192);
     savedOperators.reserve(8192);
     paramsStack.reserve(8192);
@@ -393,7 +394,12 @@ void AscalExecutor::deleteFrame(AscalFrame<double> *frame)
         case 'z':
             this->fpFramePool.destroy((ParamFrameFunctionPointer<double>*) frame);
             break;
-            
+        case 'c':
+            this->cFramePool.destroy((ConditionalFrame<double>*) frame);
+            break;
+        case 's':
+            this->sFramePool.destroy((FunctionSubFrame<double>*) frame);
+            break;
         default:
             throw std::string("Error, no deallocation strategy for frame, this is a system bug, contact developer on github @ github.com/andrewrubinstein");
             break;
@@ -472,7 +478,8 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                 if(memoPad.count(currentFrame->memoPointer))
                 {
                     data = memoPad[currentFrame->memoPointer];
-                    currentFrame->returnResult(data, memory);
+                    executionStack.pop();//must happen before return for conditional frames
+                    currentFrame->returnResult(data, memory, executionStack, *this);
                     ++rememberedFromMemoTableCount;
 
                     if(*boolsettings["o"])
@@ -483,7 +490,6 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                             std::cout<<"Returning value: "<<data<<'\n';
                         }
                     }
-                    executionStack.pop();
                     if(currentFrame->isDynamicAllocation())
                         deleteFrame(currentFrame);
                     goto check_stack;
@@ -559,7 +565,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             while(!currentFrame->initialOperators.isEmpty())
                 currentFrame->initialOperators.pop();
          }
-         else if(ParsingUtil::isalpha(currentChar) && (ParsingUtil::isalpha(frame->exp[i+1]) || !Calculator<double>::isOperator(currentChar)))
+         else if(ParsingUtil::isalpha(currentChar) && (frame->exp.size() < i+1 || ParsingUtil::isalpha(frame->exp[i+1]) || !Calculator<double>::isOperator(currentChar)))
          {
              //This needs to be updated, and simplified it makes conditional jumps very expensive
              uint32_t ind = i;
@@ -568,6 +574,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
              if(inputMapper.count(varName.data) != 0)
              {
                  Keyword* executingKeyword;
+                 const int currentFrameCount = executionStack.length();
                  bool isDynamicBackup = currentFrame->isDynamicAllocation();
                  if(!currentFrame->returnPointer)
                      cachedRtnObject = rtnptr;
@@ -610,7 +617,11 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                      //while loops?
                      //just make sure first character in returned string is a throwaway alphabetical character
                      //it will not be parsed so ensure it is not meaningful code
-                         i = currentFrame->index<currentFrame->exp.size()?currentFrame->index-1:currentFrame->exp.size();
+                         i = currentFrame->index<currentFrame->exp.size()?currentFrame->index - 1:currentFrame->exp.size();
+                     if(executionStack.length() != currentFrameCount)
+                     {
+                         goto new_frame_execution;
+                     }
                           continue;
 
                  }
@@ -781,13 +792,15 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                     std::cout<<"Returning value: "<<data<<" from function: "<<currentFrame->getContext()->getId()<<'\n';
                 }
             }
-            currentFrame->returnResult(data, memory);
+            executionStack.pop();//must happen before return for conditional frames
+            currentFrame->returnResult(data, memory, executionStack, *this);
         }
+        else
+            executionStack.pop();//must happen before return for conditional frames
         if(currentFrame->isDynamicAllocation())
         {
             deleteFrame(currentFrame);
         }
-        executionStack.pop();
         cachedRtnObject = nullptr;
         currentFrame = nullptr;
     }
@@ -1097,9 +1110,10 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
             else if(frame->exp.size() > frame->index)
             {
                 //By variable name representing string to lookup
-                if(frame->exp[frame->index] == '&')
+                if(frame->exp[frame->index+1] == '&')
                 {
                     varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
+                    //get object data
                     frame->index = varName.start;
                     result.parent = obj;
                     obj = &(*obj)[AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data->listToString(memory)];

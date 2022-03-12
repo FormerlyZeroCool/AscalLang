@@ -369,14 +369,40 @@ Object& Object::operator[](string_view id)
 }
 std::string Object::listToString(MemoryMap &memory)
 {
-    std::stringstream str;
-    for(size_t i = 0; i <= this->getListSize(); i++)
+    
+    if(this->isList())
     {
-        char letter = 0;//(char) stoi(this->getListElement(i, memory).getInstructions().substr(0, 4));
-        if(isprint(letter))
-            str<<letter;
+        std::string str;
+        for(size_t i = 0; i < this->getListSize(); i++)
+        {
+            char letter = (char) this->getDoubleAtIndex(i);
+            if(isprint(letter))
+                str += letter;
+        }
+        return str;
     }
-    return str.str();
+    else if(this->isDouble())
+    {
+        return ParsingUtil::to_string(this->getDouble());
+    }
+    else if(this->isDoubleList())
+    {
+        std::string str;
+        for(int i = 0; i < this->getListSize(); i++)
+        {
+            str += this->getDoubleAtIndex(i);
+        }
+        return str;
+    }
+    else
+    {
+        std::string str;
+        for(int i = 0; i < this->getListSize(); i++)
+        {
+            str += this->getObjectAtIndex(i).listToString(memory);
+        }
+        return str;
+    }
 }
 void Object::printList(MemoryMap &memory)
 {

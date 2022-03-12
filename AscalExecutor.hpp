@@ -37,13 +37,16 @@
 #include "string_view.hpp"
 #include "MemoryMap.hpp"
 
-
+template <typename t>
+class FunctionSubFrame;
 template <typename t>
 class AscalFrame;
 template <typename t>
 class FunctionFrame;
 template <typename t>
 class ParamFrame;
+template <typename t>
+class ConditionalFrame;
 template <typename t>
 class ParamFrameFunctionPointer;
 class Keyword;
@@ -66,7 +69,6 @@ const std::string VERSION = "2.01";
 uint32_t frameCount = 1;
 uint32_t varCount = 0;
 
-StackSegment<AscalFrame<double> *> *currentStack = nullptr;
 //Interpreter hash map for system keywords
 std::unordered_map<string_view, Keyword*> inputMapper;
 
@@ -84,12 +86,15 @@ stack<char> instructionStack;
 //end stack frame shred memory
 std::unordered_map<uint64_t,double> memoPad;
 AscalFrame<double>* cachedRtnObject = nullptr;
-    boost::object_pool<ParamFrame<double> > pFramePool;
-    boost::object_pool<ParamFrameFunctionPointer<double> > fpFramePool;
-    boost::object_pool<FunctionFrame<double> > fFramePool;
 
     ParsedStatementList paramsBuffer;
 public:
+    StackSegment<AscalFrame<double> *> *currentStack = nullptr;
+    ObjectPool<ParamFrame<double> > pFramePool;
+    ObjectPool<ConditionalFrame<double> > cFramePool;
+    ObjectPool<FunctionSubFrame<double> > sFramePool;
+    ObjectPool<ParamFrameFunctionPointer<double> > fpFramePool;
+    ObjectPool<FunctionFrame<double> > fFramePool;
 /////////////////////////////
 //Program Global Memory Declaration
 stack<double> operands;

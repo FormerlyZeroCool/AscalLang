@@ -12,8 +12,6 @@
 #include <map>
 #include "string_view.hpp"
 #include "stack.hpp"
-#include <boost/pool/pool.hpp>
-#include <boost/pool/object_pool.hpp>
 #include "Pool.hpp"
 class Object;
 class MemoryManager {
@@ -24,7 +22,7 @@ private:
     Pool very_large_obj_pool;
     Pool small_obj_id_pool;
     Pool large_obj_id_pool;
-    boost::object_pool<Object> object_pool;
+    ObjectPool<Object> object_pool;
 public:
 	MemoryManager();
 	~MemoryManager();

@@ -7,7 +7,6 @@
 #include "MemoryManager.hpp"
 #include "Object.hpp"
 typedef std::allocator<std::map<int, std::string, std::less<int>>::value_type> MyAlloc;
-typedef boost::pool_allocator<std::map<int, std::string, std::less<int>>::value_type> MyAlloc2;
 
 std::map<int, std::string, std::less<int>, MyAlloc> m;
 
