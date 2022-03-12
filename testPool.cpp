@@ -5,9 +5,9 @@ int main()
 {
     ObjectPool<long> a;
     std::vector<long*> list;
-    for(int i = 0; i < 100000010; i++)
+    for(int i = 0; i < 10000010; i++)
         list.push_back(a.construct(i));
-    for(int i = 0; i < 100000000; i++){
+    for(int i = 0; i < 10000000; i++){
         a.destroy(list.back());
         list.pop_back();
     }
