@@ -67,7 +67,6 @@
 #include "keywords/ManualAction.hpp"
 #include "keywords/WhileAction.h"
 #include "Keyword.hpp"
-#include <boost/pool/object_pool.hpp>
 class Ascal {
 private:
 	AscalExecutor runtime;
