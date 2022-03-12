@@ -98,85 +98,81 @@ public:
     static bool isNonParentheticalOperator(char op)
     {
 
-        switch (op) {
-           case '+': return true;
-           case '-': return true;
-           case '*': return true;
-           case '/': return true;
-           case '%': return true;
-           case '^': return true;
-           case 'P': return true;
-           case 'C': return true;
-           case '@': return true;
-           case '$': return true;
-           case '=': return true;
-           case '<': return true;
-           case '>': return true;
-           default:
-           return false;
-        }
-        return false;
-    }
-    static bool isOperator(char op)
-    {
-        if(op == '(' || op == ')')
-            return true;
-        else
-            return isNonParentheticalOperator(op);
-    }
-    static char getPriority(char ator)
-    {
-      int priority = -1;
-      switch (ator){
-      case '(':
-          priority = 0;
-          break;
-      case ')':
-          priority = 0;
-          break;
-      case '^':
-          priority = 90;
-          break;
-      case '*':
-          priority = 80;
-          break;
-      case '/':
-          priority = 80;
-          break;
-      case '%':
-          priority = 80;
-          break;
-      case '$':
-          priority = 80;
-          break;
-      case '@':
-          priority = 80;
-          break;
-      case 'P':
-          priority = 80;
-          break;
-      case 'C':
-          priority = 80;
-          break;
-      case '+':
-          priority = 70;
-          break;
-      case '-':
-          priority = 70;
-          break;
-      case '=':
-          priority = 60;
-          break;
-      case '>':
-          priority = 60;
-          break;
-      case '<':
-          priority = 60;
-          break;
-      case 'a':
-          priority = -255;
-    default:
-        priority = -250;
+	    switch (op) {
+	       case '+': return true;
+	       case '-': return true;
+	       case '*': return true;
+	       case '/': return true;
+	       case '%': return true;
+	       case '^': return true;
+	       case 'P': return true;
+	       case 'C': return true;
+	       case '@': return true;
+	       case '$': return true;
+	       case '=': return true;
+	       case '<': return true;
+	       case '>': return true;
+	    }
+	    return false;
+	}
+	static bool isOperator(char op)
+	{
+		if(op == '(' || op == ')')
+			return true;
+		else
+			return isNonParentheticalOperator(op);
+	}
+	static char getPriority(char ator)
+	{
+	  int priority = -1;
+	  switch (ator){
+	  case '(':
+		  priority = 0;
+		  break;
+	  case ')':
+		  priority = 0;
+		  break;
+	  case '^':
+		  priority = 90;
+		  break;
+	  case '*':
+		  priority = 80;
+		  break;
+	  case '/':
+		  priority = 80;
+		  break;
+	  case '%':
+		  priority = 80;
+		  break;
+	  case '$':
+		  priority = 80;
+		  break;
+	  case '@':
+		  priority = 80;
+		  break;
+	  case 'P':
+		  priority = 80;
+		  break;
+	  case 'C':
+		  priority = 80;
+		  break;
+	  case '+':
+		  priority = 70;
+		  break;
+	  case '-':
+		  priority = 70;
+		  break;
+	  case '=':
+		  priority = 60;
+		  break;
+	  case '>':
+		  priority = 60;
+		  break;
+	  case '<':
+		  priority = 60;
+		  break;
+	  case 'a':
+		  priority = -255;
 
       }
       return priority;
