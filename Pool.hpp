@@ -16,7 +16,7 @@ class Pool {
     std::vector<void*> pool;
     void* poolPtr;
     std::vector<void*> freeList;
-    int_fast32_t chunkSize;
+    const int_fast32_t chunkSize;
     int_fast64_t poolSize;
     int_fast64_t index = 0;
 public:
@@ -27,7 +27,6 @@ public:
         poolPtr = std::malloc(poolSize); 
         pool.push_back(poolPtr); 
     }
-    Pool(int_fast32_t chunkSize, int_fast64_t poolSize): chunkSize(chunkSize), poolSize(poolSize) { poolPtr = std::malloc(poolSize); pool.push_back(poolPtr); }
     ~Pool()
     {
         for(auto block : this->pool)
@@ -74,13 +73,6 @@ class Pool_t {
     int_fast64_t poolSize;
     int_fast64_t index = 0;
 public:
-    void init()
-    {   
-        auto ptr = new Chunk[this->poolSize];
-        blocks.push_back(ptr);
-        this->initBlock(ptr, poolSize);
-        last = ptr;
-    }
     Pool_t() {
         this->poolSize = 1024;
         this->init();
@@ -93,6 +85,13 @@ public:
     {
         for(auto block : this->blocks)
             delete[] block;
+    }
+    void init()
+    {   
+        auto ptr = new Chunk[this->poolSize];
+        blocks.push_back(ptr);
+        this->initBlock(ptr, poolSize);
+        last = ptr;
     }
     void initBlock(Chunk *block, long len)
     {
