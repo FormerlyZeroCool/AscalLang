@@ -189,15 +189,6 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
     ascal_cin.rdbuf(streambuf);
     loadInitialFunctions();
     
-    savedOperands.reserve(8192);
-    savedOperators.reserve(8192);
-    paramsStack.reserve(8192);
-    instructionsStack.reserve(1<<22);
-    processOperands.reserve(8192);
-    processOperators.reserve(8192);
-    operands.reserve(8192);
-    operators.reserve(8192);
-    instructionStack.reserve(8192);
     commandLineParams.argc = argc;
     commandLineParams.argv = argv;
     commandLineParams.index = 1;
@@ -953,7 +944,7 @@ double AscalExecutor::processStack(stack<double> &operands,stack<char> &operator
           operators.pop();
 
           operators.top(nextOperator);
-          if(Calculator<double>::getPriority(nextOperator)>Calculator<double>::getPriority(firstOperator))
+          if(Calculator<double>::getPriority(nextOperator) > Calculator<double>::getPriority(firstOperator))
           {
               savedOperators.push(firstOperator);
               savedOperands.push(and1);

@@ -105,9 +105,7 @@ if(head != nullptr)
   head = p;
 }
 else
-{
-  std::cout<<"Stack is empty! Can't pop.";
-}
+{std::cout<<"Stack is empty! Can't pop.";}
 
     }
 template <typename t>
@@ -128,10 +126,9 @@ public:
 	stack(){}
 	inline void push(const t &data);
 	inline void push(const t &&data);
-    inline void pop();
+  inline void pop();
 	inline void top(t&data);
 	inline void top(t*&data);
-    inline void reserve(size_t size);
     inline t& get()
     {
         return (*this)[this->size()-1];
@@ -139,11 +136,6 @@ public:
 	inline bool isEmpty();
 	inline size_t length();
 };
-template <typename t>
-void stack<t>::reserve(size_t size)
-{
-    this->resize(size);
-}
 template <typename t>
 void stack<t>::push(const t &data)
 {
@@ -161,8 +153,7 @@ void stack<t>::pop()
 	{
 		this->pop_back();
 	}
-    else
-        throw std::string("You popped an empty list!");
+    else throw std::string("You popped an empty list!");
 }
 template <typename t>
 bool stack<t>::isEmpty()
