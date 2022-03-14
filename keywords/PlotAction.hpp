@@ -33,7 +33,7 @@ public:
 	    std::vector<std::string> functions;
 	    int trailer = index;
 	    {
-	        while(frame->exp[index] && frame->exp[index] != ',')
+	        while(frame->exp.size() > index && frame->exp[index] != ',')
 	        {
 	            if(frame->exp[index] == '|')
 	            {
@@ -66,18 +66,15 @@ public:
 	    std::stringstream exp;
 	    for(int j = 0;j<functions.size();j++)
 	    {
-	        std::string function = functions[j];
+	        const std::string &function = functions[j];
 		    if(*runtime.boolsettings["o"])
 	        	std::cout<<"\nProcessing: "<<function<<"\n";
 	        for(int i = 0;i<tableWidth;i++)
 	        {
 	            xi = xMin+dx*(i);
-	            FunctionFrame<double>* calledFunction = new FunctionFrame<double>(runtime, runtime.memMan);
 	            exp << function << '(' << ParsingUtil::to_string(xi) << ')';
-	            calledFunction->exp = exp.str();
+	            outPuts.push_back(runtime.callOnFrame(frame, exp.str()));
 	            exp.str(std::string());
-	            outPuts.push_back(
-	                    runtime.calculateExpression(calledFunction));
 	            sumArea[j] += outPuts.get(i,j)*dx;
 	        }
 	    }
