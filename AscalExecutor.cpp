@@ -1093,8 +1093,8 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                     result.parent = obj;
                     result.listIndex = lookup;
                     obj = nullptr;
-                    frame->index = index+1;
-                    varName.end = index+lStr.data.size();
+                    frame->index = index;
+                    varName.end = index+lStr.data.size() - 1;
                     varName.data.resize(0);
                 }
             }
