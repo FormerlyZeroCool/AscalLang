@@ -123,35 +123,43 @@ public:
         this->last->next = p;
     }
 };
+
 template <typename t>
 class ObjectPool {
     Pool pool;
 public:
     ObjectPool(): pool(sizeof(t)){}
+
+    t* construct()
+    {
+        void *location = this->pool.malloc();
+        return new (location) t();
+    }
+
     template <typename u>
     t* construct(u &first)
     {
-        const void *location = this->pool.malloc();
-        return new ((void*) location) t(first);
+        void *location = this->pool.malloc();
+        return new (location) t(first);
     }
     
     template <typename u, typename v>
     t* construct(u &first, v &second)
     {
-        const void *location = this->pool.malloc();
-        return new ((void*)location) t(first, second);
+        void *location = this->pool.malloc();
+        return new (location) t(first, second);
     }
     template <typename u, typename v, typename x>
     t* construct(u &first, v &second, x &third)
     {
-        const void *location = this->pool.malloc();
-        return new ((void*) location) t(first, second, third);
+        void *location = this->pool.malloc();
+        return new (location) t(first, second, third);
     }
     template <typename u, typename v, typename x, typename y>
     t* construct(u &first, v &second, x &third, y &fourth)
     {
-        const void *location = this->pool.malloc();
-        return new ((void*)location) t(first, second, third, fourth);
+        void *location = this->pool.malloc();
+        return new (location) t(first, second, third, fourth);
     }
     void destroy(t* record)
     {
