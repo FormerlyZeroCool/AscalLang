@@ -15,6 +15,8 @@
 #include <inttypes.h>
 #include <string>
 #include "Ascal.hpp"
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define DEBUG 1
 #define THROWERRORS 1
@@ -64,11 +66,19 @@ int main(int argc,char* argv[])
   //command line by the user loop will not run
   //by default the loop runs
 
+  char* buf;
   while(std::cin && running)
   {
+    if(buf = readline(">> ")) == nullptr)
+      break;
+    if (strlen(buf) > 0) {
+      add_history(buf);
+    }
+      arg = buf;
+      free(buf);
       //Interpreter prompt to let user know program is expecting a command/expression
-      std::cout<<std::endl<<">>";
-      getline(std::cin, arg);
+      //std::cout<<std::endl<<">>";
+      //getline(std::cin, arg);
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
       	if(ParsingUtil::firstChar(arg, '{'))
