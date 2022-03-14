@@ -14,6 +14,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <string>
+#include <memory>
 #include "Ascal.hpp"
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -36,6 +37,7 @@ int main(int argc,char* argv[])
 	  Ascal ascalRuntime(argv, argc, 0);
   //Beginning of section interpreting program parameters from command line
 	  bool running = true;
+  char* readLineBuffer;
   std::string arg = "";
     try{
   if(argc > 1)
@@ -66,33 +68,32 @@ int main(int argc,char* argv[])
   //command line by the user loop will not run
   //by default the loop runs
 
-  char* buf;
   while(std::cin && running)
   {
-    if(buf = readline(">> ")) == nullptr)
-      break;
-    if (strlen(buf) > 0) {
-      add_history(buf);
-    }
-      arg = buf;
-      free(buf);
-      //Interpreter prompt to let user know program is expecting a command/expression
-      //std::cout<<std::endl<<">>";
-      //getline(std::cin, arg);
+    //this can be replaced with std::cout<<">>"; getline(std::cin, arg);
+    //if you then remove header files for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
+      if((readLineBuffer = readline(">>")) == nullptr)
+        break;
+      if (strlen(readLineBuffer) > 0) {
+        add_history(readLineBuffer);
+      }
+      auto bufCleaner = std::make_unique<char*>(readLineBuffer);
+      string_view line(readLineBuffer);
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
-      	if(ParsingUtil::firstChar(arg, '{'))
-    	  arg = ParsingUtil::getExpr(arg, 0, std::cin).data;
+      	if(ParsingUtil::firstChar(line, '{'))
+        line = ParsingUtil::getExpr(line, 0, std::cin).data;
         try{
-        	ascalRuntime.execExpression(arg);
+        	ascalRuntime.execExpression(line.str());
         }
         catch(std::string &exception)
         {
             std::cerr<<"Function call stack trace.\n";
             std::cerr<<exception<<std::endl;
-            std::cerr<<"Failed to exec: "<<arg<<std::endl;
+            std::cerr<<"Failed to exec: "<<line<<std::endl;
         }
-  }
+
+    }
   }
   catch(int exitCode){
       return exitCode;
