@@ -29,7 +29,6 @@ public:
         uint32_t index = frame->index+keyWord.size()+params.statements[0].start;
 	    SubStrSV vns = ParsingUtil::getVarNameSV(frame->exp, index);
 	    Object *list = runtime.resolveNextExprSafe(frame, vns);
-        std::cout<<"index to delete: "<<indexToDelete<<"\n";
 	    list->eraseList(indexToDelete);
 	    if(*runtime.boolsettings["o"])
 	    {
