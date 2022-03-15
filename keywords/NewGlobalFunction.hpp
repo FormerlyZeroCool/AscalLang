@@ -23,6 +23,7 @@ public:
         uint32_t index = frame->index+4;
         SubStrSV newVarPart = ParsingUtil::getVarNameSV(frame->exp, index);
         Object *parent = runtime.resolveNextObjectExpressionPartial(frame, newVarPart);
+        frame->index = exPart.start + exPart.end;
         Object *obj = nullptr;
         if(parent)
         {
@@ -37,7 +38,7 @@ public:
                 Object var(runtime.memMan, newVarPart.data,exPart.data);
                 Object pushMethod(runtime.memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
                 obj = &parent->loadChild(var, runtime);
-                obj->loadChild(pushMethod, runtime);
+                runtime.makeArray(*obj);
             }
             else{
                 index = frame->index;
@@ -60,15 +61,7 @@ public:
             obj = &runtime.loadUserDefinedFn(var, runtime.memory);
             if(ParsingUtil::getFirstChar(s) == '[')
             {
-                Object pushMethod(runtime.memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
-                pushMethod.compileInstructions();
-                Object popMethod(runtime.memMan, string_view("pop"), string_view("arrErase(this,arrLen(this)-1)"));
-                popMethod.compileInstructions();
-                Object eraseMethod(runtime.memMan, string_view("erase"), string_view("arrErase(this,index)"));
-                popMethod.compileInstructions();
-                obj->loadChild(pushMethod, runtime);
-                obj->loadChild(popMethod, runtime);
-                obj->loadChild(eraseMethod, runtime);
+                runtime.makeArray(*obj);
             }
         }
         if(*runtime.boolsettings["o"])
