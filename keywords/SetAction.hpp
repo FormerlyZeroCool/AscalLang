@@ -48,8 +48,7 @@ public:
             }
         }
         else
-        {
-	    if(!ParsingUtil::isObj(subexp))
+	    if(obj && !ParsingUtil::isObj(subexp))
 	    {
 	    	if(!ParsingUtil::isDouble(subexp))
 	    	{
@@ -67,7 +66,7 @@ public:
     	    //	std::cout<<"set "<<varName.data<<" = "<< obj->getDouble()<<"\n";
     	    //}
 	    }
-	    else
+	    else if(obj)
 	    {
 	    	SubStrSV rightHandObjectLookup = ParsingUtil::getVarNameSV(frame->exp, startIndex);
 	    	Object *rightObj = runtime.resolveNextExprSafe(frame, rightHandObjectLookup);
@@ -78,7 +77,7 @@ public:
 		    	std::cout<<"set "<<varName.data<<" = "<<obj->toString()<<"\n";
 		    }
 	    }
-        }
+        
 	}
 };
 
