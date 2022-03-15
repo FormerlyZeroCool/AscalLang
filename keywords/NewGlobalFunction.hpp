@@ -56,7 +56,6 @@ public:
             }
             Object var(runtime.memMan, newVarPart.data,exPart.data);
             string_view s = frame->exp.substr(exStart,frame->exp.length() - exStart);
-            std::cout<<s<<" "<<(s[0] == ' ')<<"  :"<<ParsingUtil::getFirstChar(s)<<": seee\n";
             var.compileInstructions();
             obj = &runtime.loadUserDefinedFn(var, runtime.memory);
             if(ParsingUtil::getFirstChar(s) == '[')
