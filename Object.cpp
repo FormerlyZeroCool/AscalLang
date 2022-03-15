@@ -508,6 +508,29 @@ Object& Object::loadChild(Object &data, AscalExecutor &runtime)
     return data;
 }
 
+void Object::eraseList(long index)
+{
+    if(index >= 0 && index < this->getListSize())
+    {
+        if(this->isDoubleList() || this->isObjList())
+        {
+            void* element = reinterpret_cast<void*>(&this->instructions[initialOffset + index * sizeof(uint64_t)]);
+            void* finalElement = reinterpret_cast<void*>(&this->instructions[this->instructionBufferSizeId - 1 * sizeof(uint64_t)]);
+            const long elementsToMove = reinterpret_cast<uint64_t*>(finalElement) - reinterpret_cast<uint64_t*>(element);
+
+            if(this->isObjList())
+            {
+                this->objectMap.getMemMan().obj_free(reinterpret_cast<Object*>(element));
+                memcpy(element, reinterpret_cast<Object*>(element) + 1, elementsToMove * sizeof(uint64_t));
+            }
+            else
+                memcpy(element, reinterpret_cast<double*>(element) + 1, elementsToMove * sizeof(uint64_t));
+            this->listSize--;
+        }
+    }
+    else
+        throw std::string("Error deleting element, no element at index: ") + ParsingUtil::to_string(index);
+}
 Object* Object::getThis()
 {
     return this->parent;

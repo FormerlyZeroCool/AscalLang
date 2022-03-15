@@ -144,6 +144,7 @@ public:
     void pushList(Object &data);
     void pushList(Object &&data);
     void pushList(double data);
+    void eraseList(long index);
     Object& setList(Object &data, size_t index);
     Object splitString(string_view filter, MemoryMap &);
     void loadString(string_view s);

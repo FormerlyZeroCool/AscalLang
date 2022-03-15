@@ -62,7 +62,13 @@ public:
             {
                 Object pushMethod(runtime.memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
                 pushMethod.compileInstructions();
+                Object popMethod(runtime.memMan, string_view("pop"), string_view("arrErase(this,arrLen(this)-1)"));
+                popMethod.compileInstructions();
+                Object eraseMethod(runtime.memMan, string_view("erase"), string_view("arrErase(this,index)"));
+                popMethod.compileInstructions();
                 obj->loadChild(pushMethod, runtime);
+                obj->loadChild(popMethod, runtime);
+                obj->loadChild(eraseMethod, runtime);
             }
         }
         if(*runtime.boolsettings["o"])
