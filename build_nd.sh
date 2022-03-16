@@ -1,7 +1,7 @@
 echo "Building Ascal Interpreter with g++ -O2"
-g++  -c -Wall -std=c++20 -O3 AscalMainN.cpp AscalParameters.cpp Object.cpp   string_view.cpp Ascal.cpp AscalExecutor.cpp CrossPlatform.cpp ParsingUtil.cpp PRNG.cpp Keyword.cpp MemoryMap.cpp MemoryManager.cpp SubStr.cpp 
+g++  -c -Wall -std=c++20 -O3 AscalMainNoDep.cpp AscalParameters.cpp Object.cpp   string_view.cpp Ascal.cpp AscalExecutor.cpp CrossPlatform.cpp ParsingUtil.cpp PRNG.cpp Keyword.cpp MemoryMap.cpp MemoryManager.cpp SubStr.cpp
 #g++  -Wall -std=c++20 -Og -ggdb3 -fsanitize=address,undefined AscalMain.cpp AscalParameters.cpp Object.cpp   string_view.cpp Ascal.cpp AscalExecutor.cpp CrossPlatform.cpp ParsingUtil.cpp PRNG.cpp Keyword.cpp MemoryMap.cpp MemoryManager.cpp SubStr.cpp
-g++ -o ascal -O3 AscalMain.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o CrossPlatform.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o
+g++ -o ascal -O3 AscalMainNoDep.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o CrossPlatform.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o
 #rm AscalMain.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o CrossPlatform.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o
 
 echo "Starting Ascal interpreter"
