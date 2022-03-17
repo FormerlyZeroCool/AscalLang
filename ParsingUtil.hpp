@@ -192,9 +192,25 @@ public:
 	static bool firstChar(string &s, char c)
 	{
         uint32_t it;
-		for(it = 0; s[it] == ' '; it++){}
+		for(it = 0;s.length() > it && s[it] == ' '; it++){}
 
 		return s[it] == c;
+	}
+    template <typename string>
+	static char getFirstChar(string &s)
+	{
+        uint32_t it = 0;
+		for(it = 0; s[it] == ' '; it++){}
+
+		return s[it];
+	}
+    template <typename string>
+	static char getFirstChar(string &&s)
+	{
+        uint32_t it = 0;
+		for(it = 0; s[it] == ' '; it++){}
+
+		return s[it];
 	}
 	static std::string ts(string_view s)
 	{
