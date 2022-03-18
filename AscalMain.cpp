@@ -67,24 +67,26 @@ int main(int argc,char* argv[])
   //beginning of main program loop, if parameters are given in the
   //command line by the user loop will not run
   //by default the loop runs
-
+  std::string lastLine = "";
   while(std::cin && running)
   {
     //this can be replaced with std::cout<<">>"; getline(std::cin, arg);
     //if you then remove header files for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
       if((readLineBuffer = readline(">>")) == nullptr)
         break;
-      if (strlen(readLineBuffer) > 0) {
-        add_history(readLineBuffer);
-      }
       auto bufCleaner = std::make_unique<char*>(readLineBuffer);
-      string_view line(readLineBuffer);
+      
+      std::string line(readLineBuffer);
+      if (line.size() > 0 && line != lastLine) {
+        add_history(readLineBuffer);
+        lastLine = line;
+      }
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
       	if(ParsingUtil::firstChar(line, '{'))
         line = ParsingUtil::getExpr(line, 0, std::cin).data;
         try{
-        	ascalRuntime.execExpression(line.str());
+        	ascalRuntime.execExpression(line);
         }
         catch(std::string &exception)
         {
