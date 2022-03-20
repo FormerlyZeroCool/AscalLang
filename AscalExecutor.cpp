@@ -899,6 +899,7 @@ double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
     return result;
 
 }
+
 double AscalExecutor::processStack(stack<double> &operands,stack<char> &operators)
 {
 

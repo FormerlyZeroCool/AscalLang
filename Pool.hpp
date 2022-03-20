@@ -58,6 +58,17 @@ public:
     {
         freeList.push_back(ptr);
     }
+    /*
+    bool isAlloced(void* ptr)
+    {
+        bool isAlloced = false;
+        if(ptr > this->poolPtr && ptr < this->poolPtr + this->index * this->chunkSize)
+            isAlloced = true;
+        for(long i  = 0; !isAlloced i < this->freeList.size(); i++)
+            isAlloced = this->freeList[i] == ptr;
+        
+        return isAlloced;
+    }*/
 };
 //in dev
 template <typename t>
@@ -129,7 +140,9 @@ class ObjectPool {
     Pool pool;
 public:
     ObjectPool(): pool(sizeof(t)){}
-
+    Pool& getPool(){
+        return this->pool;
+    }
     t* construct()
     {
         void *location = this->pool.malloc();

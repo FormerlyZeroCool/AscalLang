@@ -408,7 +408,7 @@ void Object::printList(MemoryMap &memory)
 {
     for(size_t i = 0; i < this->getListSize(); i++)
     {
-            std::cout<<(char) this->getDoubleAtIndex(i);
+        std::cout<<(char) this->getDoubleAtIndex(i);
     }
 }
 void Object::loadString(string_view s)
@@ -504,8 +504,7 @@ void Object::setParent(Object *p)
 Object& Object::loadChild(Object &data, AscalExecutor &runtime)
 {
     data.parent = this;
-    runtime.loadUserDefinedFn(data, this->objectMap);
-    return data;
+    return runtime.loadUserDefinedFn(data, this->objectMap);
 }
 
 void Object::eraseList(long index)

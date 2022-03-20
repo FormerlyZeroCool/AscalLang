@@ -29,8 +29,8 @@ public:
 	}
 	void insertAt(int x,int y,t value)
 	{
-		if(this->size()>x+ y*width)
-			(*this)[x+ y*width] = value;
+		if(this->size() > x + y * width && x|y)
+			(*this)[x + y*width] = value;
 		else
 		{
 			while(this->size()<x+ y*width)

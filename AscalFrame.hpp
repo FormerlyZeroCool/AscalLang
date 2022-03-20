@@ -284,7 +284,6 @@ public:
         if(this->returnPointer)
         {
             this->initialOperands.clear();
-            //this->returnPointer->initialOperands.push_back(result);
             if(!result)
             {
                 AscalFrame<double> *frameToBeRemoved = nullptr;

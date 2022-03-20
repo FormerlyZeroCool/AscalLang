@@ -15,6 +15,7 @@
 #include "keywords/ArcCosAction.hpp"
 #include "keywords/ArcSinAction.hpp"
 #include "keywords/ArcTanAction.hpp"
+#include "keywords/ArrErase.hpp"
 #include "keywords/ArrGetValAction.hpp"
 #include "keywords/ArrPushValAction.hpp"
 #include "keywords/ArrSetValAction.hpp"
@@ -103,6 +104,7 @@ public:
 			addKeyWord<ArrGetValAction>();
 			addKeyWord<ArrPushValAction>();
 			addKeyWord<ArrSetValAction>();
+			addKeyWord<ArrEraseValAction>();
 			addKeyWord<DeleteObject>();
 			addKeyWord<DerivefnAction>();
 			addKeyWord<ElseAction>();
@@ -146,7 +148,7 @@ public:
 			addKeyWord<EvalSetZF>();
 	}
 	double execExpression(std::string &&exp);
-	double execExpression(std::string &exp);
+	double execExpression(string_view exp);
 	CommandLineParams& getCLParams()
 	{
 		return runtime.getCLParams();

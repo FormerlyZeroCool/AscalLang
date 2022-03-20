@@ -28,7 +28,7 @@ public:
 	    	throw std::string("loadStr (<object name>)");
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params.statements[0].start);
 	    Object *obj = runtime.resolveNextExprSafe(frame, vns);
-	    obj->printList(runtime.memory);
+	    std::cout << obj->listToString(runtime.memory);
 	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"loadstr("<<") = "<<(char)(65)<<'\n';

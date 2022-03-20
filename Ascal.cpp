@@ -10,7 +10,7 @@
 	{
 		return execExpression(exp);
 	}
-	double Ascal::execExpression(std::string &exp)
+	double Ascal::execExpression(string_view exp)
 	{
 		FunctionFrame<double> frame(runtime, runtime.memMan);
         frame.setIsDynamicAllocation(false);

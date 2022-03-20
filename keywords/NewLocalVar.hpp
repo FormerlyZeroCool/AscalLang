@@ -22,12 +22,18 @@ public:
         SubStr localName = ParsingUtil::getVarName(frame->exp,frame->exp.find("loc",frame->index)+4);
         static uint32_t startOfExp;
         startOfExp = frame->exp.find('=', frame->index)+1;
-
-        if(ParsingUtil::getFirstChar(frame->exp.substr(startOfExp)) == '[')
+        const char firstCharExp = ParsingUtil::getFirstChar(frame->exp.substr(startOfExp));
+        if(firstCharExp == '[')
         {
             Object obj(runtime.memMan, localName.data);
             nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());
             runtime.makeArray(*nobj);
+        }
+        else if(firstCharExp == '\"')
+        {
+            Object obj(runtime.memMan, localName.data);
+            nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());
+            runtime.makeString(*nobj);
         }
         else
         {
