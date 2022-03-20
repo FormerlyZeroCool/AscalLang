@@ -45,6 +45,7 @@ public:
             {
                 Object var(runtime.memMan, newVarPart.data,string_view("", 0));
                 obj = &parent->loadChild(var, runtime);
+                obj->loadString(exPart.data.substr(0, exPart.data.length() - 2));
                 runtime.makeString(*obj);
             }
             else
