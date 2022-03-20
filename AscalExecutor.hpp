@@ -169,6 +169,14 @@ void setCachedRtnObject(AscalFrame<double> *frame)
         obj.loadChild(popMethod, *this);
         obj.loadChild(eraseMethod, *this);
 	}
+	void makeString(Object &obj)
+	{
+		this->makeArray(obj);
+		//substr
+        Object pushMethod(this->memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
+        pushMethod.compileInstructions();
+        obj.loadChild(pushMethod, *this);
+	}
 	void loadFn(Object function);
 	Object& loadUserDefinedFn(Object &function, MemoryMap &mem);
 	Object& loadUserDefinedFn(Object &function, std::map<string_view, Object*> &mem);
