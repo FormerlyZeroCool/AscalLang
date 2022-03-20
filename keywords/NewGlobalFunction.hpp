@@ -72,7 +72,7 @@ public:
             }
             else if(firstCharExp == '\"')
             {
-                var.loadString(exPart.data.substr(0, exPart.data.length() - 2));
+                obj->loadString(exPart.data.substr(0, exPart.data.length() - 2));
                 runtime.makeString(*obj);
             }
         }
