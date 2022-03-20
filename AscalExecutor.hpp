@@ -173,9 +173,9 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	{
 		this->makeArray(obj);
 		//substr
-        Object pushMethod(this->memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
-        pushMethod.compileInstructions();
-        obj.loadChild(pushMethod, *this);
+        //Object pushMethod(this->memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
+        //pushMethod.compileInstructions();
+        //obj.loadChild(pushMethod, *this);
 	}
 	void loadFn(Object function);
 	Object& loadUserDefinedFn(Object &function, MemoryMap &mem);

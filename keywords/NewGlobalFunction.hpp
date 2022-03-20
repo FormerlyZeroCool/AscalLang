@@ -26,6 +26,7 @@ public:
         frame->index = exPart.start + exPart.end;
         Object *obj = nullptr;
         string_view s = frame->exp.substr(exStart,frame->exp.length() - exStart);
+        const char firstCharExp = ParsingUtil::getFirstChar(s);
         if(parent)
         {
             if(ParsingUtil::getFirstChar(newVarPart.data) == '\"'){
@@ -34,11 +35,17 @@ public:
                 var.compileInstructions();
                 obj = &parent->setList(var, atoi(var.getId().c_str()));
             }
-            else if(ParsingUtil::getFirstChar(s) == '[')
+            else if(firstCharExp == '[')
             {
                 Object var(runtime.memMan, newVarPart.data,string_view("", 0));
                 obj = &parent->loadChild(var, runtime);
                 runtime.makeArray(*obj);
+            }
+            else if(firstCharExp == '\"')
+            {
+                Object var(runtime.memMan, newVarPart.data,string_view("", 0));
+                obj = &parent->loadChild(var, runtime);
+                runtime.makeString(*obj);
             }
             else
             {
@@ -59,9 +66,14 @@ public:
             Object var(runtime.memMan, newVarPart.data,exPart.data);
             var.compileInstructions();
             obj = &runtime.loadUserDefinedFn(var, runtime.memory); 
-            if(ParsingUtil::getFirstChar(s) == '[')
+            if(firstCharExp == '[')
             {
                 runtime.makeArray(*obj);
+            }
+            else if(firstCharExp == '\"')
+            {
+                var.loadString(exPart.data.substr(0, exPart.data.length() - 2));
+                runtime.makeString(*obj);
             }
         }
         if(*runtime.boolsettings["o"])
