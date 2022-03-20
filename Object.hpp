@@ -205,5 +205,9 @@ void Object::clearList()
             objectMap.getMemMan().obj_free(obj);
         }
     }
+    else
+    {
+        this->listSize = 0;
+    }
 }
 #endif /* OBJECT_HPP_ */
