@@ -25,6 +25,7 @@ public:
         Object *parent = runtime.resolveNextObjectExpressionPartial(frame, newVarPart);
         frame->index = exPart.start + exPart.end;
         Object *obj = nullptr;
+        string_view s = frame->exp.substr(exStart,frame->exp.length() - exStart);
         if(parent)
         {
             if(ParsingUtil::getFirstChar(newVarPart.data) == '\"'){
@@ -33,14 +34,14 @@ public:
                 var.compileInstructions();
                 obj = &parent->setList(var, atoi(var.getId().c_str()));
             }
-            else if(ParsingUtil::getFirstChar(exPart.data) == '[')
+            else if(ParsingUtil::getFirstChar(s) == '[')
             {
-                Object var(runtime.memMan, newVarPart.data,exPart.data);
-                Object pushMethod(runtime.memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
+                Object var(runtime.memMan, newVarPart.data,string_view("", 0));
                 obj = &parent->loadChild(var, runtime);
                 runtime.makeArray(*obj);
             }
-            else{
+            else
+            {
                 index = frame->index;
                 Object var(runtime.memMan, newVarPart.data,exPart.data);
                 var.compileInstructions();
@@ -56,9 +57,8 @@ public:
                     runtime.userDefinedFunctions.erase(position);
             }
             Object var(runtime.memMan, newVarPart.data,exPart.data);
-            string_view s = frame->exp.substr(exStart,frame->exp.length() - exStart);
             var.compileInstructions();
-            obj = &runtime.loadUserDefinedFn(var, runtime.memory);
+            obj = &runtime.loadUserDefinedFn(var, runtime.memory); 
             if(ParsingUtil::getFirstChar(s) == '[')
             {
                 runtime.makeArray(*obj);
