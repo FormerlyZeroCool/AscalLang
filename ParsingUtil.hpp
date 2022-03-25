@@ -14,8 +14,7 @@
 #include "Calculator.hpp"
 #include "SubStr.hpp"
 #include "string_view.hpp"
-#include <readline/readline.h>
-#include <readline/history.h>
+#include "CrossPlatform.hpp"
 
 class AscalExecutor;
 struct ParsedStatementList {
@@ -140,7 +139,6 @@ public:
 	template <typename string>
 	static bool isDouble(string &exp);
 
-    inline static void readLine(std::string &line);
     inline static void getLine(std::istream &ascal_cin, std::string &line);
 	template <typename string_type>
 	static bool isObj(string_type &s)
@@ -226,22 +224,10 @@ public:
 		return s;
 	}
 };
-void ParsingUtil::readLine(std::string &line)
-{
-    char *readLineBuffer = readline("");
-    auto bufCleaner = std::make_unique<char*>(readLineBuffer);
-    line = readLineBuffer;
-    if (line.size() > 0) {
-      add_history(readLineBuffer);
-    }
-}
 void ParsingUtil::getLine(std::istream &ascal_cin, std::string &line)
 {
     //if you get compiler errors you can not use readLine
-    if(ascal_cin.rdbuf() != std::cin.rdbuf())
-        getline(ascal_cin, line);
-    else
-        readLine(line);
+    CrossPlatform::getLine(ascal_cin, line);
 }
 template <typename string>
 SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_cin,char opening,char closing,char lineBreak)

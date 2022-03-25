@@ -14,6 +14,8 @@
 #define PATH_SEPARATOR '\\'
 #else
 #define PATH_SEPARATOR '/'
+#include <readline/readline.h>
+#include <readline/history.h>
 #endif
 class CrossPlatform {
 public:
@@ -32,7 +34,35 @@ static void usleep(__int64 usec)
     WaitForSingleObject(timer, INFINITE);
     CloseHandle(timer);
 }
+static void readLine(std::string &line, std::string prompt)
+{
+    std::cout<<prompt;
+    getLine(ascal_cin, line);
+}
+
+static void getLine(std::istream &ascal_cin, std::string &line)
+{
+    getline(ascal_cin, line);
+}
 #else
+
+static void readLine(std::string &line, std::string prompt)
+{
+    char *readLineBuffer = readline(prompt.c_str());
+    auto bufCleaner = std::make_unique<char*>(readLineBuffer);
+    line = readLineBuffer;
+    if (line.size() > 0) {
+      add_history(readLineBuffer);
+    }
+}
+static void getLine(std::istream &ascal_cin, std::string &line)
+{
+    //if you get compiler errors you can not use readLine
+    if(ascal_cin.rdbuf() != std::cin.rdbuf())
+        getline(ascal_cin, line);
+    else
+        readLine(line, "");
+}
 static void usleep(uint64_t usec){
 	std::this_thread::sleep_for(std::chrono::microseconds(usec));
 }

@@ -16,8 +16,8 @@
 #include <string>
 #include <memory>
 #include "Ascal.hpp"
-#include <readline/readline.h>
-#include <readline/history.h>
+#include "CrossPlatform.hpp"
+
 
 #define DEBUG 1
 #define THROWERRORS 1
@@ -37,7 +37,6 @@ int main(int argc,char* argv[])
 	  Ascal ascalRuntime(argv, argc, 0);
   //Beginning of section interpreting program parameters from command line
 	  bool running = true;
-  char* readLineBuffer;
   std::string arg = "";
     try{
   if(argc > 1)
@@ -72,11 +71,9 @@ int main(int argc,char* argv[])
   {
     //this can be replaced with std::cout<<">>"; getline(std::cin, arg);
     //if you then remove header files for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
-      if((readLineBuffer = readline(">>")) == nullptr)
-        break;
-      auto bufCleaner = std::make_unique<char*>(readLineBuffer);
       
-      std::string line(readLineBuffer);
+      std::string line;
+      CrossPlatform::readLine(line, ">>");
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
       	if(ParsingUtil::firstChar(line, '{'))
@@ -85,11 +82,6 @@ int main(int argc,char* argv[])
         }
         try{
         	ascalRuntime.execExpression(line);
-
-          if (line.size() > 0 && line != lastLine) {
-            add_history(readLineBuffer);
-            lastLine = line;
-          }
         }
         catch(std::string &exception)
         {
