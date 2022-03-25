@@ -14,6 +14,7 @@
 #include "Calculator.hpp"
 #include "SubStr.hpp"
 #include "string_view.hpp"
+#include "CrossPlatform.hpp"
 
 class AscalExecutor;
 struct ParsedStatementList {
@@ -137,6 +138,8 @@ public:
 	static bool hasChar(const string &dat,const char &c);
 	template <typename string>
 	static bool isDouble(string &exp);
+
+    inline static void getLine(std::istream &ascal_cin, std::string &line);
 	template <typename string_type>
 	static bool isObj(string_type &s)
 	{
@@ -221,7 +224,11 @@ public:
 		return s;
 	}
 };
-
+void ParsingUtil::getLine(std::istream &ascal_cin, std::string &line)
+{
+    //if you get compiler errors you can not use readLine
+    CrossPlatform::getLine(ascal_cin, line);
+}
 template <typename string>
 SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_cin,char opening,char closing,char lineBreak)
 {
@@ -269,11 +276,11 @@ SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_ci
             block.loadedNew = true;
         	uint32_t i;
         	do{
-        		getline(ascal_cin, line);
+        		getLine(ascal_cin, line);
         		i = 0;
         		while(line[i] == ' ')
         			i++;
-        	}while(line[i] == '#');
+        	} while(line[i] == '#');
 
 
             index = 0;
@@ -491,7 +498,7 @@ SubStr ParsingUtil::getCodeBlock(string &exp, int index, std::istream &cin_ascal
     	std::string nextLine;
         while(cin_ascal && codeBlock.data.size() == 0)
         {
-        	getline(cin_ascal,nextLine);
+        	getLine(cin_ascal,nextLine);
         	codeBlock = getExpr(nextLine, 0, cin_ascal);
         }
     }

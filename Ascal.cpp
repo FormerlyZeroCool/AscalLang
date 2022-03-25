@@ -6,17 +6,19 @@
  */
 
 #include "Ascal.hpp"
-	double Ascal::execExpression(std::string &&exp)
-	{
-		return execExpression(exp);
-	}
 	double Ascal::execExpression(string_view exp)
 	{
-		FunctionFrame<double> frame(runtime, runtime.memMan);
-        frame.setIsDynamicAllocation(false);
-		frame.exp = exp;
+		FunctionFrame<double> *current = nullptr;
+		execExpression(exp, current);
+		runtime.fFramePool.destroy(current);
+	}
+	double Ascal::execExpression(string_view exp, FunctionFrame<double>* &current)
+	{
+		current = runtime.fFramePool.construct(runtime, runtime.memMan);
+        current->setIsDynamicAllocation(false);
+		current->exp = exp;
 	try{
-		return runtime.calcWithOptions(&frame);
+		return runtime.calcWithOptions(current);
 	}
     catch(std::string &exception)
     {

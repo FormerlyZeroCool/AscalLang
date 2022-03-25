@@ -147,7 +147,7 @@ public:
 			addKeyWord<JumpNZ>();
 			addKeyWord<EvalSetZF>();
 	}
-	double execExpression(std::string &&exp);
+	double execExpression(string_view exp, FunctionFrame<double>*& current);
 	double execExpression(string_view exp);
 	CommandLineParams& getCLParams()
 	{
