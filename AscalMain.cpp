@@ -77,16 +77,19 @@ int main(int argc,char* argv[])
       auto bufCleaner = std::make_unique<char*>(readLineBuffer);
       
       std::string line(readLineBuffer);
-      if (line.size() > 0 && line != lastLine) {
-        add_history(readLineBuffer);
-        lastLine = line;
-      }
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
       	if(ParsingUtil::firstChar(line, '{'))
-        line = ParsingUtil::getExpr(line, 0, std::cin).data;
+        {
+          line = ParsingUtil::getExpr(line, 0, std::cin).data;
+        }
         try{
         	ascalRuntime.execExpression(line);
+
+          if (line.size() > 0 && line != lastLine) {
+            add_history(readLineBuffer);
+            lastLine = line;
+          }
         }
         catch(std::string &exception)
         {
