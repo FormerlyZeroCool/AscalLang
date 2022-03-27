@@ -13,11 +13,11 @@
 
 #if defined(WIN32) || defined(_WIN32)
 #define PATH_SEPARATOR '\\'
-#define posix 0
+#define libreadline 0
 #else
 #define PATH_SEPARATOR '/'
-#if defined(posix)
-#define posix 1
+#if defined(libreadline)
+#define libreadline 1
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif
@@ -59,7 +59,7 @@ static std::string convertFilePath(std::string fp)
     fp[c] = fp[c]*(!c) + PATH_SEPARATOR*(c!=0);
     return fp;
 }
-#if posix == 0
+#if libreadline == 0
 static void readLine(std::string &line, std::string prompt)
 {
     std::cout<<prompt;
