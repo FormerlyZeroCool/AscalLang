@@ -9,7 +9,7 @@
 #include "Object.hpp"
 MemoryMap::MemoryMap(MemoryManager &data) : data(&data) {}
 
-MemoryMap::clone(const MemoryMap &m)
+void MemoryMap::clone(const MemoryMap &m)
 {
     this->data = m.data;
     for(auto &[key,value] : m.map)
@@ -18,7 +18,7 @@ MemoryMap::clone(const MemoryMap &m)
         this->insert(*value);
     }
 }
-MemoryMap::MemoryMap& operator=(const MemoryMap &m)
+MemoryMap& MemoryMap::operator=(const MemoryMap &m)
 {
     this->clone(m);
 }

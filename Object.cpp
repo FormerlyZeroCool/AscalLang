@@ -723,20 +723,12 @@ void Object::copyToInstructions(string_view ins)
         this->deallocateInstructions(ptr, bufSize);
     }
 }
-Object& Object::operator=(const Object& o)
-{
-    this->copyToId(o.id);
-    this->copyToInstructions(o.instructions);
-    this->objectMap = o.objectMap;
-    this->parent = o.parent;
-    return *this;
-}
 void Object::clone(const Object &o)
 {
     loadData(o.id, o.instructions);
     if(this->isObjList())
     {
-        for(int_fast64_t i; i < o.getListSize(); i++)
+        for(int_fast64_t i = 0; i < o.getListSize(); i++)
         {
             Object &toCopy = o.getObjectAtIndex(i);
             char *location = &this->instructions[initialOffset+i*(sizeof(uint64_t))];
@@ -746,7 +738,7 @@ void Object::clone(const Object &o)
     }
     this->listSize = o.getListSize();
 }
-Object& operator=(const Object &o)
+Object& Object::operator=(const Object &o)
 {
     this->clone(o);
 }

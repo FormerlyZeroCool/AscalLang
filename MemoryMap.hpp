@@ -21,7 +21,7 @@ private:
 public:
 	friend Object;
     MemoryMap(MemoryManager &data);
-	clone(const MemoryMap &m);
+	void clone(const MemoryMap &m);
     MemoryMap(const MemoryMap &m);
 	MemoryMap& operator=(const MemoryMap &m);
     ~MemoryMap();
@@ -43,6 +43,7 @@ public:
     Object& insert(string_view id);
     //Dangerous, user needs to manage the string views memory
     Object& insert(string_view s, Object &obj);
+	size_t count(string_view s);
 	class iterator {
 	private:
 		std::map<string_view, Object* >::iterator intIt;
