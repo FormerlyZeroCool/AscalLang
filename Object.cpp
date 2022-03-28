@@ -321,7 +321,7 @@ bool Object::isObjList()
 {
     return this->instructions[0] == 5;
 }
-size_t Object::getListSize()
+size_t Object::getListSize() const
 {
     return this->listSize;
 }
@@ -430,6 +430,26 @@ void Object::loadString(string_view s)
     if(cur != '\"' && (last != '\\' || cur != 'n'))
         this->pushList((double) cur);
 
+}
+    
+Object Object::subString(uint_fast64_t start, uint_fast64_t length, MemoryMap &)
+{
+    Object subString(this->objectMap.getMemMan(), id+"Sub","","");
+    if(this->isDoubleList())
+    {
+        for(uint_fast64_t i = start; i < start+length; i++)
+        {
+            subString.pushList(this->getDoubleAtIndex(i));
+        }
+    }
+    else if(this->isObjList())
+    {
+        for(uint_fast64_t i = start; i < start+length; i++)
+        {
+            subString.pushList(this->getObjectAtIndex(i));
+        }
+    }
+    return subString;
 }
 Object Object::splitString(string_view filter, MemoryMap &memory)
 {
@@ -711,10 +731,25 @@ Object& Object::operator=(const Object& o)
     this->parent = o.parent;
     return *this;
 }
+void Object::clone(const Object &o)
+{
+    loadData(o.id, o.instructions);
+    if(this->isObjList())
+    {
+        for(int_fast64_t i; i < o.getListSize(); i++)
+        {
+            Object &toCopy = o.getObjectAtIndex(i);
+            char *location = &this->instructions[initialOffset+i*(sizeof(uint64_t))];
+            Object *newObj = this->objectMap.getMemMan().constructObj(toCopy);
+            memcpy(location, newObj, sizeof(Object*));
+        }
+    }
+    this->listSize = o.getListSize();
+}
 //need to make a copy constructor for the objectMap
 Object::Object(const Object &o): objectMap(o.objectMap)
 {
-    loadData(o.id, o.instructions);
+    this->clone(o);
 }
 Object::Object(MemoryManager &memMan, std::string &&id,std::string &&expression,std::string &param): objectMap(memMan)
 {

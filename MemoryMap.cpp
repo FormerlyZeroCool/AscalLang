@@ -8,6 +8,16 @@
 #include "MemoryMap.hpp"
 #include "Object.hpp"
 MemoryMap::MemoryMap(MemoryManager &data) : data(&data) {}
+
+MemoryMap::MemoryMap(const MemoryMap &m)
+{
+    this->data = m.data;
+    for(auto &[key,value] : m.map)
+    {
+        Object *obj = m.getMemMan().constructObj(*value);
+        this->insert(*value);
+    }
+}
 Object& MemoryMap::iterator::operator*() const
 {
     return *intIt->second;
@@ -52,7 +62,7 @@ Object& MemoryMap::insert(Object &s)
 	if(this->map.count(s.id))
 	{
         obj = this->map[s.id];
-        *obj = s;
+        obj->clone(s);
 	}
     else
     {

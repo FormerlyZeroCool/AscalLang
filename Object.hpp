@@ -115,9 +115,10 @@ public:
         else
             throw std::string("Error invalid index: "+std::to_string(index));
     }
-    inline Object& getObjectAtIndex(uint32_t index);
+    inline Object& getObjectAtIndex(uint32_t index) const;
     int setParams(string_view param, uint32_t = 0);
     void resizeInstructions(uint32_t);
+    void clone(const Object &o);
     Object(const Object&);
     Object(MemoryManager &memMan);
     Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &param);
@@ -147,9 +148,10 @@ public:
     void eraseList(long index);
     Object& setList(Object &data, size_t index);
     Object splitString(string_view filter, MemoryMap &);
+    Object subString(uint_fast64_t start, uint_fast64_t length, MemoryMap &);
     void loadString(string_view s);
     void printList(MemoryMap &memory);
-    size_t getListSize();
+    size_t getListSize() const;
     Object& getListElement(size_t index,MemoryMap &memory);
     bool operator==(const Object &o) const;
     bool operator==(Object &o) const;
@@ -182,7 +184,7 @@ double Object::getDouble() const
     memcpy(&number, &this->instructions[initialOffset], sizeof(uint64_t));
     return number;
 }
-Object& Object::getObjectAtIndex(uint32_t index)
+Object& Object::getObjectAtIndex(uint32_t index) const
 {
     Object *obj = nullptr;
     memcpy(&obj, &this->instructions[initialOffset+index*(sizeof(uint64_t))], sizeof(Object*));

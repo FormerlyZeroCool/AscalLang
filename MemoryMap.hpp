@@ -19,20 +19,20 @@ private:
     std::map<string_view, Object* , std::less<string_view> > map;
     uint32_t hashKey(string_view key);
 public:
+	friend Object;
     MemoryMap(MemoryManager &data);
-    MemoryMap(const MemoryMap &m) = default;
-    MemoryMap(MemoryMap &m) = default;
+    MemoryMap(const MemoryMap &m);
     ~MemoryMap();
 	void clear();
     void erase(string_view);
    // void erase(uint64_t);
-    inline MemoryManager& getMemMan()
+    inline MemoryManager& getMemMan() const
     {
         return *data;
     }
 
     Object& operator[](string_view);
-    size_t count(string_view);
+    size_t count(string_view) const;
     Object& find(string_view);
     size_t size();
     //Prefferred methods to insert
