@@ -119,6 +119,7 @@ public:
     int setParams(string_view param, uint32_t = 0);
     void resizeInstructions(uint32_t);
     void clone(const Object &o);
+	Object& operator=(const Object &m);
     Object(const Object&);
     Object(MemoryManager &memMan);
     Object(MemoryManager &memMan, std::string &id,std::string &expression,std::string &param);

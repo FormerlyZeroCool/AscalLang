@@ -21,7 +21,9 @@ private:
 public:
 	friend Object;
     MemoryMap(MemoryManager &data);
+	clone(const MemoryMap &m);
     MemoryMap(const MemoryMap &m);
+	MemoryMap& operator=(const MemoryMap &m);
     ~MemoryMap();
 	void clear();
     void erase(string_view);

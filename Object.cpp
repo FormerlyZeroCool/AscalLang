@@ -746,6 +746,10 @@ void Object::clone(const Object &o)
     }
     this->listSize = o.getListSize();
 }
+Object& operator=(const Object &o)
+{
+    this->clone(o);
+}
 //need to make a copy constructor for the objectMap
 Object::Object(const Object &o): objectMap(o.objectMap)
 {
