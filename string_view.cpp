@@ -79,7 +79,7 @@ uint32_t findText(const char *original, const uint32_t originalLen, const char *
         result = ((j==lookupLen) & result);
         i++;
     }
-    i = result*(i-1) + !result*(-1);
+    i = result*(i-1) - !result;
     return i;
 }
 
