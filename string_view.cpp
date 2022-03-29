@@ -40,23 +40,23 @@ string_view::string_view(const std::string &s)
     this->ptr = (char*) s.c_str();
     this->len = s.size();
 }
-string_view::string_view(const std::string &s, const uint32_t start, const uint32_t end)
+string_view::string_view(const std::string &s, const int_fast32_t start, const int_fast32_t end)
 {
 	this->ptr = (char*) s.c_str()+start;
 	this->len = (end - start)<s.size()?(end-start):s.size()-start;
 }
-string_view::string_view(string_view s, const uint32_t start, const uint32_t end)
+string_view::string_view(string_view s, const int_fast32_t start, const int_fast32_t end)
 {
 	this->ptr = (char*) s.ptr+start;
 	this->len = (end - start)<s.size()?(end-start):s.size()-start;
 }
-string_view::string_view(const char *s, const uint32_t len)
+string_view::string_view(const char *s, const int_fast32_t len)
 {
 	ptr = (char*) s;
 	this->len = len;
 }
 //given an original string, and a string to search for return index of start of match, and -1 if none present
-uint32_t findText(const char *original, const uint32_t originalLen, const char *lookup, const uint32_t lookupLen)
+int_fast32_t findText(const char *original, const int_fast32_t originalLen, const char *lookup, const int_fast32_t lookupLen)
 {
     if(!lookupLen || !originalLen || lookupLen>originalLen || !original || !lookup)
     {
@@ -65,7 +65,7 @@ uint32_t findText(const char *original, const uint32_t originalLen, const char *
     bool result = 0;    
 	//i is the current index in the original that could be the start of a match
     //j is the current index into the possible match starts at 0 to index lookup string
-    uint32_t i = 0, j = 0;
+    int_fast32_t i = 0, j = 0;
     while(!result & originalLen > i)
     {
         //j ^= j sets j = 0;
@@ -83,34 +83,34 @@ uint32_t findText(const char *original, const uint32_t originalLen, const char *
     return i;
 }
 
-uint32_t string_view::find(const std::string &s) const
+int_fast32_t string_view::find(const std::string &s) const
 {
-	uint32_t result = findText(ptr, len, s.c_str(), (uint32_t) s.size());
+	int_fast32_t result = findText(ptr, len, s.c_str(), (int_fast32_t) s.size());
 	return result;
 }
-uint32_t string_view::find(const char *s, const uint32_t start, uint32_t size) const
+int_fast32_t string_view::find(const char *s, const int_fast32_t start, int_fast32_t size) const
 {
 	if(size == -1)
 		size = strlen(s);
-	uint32_t result = findText(ptr+start, len-start, s, size);
+	int_fast32_t result = findText(ptr+start, len-start, s, size);
 	result += (result != -1)*start;
 	return result;
 }
-uint32_t string_view::find(const string_view s, const uint32_t start, uint32_t size) const
+int_fast32_t string_view::find(const string_view s, const int_fast32_t start, int_fast32_t size) const
 {
 	if(size == -1)
 		size = s.size();
-	uint32_t result = findText(ptr+start, len-start, s.ptr, size);
+	int_fast32_t result = findText(ptr+start, len-start, s.ptr, size);
 	result += (result != -1)*start;
 	return result;
 }
-uint32_t string_view::find(const char s, const uint32_t start) const
+int_fast32_t string_view::find(const char s, const int_fast32_t start) const
 {
-	uint32_t result = findText(ptr+start, len-start, &s, 1);
+	int_fast32_t result = findText(ptr+start, len-start, &s, 1);
 	result += (result != -1)*start;
 	return result;
 }
-string_view string_view::substr(const uint32_t start, uint32_t len) const
+string_view string_view::substr(const int_fast32_t start, int_fast32_t len) const
 {
 	if(len==-1)
 		len = this->len;
@@ -124,7 +124,7 @@ std::string string_view::str() const
 bool string_view::operator==(const string_view &s) const
 {
 	bool equal = this->length() == s.length();
-	for(uint32_t i = 0; i < this->length() && equal; i++)
+	for(int_fast32_t i = 0; i < this->length() && equal; i++)
 		equal = s[i] == (*this)[i];
 	return equal;
 }
@@ -148,8 +148,8 @@ bool string_view::operator<(const string_view &s) const
     return result;/*
     bool isLessThan = false;
 	bool checking = true;
-	uint32_t i = 0;
-    uint32_t max = std::min(s.length(), (*this).length());
+	int_fast32_t i = 0;
+    int_fast32_t max = std::min(s.length(), (*this).length());
 	while(!isLessThan && checking && i < max)
 	{
 	    if((*this)[i] < s[i])
@@ -179,7 +179,7 @@ std::string string_view::operator+(const std::string &s) const
 }
 std::ostream& operator<<(std::ostream &o,const string_view &l)
 {
-	for(uint32_t i = 0; i < l.len; i++)
+	for(int_fast32_t i = 0; i < l.len; i++)
 		o<<l[i];
 	return o;
 }
