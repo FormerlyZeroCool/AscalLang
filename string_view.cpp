@@ -13,24 +13,12 @@ string_view::string_view() {}
 
 string_view::~string_view() {}
 
-//string_view::string_view(const ObjectIDView &s): string_view(s.str()) {}
 string_view& string_view::operator=(const std::string &s)
 {
 	this->ptr = (char*) s.c_str();
 	this->len = s.size();
 	return *this;
-}/*
-string_view& string_view::operator=(const string_view &s)
-{
-    this->ptr = s.ptr;
-    this->len = s.size();
-    return *this;
 }
-string_view& string_view::operator=(const string_view &&s)
-{
-    *this = s;
-    return *this;
-}*/
 string_view& string_view::operator=(const SubStrSV &s)
 {
 	return *this = s.data;
@@ -56,31 +44,19 @@ string_view::string_view(const char *s, const int_fast32_t len)
 	this->len = len;
 }
 //given an original string, and a string to search for return index of start of match, and -1 if none present
-int_fast32_t findText(const char *original, const int_fast32_t originalLen, const char *lookup, const int_fast32_t lookupLen)
-{
-    if(!lookupLen || !originalLen || lookupLen>originalLen || !original || !lookup)
-    {
-        return -1;
-    }
-    bool result = 0;    
-	//i is the current index in the original that could be the start of a match
-    //j is the current index into the possible match starts at 0 to index lookup string
-    int_fast32_t i = 0, j = 0;
-    while(!result & originalLen > i)
-    {
-        //j ^= j sets j = 0;
-        j ^= j;
-		result = original[i] == lookup[j]; 
-        while(result & lookupLen > j & originalLen > i+j)
-        {
-            result = original[i+j] == lookup[j];
-            j++;
+int findText(const char *original, const int originalLen, const char *lookup, const int lookupLen)
+ {
+    for (int i = 0; i < originalLen; i++) {
+        for (int j = 0; j < lookupLen; j++) {
+            if (original[i+j] != lookup[j])
+                goto breakLookupLoop;
         }
-        result = ((j==lookupLen) & result);
-        i++;
+        
+        return i;
+        breakLookupLoop:;
     }
-    i = result*(i-1) - !result;
-    return i;
+    
+    return -1;
 }
 
 int_fast32_t string_view::find(const std::string &s) const
