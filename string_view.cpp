@@ -55,39 +55,37 @@ string_view::string_view(const char *s, const uint32_t len)
 	ptr = (char*) s;
 	this->len = len;
 }
-uint32_t findText(const char *original, const uint32_t olen, const char *lookup, const uint32_t llen)
-{;
-    if(!llen || !olen || llen>olen || !original || !lookup)
+//given an original string, and a string to search for return index of start of match, and -1 if none present
+uint32_t findText(const char *original, const uint32_t originalLen, const char *lookup, const uint32_t lookupLen)
+{
+    if(!lookupLen || !originalLen || lookupLen>originalLen || !original || !lookup)
     {
         return -1;
     }
-    bool intRes = 1, result = 0;
+    bool result = 0;    
+	//i is the current index in the original that could be the start of a match
+    //j is the current index into the possible match starts at 0 to index lookup string
     uint32_t i = 0, j = 0;
-    while(!result && olen > i)
+    while(!result & originalLen > i)
     {
-        if(original[i] == lookup[0])
+        //j ^= j sets j = 0;
+        j ^= j;
+		result = original[i] == lookup[j]; 
+        while(result & lookupLen > j & originalLen > i+j)
         {
-            j = 0;
-            while(intRes && llen > j && olen > i+j)
-            {
-                intRes = original[i+j] == lookup[j];
-                j++;
-            }
-            intRes = ((j==llen) && intRes);
-            //j ^= j sets j = 0;
-            j ^= j;
-            result = intRes;
-            intRes = !intRes;
+            result = original[i+j] == lookup[j];
+            j++;
         }
+        result = ((j==lookupLen) & result);
         i++;
     }
     i = result*(i-1) + !result*(-1);
     return i;
 }
+
 uint32_t string_view::find(const std::string &s) const
 {
-	const char *intArray = s.c_str();
-	uint32_t result = findText(ptr, len, (char*) intArray, (uint32_t) s.size());
+	uint32_t result = findText(ptr, len, s.c_str(), (uint32_t) s.size());
 	return result;
 }
 uint32_t string_view::find(const char *s, const uint32_t start, uint32_t size) const
