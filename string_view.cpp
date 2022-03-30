@@ -44,7 +44,7 @@ string_view::string_view(const char *s, const int_fast32_t len)
 	this->len = len;
 }
 //given an original string, and a string to search for return index of start of match, and -1 if none present
-int findText(const char *original, const int originalLen, const char *lookup, const int lookupLen)
+int findText2(const char *original, const int originalLen, const char *lookup, const int lookupLen)
  {
     for (int i = 0; i < originalLen; i++) {
         for (int j = 0; j < lookupLen; j++) {
@@ -54,6 +54,18 @@ int findText(const char *original, const int originalLen, const char *lookup, co
         
         return i;
         breakLookupLoop:;
+    }
+    
+    return -1;
+}
+//given an original string, and a string to search for return index of start of match, and -1 if none present
+int_fast32_t findText(const char *original, const int_fast32_t originalLen, const char *lookup, const int_fast32_t lookupLen)
+ {
+    for (int_fast32_t i = 0; i + lookupLen < originalLen; i++) {
+		if(memcmp(original + i, lookup, lookupLen) == 0)
+		{
+			return i;
+		}
     }
     
     return -1;
