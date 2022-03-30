@@ -99,44 +99,19 @@ std::string string_view::str() const
 
 bool string_view::operator==(const string_view &s) const
 {
-	bool equal = this->length() == s.length();
-	for(int_fast32_t i = 0; i < this->length() && equal; i++)
-		equal = s[i] == (*this)[i];
-	return equal;
+	return this->length() == s.length() && memcmp(this->c_str(), s.c_str(), this->length()) == 0;
 }
 
+bool string_view::operator>(const string_view &s) const
+{
+	int_fast32_t result = memcmp(this->c_str(), s.c_str(), std::min(this->length(), s.length()));
+    return result + (this->length() < s.length()) > 0;
+}
 bool string_view::operator<(const string_view &s) const
 {
-    const char *s1 = this->c_str();
-    const char *s2 = s.c_str();
-    const char s1t = (*this)[this->size()];
-    const char s2t = (s)[s.size()];
-    (*this)[this->size()] = 0;
-    s[s.size()] = 0;
-    while(*s1 && (*s1 == *s2))
-    {
-        s1++;
-        s2++;
-    }
-    const bool result = (*(const unsigned char*)s1 - *(const unsigned char*)s2)<0;
-    (*this)[this->size()] = s1t;
-    s[s.size()] = s2t;
-    return result;/*
-    bool isLessThan = false;
-	bool checking = true;
-	int_fast32_t i = 0;
-    int_fast32_t max = std::min(s.length(), (*this).length());
-	while(!isLessThan && checking && i < max)
-	{
-	    if((*this)[i] < s[i])
-	        isLessThan = true;
-	    else if((*this)[i] > s[i])
-	        checking = false;
-	    i++;
-	}
-	isLessThan = isLessThan || (checking && s.length() > (*this).length());
-
-	return isLessThan;*/
+    
+	int_fast32_t result = memcmp(this->c_str(), s.c_str(), std::min(this->length(), s.length()));
+    return result - (this->length() > s.length()) < 0;
 }
 
 std::string string_view::operator+(const string_view &s) const
