@@ -50,13 +50,10 @@ public:
     std::string operator+(const string_view &s) const;
     std::string operator+(const std::string &s) const;
     string_view& operator=(const std::string &s);
-    /*
-    string_view& operator=(const string_view &s);
-    string_view& operator=(const string_view &&s);
-     */
     string_view& operator=(const SubStrSV &s);
     bool operator==(const string_view &s) const;
     bool operator<(const string_view &s) const;
+    bool operator>(const string_view &s) const;
     int_fast32_t find(const std::string &s) const;
     int_fast32_t find(const char *s, int_fast32_t start = 0, int_fast32_t size = -1) const;
     int_fast32_t find(const string_view, const int_fast32_t start = 0, int_fast32_t size = -1) const;
