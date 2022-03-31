@@ -733,7 +733,7 @@ void Object::clone(const Object &o)
             Object &toCopy = o.getObjectAtIndex(i);
             char *location = &this->instructions[initialOffset+i*(sizeof(uint64_t))];
             Object *newObj = this->objectMap.getMemMan().constructObj(toCopy);
-            memcpy(location, newObj, sizeof(Object*));
+            memcpy(&location, &newObj, sizeof(Object*));
         }
     }
     this->listSize = o.getListSize();

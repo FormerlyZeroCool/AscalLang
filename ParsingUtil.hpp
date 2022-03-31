@@ -281,8 +281,6 @@ SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_ci
         		while(line[i] == ' ')
         			i++;
         	} while(line[i] == '#');
-
-
             index = 0;
         }
         else

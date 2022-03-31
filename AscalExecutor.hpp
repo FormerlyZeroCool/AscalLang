@@ -179,7 +179,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	}
 	void loadFn(Object function);
 	Object& loadUserDefinedFn(Object &function, MemoryMap &mem);
-	Object& loadUserDefinedFn(Object &function, std::map<string_view, Object*> &mem);
+	Object& loadUserDefinedFn(Object &function, Map<string_view, Object*> &mem);
 	void updateBoolSetting(AscalFrame<double>* frame);
 	CommandLineParams& getCLParams()
 	{
@@ -187,16 +187,17 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	}
     AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf);
 	template <typename string1, typename string2>
-	static std::string printMemory(std::map<string1,Object*> &memory,string2 delimiter,bool justKey = true,
+	static std::string printMemory(Map<string1,Object*> &memory,string2 delimiter,bool justKey = true,
 	        std::string secondDelimiter = "\n")
 	{
 	    std::string s;
+		/*
 	    if(justKey)
 	        for(auto &[key,value]:memory)
 	            s+=key+delimiter;
 	    else
 	        for(auto &[key,value]:memory)
-	            s+=key+delimiter+value->instructionsToFormattedString()+secondDelimiter;
+	            s+=key+delimiter+value->instructionsToFormattedString()+secondDelimiter;*/
 	    return s.substr(0,s.size()-secondDelimiter.size());
 	}
 	template <typename string1, typename string2>

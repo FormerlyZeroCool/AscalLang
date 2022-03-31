@@ -16,7 +16,7 @@ class Object;
 class MemoryMap {
 private:
 	MemoryManager *data;
-    std::map<string_view, Object* , std::less<string_view> > map;
+    Map<string_view, Object* > map;
     uint32_t hashKey(string_view key);
 public:
 	friend Object;
@@ -27,7 +27,6 @@ public:
     ~MemoryMap();
 	void clear();
     void erase(string_view);
-   // void erase(uint64_t);
     inline MemoryManager& getMemMan() const
     {
         return *data;
@@ -36,19 +35,20 @@ public:
     Object& operator[](string_view);
     size_t count(string_view) const;
     Object& find(string_view);
+    node<string_view, Object*>* search(string_view);
     size_t size();
-    //Prefferred methods to insert
+    //Preferred methods to insert
     Object& insert(Object &obj);
     Object& insert(string_view id, string_view exp);
     Object& insert(string_view id);
-    //Dangerous, user needs to manage the string views memory
+    //Dangerous, user needs to manage the string view's memory
     Object& insert(string_view s, Object &obj);
 	size_t count(string_view s);
 	class iterator {
 	private:
-		std::map<string_view, Object* >::iterator intIt;
+		Map<string_view, Object* >::iterator<string_view, Object* > intIt;
 	public:
-		iterator(std::map<string_view, Object* >::iterator intIt): intIt(intIt) {}
+		iterator(Map<string_view, Object* >::iterator<string_view, Object* > intIt): intIt(intIt) {}
         Object& operator*() const;
         Object& operator->() const;
         MemoryMap::iterator operator++()

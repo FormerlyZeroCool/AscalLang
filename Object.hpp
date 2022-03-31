@@ -86,7 +86,7 @@ public:
     //sizeID codes
     static const uint32_t SMALL_EXP, MEDIUM_EXP, LARGE_EXP, VERYLARGE_EXP, MALLOC_EXP, SMALL_ID, LARGE_ID, MALLOC_ID;
     string_view id;
-    string_view getId() { return id; }
+    string_view& getId() { return id; }
     void copyToId(string_view);
     void copyToInstructions(string_view);
     std::vector<SubStrSV> params;

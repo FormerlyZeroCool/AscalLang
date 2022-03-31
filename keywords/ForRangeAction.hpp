@@ -48,8 +48,8 @@ public:
         executionFrame.setIsDynamicAllocation(false);
         executionFrame.setContext(frame->getContext());
         double i = params.statements.size()>1?runtime.callOnFrame(frame,params.statements[0].data):0;
-        Object itObjRef(runtime.memMan, itVar.data.str());
-        frame->getParamMemory()->insert(std::make_pair(string_view(itObjRef.id), &itObjRef));
+        Object itObjRef(runtime.memMan, itVar.data);
+        frame->getParamMemory()->insert(string_view(itObjRef.id), &itObjRef);
         Object *itObj = &itObjRef;
         if(ParsingUtil::firstChar(limitStr.data,'&'))
         {

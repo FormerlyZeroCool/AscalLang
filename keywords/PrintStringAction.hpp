@@ -19,9 +19,10 @@ public:
 	void action(AscalFrame<double>* frame) override
 	{
 	        const int startOfPrint = frame->exp.find("\"",frame->index+keyWord.length()-2)+1;
-	       // std::cout<<"sop: "<<startOfPrint<<"\n";
+	        //std::cout<<"sop: "<<startOfPrint<<"\n";
 	        const int endOfPrint = frame->exp.find("\"",startOfPrint);
-	        //std::cout<<"eop: "<<endOfPrint<<"\n";
+	        //std::cout<<"eop: "<<endOfPrint<<"\n"<<frame->exp<<"\n";
+
 	        if(endOfPrint <= startOfPrint)
 	            throw std::string("Error, no terminating \" in print string command");
 

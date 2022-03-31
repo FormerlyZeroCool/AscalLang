@@ -29,7 +29,7 @@ protected:
     //+64 designates the frame as never run
     uint16_t flagRegisters = 1 + 8 + 64;
     AscalParameters* params;
-    std::map<string_view,Object*>* paramMemory;
+    Map<string_view,Object*>* paramMemory;
     MemoryMap* localMemory;
     Object *contextObj = nullptr;
 
@@ -142,7 +142,7 @@ public:
         flagRegisters &= (uint16_t)(65535-1024);
         flagRegisters ^= (uint16_t)(1024*value);
     };
-    inline std::map<string_view,Object*>* getParamMemory(){ return paramMemory; };
+    inline Map<string_view,Object*>* getParamMemory(){ return paramMemory; };
     inline MemoryMap* getLocalMemory(){ return localMemory; };
     inline AscalParameters* getParams(){ return params; };
     virtual
@@ -188,7 +188,7 @@ template <typename t>
 class ParamFrame: public AscalFrame<t> {
 private:
 public:
-    ParamFrame(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
+    ParamFrame(AscalExecutor &runtime, AscalParameters* params, Map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
     {
         this->params = params;
         this->paramMemory = paramMemory;
@@ -227,7 +227,7 @@ template <typename t>
 class FunctionSubFrame: public AscalFrame<t> {
 private:
 public:
-    FunctionSubFrame(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
+    FunctionSubFrame(AscalExecutor &runtime, AscalParameters* params, Map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
     {
         this->params = params;
         this->paramMemory = paramMemory;
@@ -263,7 +263,7 @@ class ConditionalFrame: public AscalFrame<t> {//before this on stack must be a f
     //then the code block frame to be executed if this evalutaes to true, and then this
 private:
 public:
-    ConditionalFrame(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
+    ConditionalFrame(AscalExecutor &runtime, AscalParameters* params, Map<string_view,Object*>* paramMemory, MemoryMap* localMemory)
     {
         this->params = params;
         this->paramMemory = paramMemory;
@@ -323,7 +323,7 @@ template <typename t>
 class ParamFrameFunctionPointer: public AscalFrame<t> {
 public:
     Object *obj;
-    ParamFrameFunctionPointer(AscalExecutor &runtime, AscalParameters* params, std::map<string_view,Object*>* paramMemory, MemoryMap* localMemory):
+    ParamFrameFunctionPointer(AscalExecutor &runtime, AscalParameters* params, Map<string_view,Object*>* paramMemory, MemoryMap* localMemory):
         obj(nullptr)
     {
         this->params = params;
@@ -358,14 +358,16 @@ public:
     }
     ~ParamFrameFunctionPointer(){};
 };
+#include <map>
+#include <iostream>
 template <typename t>
 class FunctionFrame: public AscalFrame<t> {
 private:
-    std::map<string_view,Object*> paramMem;
+    Map<string_view,Object*> paramMem;
     MemoryMap localMem;
     AscalParameters param;
 public:
-    FunctionFrame(AscalExecutor &runtime, MemoryManager &memMan) : localMem(memMan)
+    FunctionFrame(AscalExecutor &runtime, MemoryManager &memMan) : localMem(memMan), paramMem(memMan.node_pool)
     {
         param.setMemory(runtime.paramsStack);
         this->params = &param;

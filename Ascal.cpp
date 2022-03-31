@@ -9,8 +9,9 @@
 	double Ascal::execExpression(string_view exp)
 	{
 		FunctionFrame<double> *current = nullptr;
-		execExpression(exp, current);
+		double value = execExpression(exp, current);
 		runtime.fFramePool.destroy(current);
+		return value;
 	}
 	double Ascal::execExpression(string_view exp, FunctionFrame<double>* &current)
 	{

@@ -63,7 +63,7 @@ public:
 	    double dy = yStepSize>0?yStepSize:1;
 	    double xi;
 	    Vect2D<double> outPuts(tableWidth,functions.size()-1);
-	    std::stringstream exp;
+	    std::string exp;
 	    for(int j = 0;j<functions.size();j++)
 	    {
 	        const std::string &function = functions[j];
@@ -72,10 +72,13 @@ public:
 	        for(int i = 0;i<tableWidth;i++)
 	        {
 	            xi = xMin+dx*(i);
-	            exp << function << '(' << ParsingUtil::to_string(xi) << ')';
-	            outPuts.push_back(runtime.callOnFrame(frame, exp.str()));
-	            exp.str(std::string());
+				exp += function;
+				exp += '(';
+				exp += ParsingUtil::to_string(xi);
+				exp += ')';
+	            outPuts.push_back(runtime.callOnFrame(frame, exp));
 	            sumArea[j] += outPuts.get(i,j)*dx;
+				exp.clear();
 	        }
 	    }
 

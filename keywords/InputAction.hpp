@@ -61,7 +61,7 @@ public:
 	            std::cout<<usrPrompt;
 	        	std::streambuf* currentBuffer = runtime.ascal_cin.rdbuf();
 	        	runtime.ascal_cin.rdbuf(runtime.stream_buffer_cin);
-	            getline(runtime.ascal_cin,input);
+	            CrossPlatform::getLine(runtime.ascal_cin,input);
 	            runtime.ascal_cin.rdbuf(currentBuffer);
 	            if(input.size()==0)
 	            	throw 0;

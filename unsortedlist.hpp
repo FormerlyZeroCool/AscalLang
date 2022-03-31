@@ -7,6 +7,7 @@
 
 #pragma once
 #include <iostream>
+#include "Pool.hpp"
 template <class t>
 struct node
 {
@@ -16,6 +17,7 @@ struct node
   node(t d):data(d), previous(NULL), next(NULL) {};
   node(): previous(NULL), next(NULL) {};
 };
+
 template <class t>
 class iterator
 {
@@ -113,6 +115,7 @@ template <class t>
 class UnsortedList
 {
   private:
+  static ObjectPool<node<t> > alloc;
   node<t> *head;
   node<t> *tail;
   long len;
@@ -146,7 +149,7 @@ void UnsortedList<t>::emptyList()
 	  {
 	    node<t>* current = head;
 	    head = head->next;
-	    delete current;
+	    alloc.destroy(current);
 
 	  }
 
@@ -168,7 +171,7 @@ void UnsortedList<t>::removeHead()
 		len--;
 		node<t> *p = head;
 		head = head->next;
-		delete p;
+		alloc.destroy(p);
 	}
 }
 template <class t>
@@ -179,7 +182,7 @@ void UnsortedList<t>::removeTail()
 		len--;
 		node<t> *p = tail;
 		tail = tail->previous;
-		delete p;
+		alloc.destroy(p);
 	}
 }
 template <class t>
@@ -255,12 +258,12 @@ void UnsortedList<t>::insertTail(t item)
 {
     if(tail == nullptr)
     {
-        tail = new node<t>(item);
+        tail = alloc.construct(item);
         head = tail;
     }
     else
     {
-        node<t> *p = new node<t>(item);
+        node<t> *p = alloc.construct(item);
         tail->next = p;
         p->previous = tail;
         tail = p;
@@ -272,12 +275,12 @@ void UnsortedList<t>::insertHead(t item)
 {
     if(head == nullptr)
     {
-        head = new node<t>(item);
+        head = alloc.construct(item);
         tail = head;
     }
     else
     {
-        node<t> *p = new node<t>(item);
+        node<t> *p = alloc.construct(item);
         p->next = head;
         head->previous = p;
         head = p;
@@ -311,7 +314,7 @@ UnsortedList<t>::~UnsortedList()
   {
     node<t>* current = head;
     head = head->next;
-    delete current;
+    alloc.destroy(current);
 
   }
   head = nullptr;
@@ -348,7 +351,7 @@ void UnsortedList<t>::operator=(const UnsortedList<t> &o)
     {
       node<t>* current = currentThis;
       currentThis = currentThis->next;
-      delete current;
+      alloc.destroy(current);
     }
     tail->next = nullptr;
   }
@@ -358,7 +361,7 @@ void UnsortedList<t>::operator=(const UnsortedList<t> &o)
     {
       node<t>* current = head;
       head = head->next;
-      delete current;
+      alloc.destroy(current);
     }
     head = nullptr;
     tail = nullptr;

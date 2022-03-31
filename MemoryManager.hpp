@@ -13,6 +13,7 @@
 #include "string_view.hpp"
 #include "stack.hpp"
 #include "Pool.hpp"
+#include "Map.hpp"
 class Object;
 class MemoryManager {
 private:
@@ -24,6 +25,7 @@ private:
     Pool large_obj_id_pool;
     ObjectPool<Object> object_pool;
 public:
+    Map<string_view, Object* >::alloc node_pool;
 	MemoryManager();
 	~MemoryManager();
     inline void* small_alloc();

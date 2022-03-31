@@ -92,7 +92,7 @@ Object& AscalExecutor::loadUserDefinedFn(Object &function, MemoryMap &mem)
     return mem.insert(function);
 
 }
-Object& AscalExecutor::loadUserDefinedFn(Object &function, std::map<string_view, Object*> &mem)
+Object& AscalExecutor::loadUserDefinedFn(Object &function, Map<string_view, Object*> &mem)
 {
     mem[function.id] = &function;
     return function;
@@ -467,9 +467,10 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             if(*boolsettings["memoize"])
             {
                 currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
-                if(memoPad.count(currentFrame->memoPointer))
+                const auto memoRec = memoPad.find(currentFrame->memoPointer);
+                if(memoRec != memoPad.end())
                 {
-                    data = memoPad[currentFrame->memoPointer];
+                    data = memoRec->second;
                     executionStack.pop();//must happen before return for conditional frames
                     currentFrame->returnResult(data, memory, executionStack, *this);
                     ++rememberedFromMemoTableCount;
@@ -562,8 +563,8 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
              //This needs to be updated, and simplified it makes conditional jumps very expensive
              uint32_t ind = i;
              SubStrSV varName = ParsingUtil::getVarNameSV(currentFrame->exp,ind);
-
-             if(inputMapper.count(varName.data) != 0)
+             const auto keywordRec = inputMapper.find(varName.data);
+             if(keywordRec != inputMapper.end())
              {
                  Keyword* executingKeyword;
                  const int currentFrameCount = executionStack.length();
@@ -571,7 +572,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  if(!currentFrame->returnPointer)
                      cachedRtnObject = rtnptr;
                  try{
-                     executingKeyword = inputMapper.find(varName.data)->second;
+                     executingKeyword = keywordRec->second;
                      executingKeyword->action(currentFrame);
                      currentFrame->setIsDynamicAllocation(isDynamicBackup);
                  }catch(std::string& s){
@@ -984,42 +985,41 @@ double AscalExecutor::processStack(stack<double> &operands,stack<char> &operator
 
 Object& AscalExecutor::getObject(AscalFrame<double>* frame, string_view functionName)
 {
-    if(frame->getLocalMemory()->count(functionName))
-                {
-                    return (*frame->getLocalMemory())[functionName];
-                }
-                else if(frame->getParamMemory()->count(functionName))
-                {
-                    return *(*frame->getParamMemory())[functionName];
-                }
-                else if(memory.count(functionName))
-                {
-                    return (memory)[functionName];
-                }
-                else
-                {
-                    throw std::string("Error locating object "+functionName.str()+"\n");
-                }
+    if(const auto rec = frame->getLocalMemory()->search(functionName))
+    {
+        return *rec->data.second;
+    }
+    else if(const auto rec = frame->getParamMemory()->find(functionName))
+    {
+        return *rec->data.second;
+    }
+    else if(const auto rec = memory.search(functionName))
+    {
+        return *rec->data.second;
+    }
+    else
+    {
+        throw std::string("Error locating object "+functionName.str()+"\n");
+    }
 }
 Object* AscalExecutor::getObjectNoError(AscalFrame<double>* frame, string_view functionName)
 {
-    if(frame->getLocalMemory()->count(functionName))
-                {
-                    return &(*frame->getLocalMemory())[functionName];
-                }
-                else if(frame->getParamMemory()->count(functionName))
-                {
-                    return (*frame->getParamMemory())[functionName];
-                }
-                else if(memory.count(functionName))
-                {
-                    Object *obj = &(memory)[functionName];
-                    return obj;
-                }
-                else
-                {
-                    return nullptr;
-                }
+    if(const auto rec = frame->getLocalMemory()->search(functionName))
+    {
+        return rec->data.second;
+    }
+    else if(const auto rec = frame->getParamMemory()->find(functionName))
+    {
+        return rec->data.second;
+    }
+    else if(const auto rec = memory.search(functionName))
+    {
+        return rec->data.second;
+    }
+    else
+    {
+        return nullptr;
+    }
 }
 
 Object* AscalExecutor::resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName)

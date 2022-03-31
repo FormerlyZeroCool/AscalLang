@@ -62,20 +62,23 @@ public:
 		    double dy = yStepSize>0?yStepSize:1;
 		    double xi;
 		    Vect2D<std::pair<double, double> > outPuts(tableWidth,functions.size()-1);
-		    std::stringstream exp;
+		    std::string exp;
 		    for(int j = 0;j<functions.size();j++)
 		    {
 		        const std::string &function = functions[j];
 		        for(int i = 0;i<tableWidth;i++)
 		        {
 		            xi = xMin+dx*(i);
-		            FunctionFrame<double>* calledFunction = new FunctionFrame<double>(runtime, runtime.memMan);
-		            exp << function << '(' << ParsingUtil::to_string(xi) << ')';
-		            calledFunction->exp = exp.str();
-		            exp.str(std::string());
+		            FunctionFrame<double>* calledFunction = runtime.fFramePool.construct(runtime, runtime.memMan);
+		            exp += function;
+					exp += '(';
+					exp += ParsingUtil::to_string(xi);
+					exp += ')';
+		            calledFunction->exp = exp;
 		            outPuts.push_back(
 		                    std::pair<double, double>(xi, runtime.calculateExpression(calledFunction))
 		            );
+					exp.clear();
 		        }
 		    }
 		    return outPuts;
