@@ -9,9 +9,8 @@
 #include "SubStr.hpp"
 #include "MemoryMap.hpp"
 
-string_view::string_view() {}
+string_view::string_view():ptr(nullptr), len(0) {}
 
-string_view::~string_view() {}
 
 string_view& string_view::operator=(const std::string &s)
 {
@@ -61,7 +60,7 @@ int findText2(const char *original, const int originalLen, const char *lookup, c
 //given an original string, and a string to search for return index of start of match, and -1 if none present
 int_fast32_t findText(const char *original, const int_fast32_t originalLen, const char *lookup, const int_fast32_t lookupLen)
  {
-    for (int_fast32_t i = 0; i + lookupLen < originalLen; i++) {
+    for (int_fast32_t i = 0; i + lookupLen <= originalLen; i++) {
 		if(memcmp(original + i, lookup, lookupLen) == 0)
 		{
 			return i;
@@ -112,6 +111,11 @@ std::string string_view::str() const
 bool string_view::operator==(const string_view &s) const
 {
 	return this->length() == s.length() && memcmp(this->c_str(), s.c_str(), this->length()) == 0;
+}
+
+bool string_view::operator!=(const string_view &s) const
+{
+	return !(*this == s);
 }
 
 bool string_view::operator>(const string_view &s) const

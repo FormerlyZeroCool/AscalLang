@@ -52,6 +52,7 @@ public:
     string_view& operator=(const std::string &s);
     string_view& operator=(const SubStrSV &s);
     bool operator==(const string_view &s) const;
+    bool operator!=(const string_view &s) const;
     bool operator<(const string_view &s) const;
     bool operator>(const string_view &s) const;
     int_fast32_t find(const std::string &s) const;
@@ -61,7 +62,6 @@ public:
     string_view substr(const int_fast32_t start, int_fast32_t len = -1) const;
     std::string str() const;
     friend std::ostream& operator<<(std::ostream &o, const string_view &l);
-    virtual ~string_view();
 };
 using sv = string_view;
 template <> struct std::hash<sv>
