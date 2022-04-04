@@ -17,6 +17,7 @@
 #include "string_view.hpp"
 #include "ParsingUtil.hpp"
 #include "MemoryMap.hpp"
+#include "HashMap.hpp"
 
 union member {
     Object **ptr;
@@ -134,7 +135,7 @@ public:
     std::string instructionsToFormattedString() const ;
     std::string instructionsToFormattedString(uint16_t depth) const;
     inline const string_view& getInstructions() { return  instructions; }
-    std::string listToString(MemoryMap &memory);
+    std::string listToString(FlatMap<string_view, Object*> &memory);
     Object& getMapUnsafe(string_view id);
     Object& operator[](string_view id);
     Object& operator[](size_t index);
@@ -148,12 +149,12 @@ public:
     void pushList(double data);
     void eraseList(long index);
     Object& setList(Object &data, size_t index);
-    Object splitString(string_view filter, MemoryMap &);
-    Object subString(uint_fast64_t start, uint_fast64_t length, MemoryMap &);
+    Object splitString(string_view filter, FlatMap<string_view, Object*> &);
+    Object subString(uint_fast64_t start, uint_fast64_t length, FlatMap<string_view, Object*> &);
     void loadString(string_view s);
-    void printList(MemoryMap &memory);
+    void printList(FlatMap<string_view, Object*> &memory);
     size_t getListSize() const;
-    Object& getListElement(size_t index,MemoryMap &memory);
+    Object* getListElement(size_t index,FlatMap<string_view, Object*> &memory);
     bool operator==(const Object &o) const;
     bool operator==(Object &o) const;
     Object& copyExceptID(const Object& o);

@@ -15,12 +15,13 @@ void MemoryMap::clone(const MemoryMap &m)
     for(auto &[key,value] : m.map)
     {
         Object *obj = m.getMemMan().constructObj(*value);
-        this->insert(*value);
+        this->insert(*obj);
     }
 }
 MemoryMap& MemoryMap::operator=(const MemoryMap &m)
 {
     this->clone(m);
+    return *this;
 }
 MemoryMap::MemoryMap(const MemoryMap &m): map(m.getMemMan().node_pool)
 {

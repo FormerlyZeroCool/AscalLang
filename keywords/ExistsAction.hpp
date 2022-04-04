@@ -23,7 +23,7 @@ public:
 	    SubStr varName = ParsingUtil::getVarName(frame->exp,index);
 	    index += varName.data.length();
 
-	    if(frame->getLocalMemory()->count(varName.data) || frame->getParamMemory()->count(varName.data) || runtime.memory.count(varName.data))
+	    if(frame->getLocalMemory()->count(varName.data) || frame->getParamMemory()->count(varName.data) || runtime.memory.find(varName.data) != runtime.memory.end())
 	    {
 	    	frame->initialOperands.push(1);
 	    }

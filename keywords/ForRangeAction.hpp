@@ -76,7 +76,7 @@ public:
                                 itObj->setDouble(list->getDoubleAtIndex(i));
                             }
                             else
-                                itObj = &(list->getListElement(i, runtime.memory));
+                                itObj = (list->getListElement(i, runtime.memory));
                             executionFrame.index = 0;
                             executionFrame.level = 0;
                             executionFrame.setIsFirstRun(true);
@@ -115,7 +115,7 @@ public:
                                 itObj->setDouble(list->getDoubleAtIndex(i));
                             }
                             else
-                                itObj = &(list->getListElement(i, runtime.memory));
+                                itObj = (list->getListElement(i, runtime.memory));
                             executionFrame.index = 0;
                             executionFrame.level = 0;
                             executionFrame.setIsFirstRun(true);

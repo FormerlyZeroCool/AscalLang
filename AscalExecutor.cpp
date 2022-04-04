@@ -53,7 +53,7 @@ static void printStack(stack<t> &operands)
 
 void AscalExecutor::addKeyWord(Keyword *key)
 {
-    inputMapper[key->getName()] = key;
+    inputMapper.insert(key->getName(),key);
 }
 void AscalExecutor::updateBoolSetting(AscalFrame<double>* frame)
     {
@@ -76,17 +76,23 @@ void AscalExecutor::updateBoolSetting(AscalFrame<double>* frame)
         }
     }
 AscalExecutor::~AscalExecutor() {
-    for(auto &[key,value]:inputMapper)
+    for(auto &chunk:inputMapper)
     {
-        delete value;
+        delete chunk.getValue();
     }
 }
 void AscalExecutor::loadFn(Object function)
 {
-        memory.insert(function);
-        systemDefinedFunctions.push_back(function);
+    loadUserDefinedFn(function, memory);
+    systemDefinedFunctions.push_back(function);
 }
 
+Object& AscalExecutor::loadUserDefinedFn(Object &function, FlatMap<string_view, Object*> &mem)
+{
+    Object *obj = this->memMan.constructObj(function);
+    mem.insert(std::make_pair(obj->id, obj));
+    return *obj;
+}
 Object& AscalExecutor::loadUserDefinedFn(Object &function, MemoryMap &mem)
 {
     return mem.insert(function);
@@ -183,7 +189,7 @@ loadFn(Object(memMan, "clear","println(150)",""));
     loadFn(Object(memMan, "printf","print \"(x)endl\"",""));
 
 }
-AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): memory(memMan), rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
+AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
 {
 
     ascal_cin.rdbuf(streambuf);
@@ -331,7 +337,7 @@ void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionSta
         //create and set new frame expression
         FunctionFrame<double> *newFrame = fFramePool.construct(*this, this->memMan);//new FunctionFrame<double>(*this, this->memMan);
         newFrame->exp = obj->getInstructions();
-        if(memory.count(obj->id) == 0)
+        if(memory.find(obj->id) == memory.end())
             this->loadUserDefinedFn(*obj, *newFrame->getParamMemory());
         newFrame->memoPointer = hash;
         //Create new frame, and set return pointer
@@ -467,7 +473,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             if(*boolsettings["memoize"])
             {
                 currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
-                const auto memoRec = memoPad.find(currentFrame->memoPointer);
+                const auto &memoRec = memoPad.find(currentFrame->memoPointer);
                 if(memoRec != memoPad.end())
                 {
                     data = memoRec->second;
@@ -558,7 +564,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             while(!currentFrame->initialOperators.isEmpty())
                 currentFrame->initialOperators.pop();
          }
-         else if(ParsingUtil::isalpha(currentChar) && (ParsingUtil::isalpha(frame->exp[i+1]) || !Calculator<double>::isOperator(currentChar)))
+         else if(ParsingUtil::isalpha(currentChar) && ((frame->exp.size() > i + 1 && ParsingUtil::isalpha(frame->exp[i+1])) || !Calculator<double>::isOperator(currentChar)))
          {
              //This needs to be updated, and simplified it makes conditional jumps very expensive
              uint32_t ind = i;
@@ -567,12 +573,13 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
              if(keywordRec != inputMapper.end())
              {
                  Keyword* executingKeyword;
+                 this->currentStack = &executionStack;
                  const int currentFrameCount = executionStack.length();
                  bool isDynamicBackup = currentFrame->isDynamicAllocation();
                  if(!currentFrame->returnPointer)
                      cachedRtnObject = rtnptr;
                  try{
-                     executingKeyword = keywordRec->second;
+                     executingKeyword = (*keywordRec).getValue();
                      executingKeyword->action(currentFrame);
                      currentFrame->setIsDynamicAllocation(isDynamicBackup);
                  }catch(std::string& s){
@@ -779,7 +786,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             {
                 if(*boolsettings["memoize"])
                 {
-                    memoPad[currentFrame->memoPointer] = data;
+                    memoPad.emplace(std::make_pair(currentFrame->memoPointer,data));
                 }
                 if(currentFrame->getContext() && *boolsettings["o"] && std::to_string(data).length() != MAX.length()){
                     std::cout<<"Returning value: "<<data<<" from function: "<<currentFrame->getContext()->getId()<<'\n';
@@ -993,13 +1000,15 @@ Object& AscalExecutor::getObject(AscalFrame<double>* frame, string_view function
     {
         return *rec->data.second;
     }
-    else if(const auto rec = memory.search(functionName))
-    {
-        return *rec->data.second;
-    }
     else
     {
-        throw std::string("Error locating object "+functionName.str()+"\n");
+        const auto rec1 = memory.find(functionName);
+        if(rec1 != memory.end())
+        {
+            return *(*rec1).getValue();
+        }
+        else
+            throw std::string("Error locating object "+functionName.str()+"\n");
     }
 }
 Object* AscalExecutor::getObjectNoError(AscalFrame<double>* frame, string_view functionName)
@@ -1012,13 +1021,15 @@ Object* AscalExecutor::getObjectNoError(AscalFrame<double>* frame, string_view f
     {
         return rec->data.second;
     }
-    else if(const auto rec = memory.search(functionName))
-    {
-        return rec->data.second;
-    }
     else
     {
-        return nullptr;
+        const auto rec1 = memory.find(functionName);
+        if(rec1 != memory.end())
+        {
+            return (*rec1).getValue();
+        }
+        else
+           return nullptr;
     }
 }
 

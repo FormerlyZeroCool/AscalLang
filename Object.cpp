@@ -325,10 +325,10 @@ size_t Object::getListSize() const
 {
     return this->listSize;
 }
-Object& Object::getListElement(size_t index, MemoryMap &memory)
+Object* Object::getListElement(size_t index, FlatMap<string_view, Object*> &memory)
 {
     if(index < this->getListSize())
-        return (*this)[index];
+        return &(*this)[index];
     return memory[string_view("null")];
 }
 Object& Object::operator[](size_t index)
@@ -367,7 +367,7 @@ Object& Object::operator[](string_view id)
     else
         throw std::string("Error invalid field ("+id.str()+") in object "+this->id.str());
 }
-std::string Object::listToString(MemoryMap &memory)
+std::string Object::listToString(FlatMap<string_view, Object*> &memory)
 {
     
     if(this->isList())
@@ -404,7 +404,7 @@ std::string Object::listToString(MemoryMap &memory)
         return str;
     }
 }
-void Object::printList(MemoryMap &memory)
+void Object::printList(FlatMap<string_view, Object*> &memory)
 {
     for(size_t i = 0; i < this->getListSize(); i++)
     {
@@ -432,7 +432,7 @@ void Object::loadString(string_view s)
 
 }
     
-Object Object::subString(uint_fast64_t start, uint_fast64_t length, MemoryMap &)
+Object Object::subString(uint_fast64_t start, uint_fast64_t length, FlatMap<string_view, Object*> &)
 {
     Object subString(this->objectMap.getMemMan(), id+"Sub","","");
     if(this->isDoubleList())
@@ -451,9 +451,9 @@ Object Object::subString(uint_fast64_t start, uint_fast64_t length, MemoryMap &)
     }
     return subString;
 }
-Object Object::splitString(string_view filter, MemoryMap &memory)
+Object Object::splitString(string_view filter, FlatMap<string_view, Object*> &memory)
 {
-    Object splitArr(memory.getMemMan(), id+"Split","","");
+    Object splitArr(this->objectMap.getMemMan(), id+"Split","","");
     size_t start = 0, end = 0;
     std::stringstream data;
     for(size_t i = 0; i < this->getListSize(); i++)
@@ -471,7 +471,7 @@ Object Object::splitString(string_view filter, MemoryMap &memory)
     {
         end = dataAsSV.find(filter, start)-1;
         end = end<=datastr.size()?end:datastr.size();
-        Object element(memory.getMemMan(), "","","");
+        Object element(this->objectMap.getMemMan(), "","","");
         element.loadString(string_view((char*)datastr.c_str()+start, end));
         splitArr.pushList(element);
         start = end+filter.size();
@@ -741,6 +741,7 @@ void Object::clone(const Object &o)
 Object& Object::operator=(const Object &o)
 {
     this->clone(o);
+    return *this;
 }
 //need to make a copy constructor for the objectMap
 Object::Object(const Object &o): objectMap(o.objectMap)

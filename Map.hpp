@@ -14,10 +14,7 @@
 template <typename t, typename u>
 struct NodeData: public std::pair<t, u>
 {
-    NodeData(const t &key, const u &value): std::pair<t, u>(key, value)
-    {
-
-    }
+    NodeData(const t &key, const u &value): std::pair<t, u>(key, value) {}
 	bool operator<(const NodeData<t, u> &o) const
 	{
 		return this->first < o.first;
@@ -285,7 +282,7 @@ int Map<t, u>::count(const t &key)
 template <typename t, typename u>
 int Map<t, u>::count(const t &&key)
 {
-    count(key);
+    return count(key);
 }
 template <typename t, typename u>
 int Map<t, u>::count(node<t, u>* p)

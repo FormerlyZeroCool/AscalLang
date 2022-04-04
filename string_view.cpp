@@ -108,16 +108,15 @@ std::string string_view::str() const
 	return std::string(ptr, len);
 }
 
-bool string_view::operator==(const string_view &s) const
-{
-	return this->length() == s.length() && memcmp(this->c_str(), s.c_str(), this->length()) == 0;
-}
-
 bool string_view::operator!=(const string_view &s) const
 {
 	return !(*this == s);
 }
 
+bool string_view::operator==(const string_view &s) const
+{
+	return this->length() == s.length() && memcmp(this->c_str(), s.c_str(), this->length()) == 0;
+}
 bool string_view::operator>(const string_view &s) const
 {
 	int_fast32_t result = memcmp(this->c_str(), s.c_str(), std::min(this->length(), s.length()));

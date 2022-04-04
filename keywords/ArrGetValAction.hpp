@@ -26,7 +26,7 @@ public:
 	    	throw std::string("arrGet(<array>,<Index as Ascal expression>)");
 	    double indexToGet = runtime.callOnFrame(frame,params.statements[1].data);
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params.statements[0].start);
-	    Object *element = &runtime.resolveNextExprSafe(frame, vns)->getListElement(indexToGet, runtime.memory);
+	    Object *element = runtime.resolveNextExprSafe(frame, vns)->getListElement(indexToGet, runtime.memory);
 	    SubStr paramsForListElementFn("", 0 , exp.end);
 	    if(exp.data[exp.end] == '(')
 	    {

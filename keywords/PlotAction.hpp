@@ -153,7 +153,7 @@ public:
 	            yMin<<" to "<<yMax<<" with a step size in the x of:"<<xStepSize<<", and in the y: "<<yStepSize<<"\n";
 	    for(int i =0; i<functions.size();i++)
 	    {
-	        std::cout<<"Function: "<<functions[i]<<", plotted using symbol: "<<symbols[i%10]<<", function defined as: "<<runtime.memory[functions[i]].instructionsToFormattedString();
+	        std::cout<<"Function: "<<functions[i]<<", plotted using symbol: "<<symbols[i%10]<<", function defined as: "<<runtime.memory[functions[i]]->instructionsToFormattedString();
 	        std::cout<<"Area Under Curve calculated with reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
 	    }
 	}

@@ -20,7 +20,7 @@ private:
 	    std::cout<<"All Functions in Memory:"<<std::endl;
 	    for(auto &value : runtime.memory)
 	    {
-	        std::cout<<std::endl<<"Function Name: "<<value.getId()<<"\nFunction Expression: "<<value.toString()<<std::endl;
+	        std::cout<<std::endl<<"Function Name: "<<value.getValue()->getId()<<"\nFunction Expression: "<<value.getKey()<<std::endl;
 	    }
 	    std::cout<<std::endl<<"End of All Functions in Memory."<<std::endl;
 	}

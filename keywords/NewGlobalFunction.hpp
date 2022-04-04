@@ -58,9 +58,10 @@ public:
         }
         else
         {
-            if(runtime.memory.count(newVarPart.data) != 0)
+            const auto rec = runtime.memory.find(newVarPart.data);
+            if(rec != runtime.memory.end())
             {
-                std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), (runtime.memory)[newVarPart.data]);
+                std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), *(runtime.memory)[newVarPart.data]);
                 if(position != runtime.userDefinedFunctions.end())
                     runtime.userDefinedFunctions.erase(position);
             }

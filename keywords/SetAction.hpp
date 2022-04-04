@@ -47,7 +47,7 @@ public:
                 subexp[subexp.size()] = tmp;
             }
         }
-        else if(obj)
+        else if(obj){
 	    if(!ParsingUtil::isObj(subexp))
 	    {
 	    	if(!ParsingUtil::isDouble(subexp))
@@ -79,6 +79,7 @@ public:
 	    }
         
 	}
+  }
 };
 
 #endif /* KEYWORDS_SETACTION_HPP_ */

@@ -47,14 +47,14 @@ public:
 	    		exPart.data[exPart.data.size()] = 0;
 	    		var.setDouble(atof(&exPart.data[0]));
 	    		exPart.data[exPart.data.size()] = tmp;
-			    runtime.memory.insert(var);
+	    	    runtime.loadUserDefinedFn(var, runtime.memory);
 	        }
 	        else
 	        {
 	    	    double value = runtime.callOnFrame(frame, exPart.data);
 	    	    var.setDouble(value);
 	        	//delete old  reference from list not really needed
-	    	    std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), runtime.memory[var.getId()]);
+	    	    std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), *runtime.memory[var.getId()]);
 	    	                            if(position != runtime.userDefinedFunctions.end())
 	    	                            	runtime.userDefinedFunctions.erase(position);
 	    	    //set var defined's value in hash map

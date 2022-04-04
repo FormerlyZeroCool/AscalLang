@@ -35,6 +35,7 @@
 #include "SubStr.hpp"
 #include "ParsingUtil.hpp"
 #include "string_view.hpp"
+#include "HashMap.hpp"
 #include "MemoryMap.hpp"
 
 template <typename t>
@@ -70,7 +71,7 @@ uint32_t frameCount = 1;
 uint32_t varCount = 0;
 
 //Interpreter hash map for system keywords
-std::unordered_map<string_view, Keyword*> inputMapper;
+FlatMap<string_view, Keyword*> inputMapper;
 
 
 /////////////////////////////
@@ -102,11 +103,11 @@ stack<char> operators;
 stack<char> instructionsStack;
 stack<Object* > paramsStack;
 MemoryManager memMan;
-MemoryMap memory;
+FlatMap<string_view, Object*> memory;
 CommandLineParams commandLineParams;
 std::streambuf* stream_buffer_cin;
 std::istream ascal_cin;
-//Interpreter Settings HashMap for toggle flags, like show time, or operations
+//Interpreter Settings FlatMap for toggle flags, like show time, or operations
 std::map<std::string,setting<bool> > boolsettings;
 //list of previous expressions for u command in interpretParam fn
 stack<std::string> lastExp;
@@ -178,6 +179,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
         //obj.loadChild(pushMethod, *this);
 	}
 	void loadFn(Object function);
+	Object& loadUserDefinedFn(Object &function, FlatMap<string_view, Object*> &mem);
 	Object& loadUserDefinedFn(Object &function, MemoryMap &mem);
 	Object& loadUserDefinedFn(Object &function, Map<string_view, Object*> &mem);
 	void updateBoolSetting(AscalFrame<double>* frame);
@@ -201,7 +203,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	    return s.substr(0,s.size()-secondDelimiter.size());
 	}
 	template <typename string1, typename string2>
-	static std::string printMemory(std::unordered_map<string1,Object> &memory,string2 delimiter,bool justKey = true,
+	static std::string printMemory(FlatMap<string1,Object> &memory,string2 delimiter,bool justKey = true,
 	        std::string secondDelimiter = "\n")
 	{
 	    std::string s;

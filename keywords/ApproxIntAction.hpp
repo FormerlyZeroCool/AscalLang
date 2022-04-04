@@ -101,7 +101,7 @@ public:
 	    std::cout<<"domain:"<<xMin<<" to "<<xMax<<" with a step size in the x of: "<<xStepSize<<"\n";
 	    for(int i =0; i<functions.size();i++)
 	    {
-	        std::cout<<"Function: "<<functions[i]<<", function defined as: "<<runtime.memory.find(functions[i]).instructionsToFormattedString();
+	        std::cout<<"Function: "<<functions[i]<<", function defined as: "<<(*runtime.memory.find(functions[i])).getValue()->instructionsToFormattedString();
 	        std::cout<<"Area Under Curve calculated with "<<calculationType<<" Reimann sum using "<<tableWidth<<" partitions: "<<sumArea[i]<<"\n\n";
 	    }
 	    frame->index = index + 1;

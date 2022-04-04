@@ -18,6 +18,7 @@
 #include "Calculator.hpp"
 #include "string_view.hpp"
 #include "MemoryMap.hpp"
+#include "HashMap.hpp"
 
 template <typename t>
 class AscalFrame {
@@ -150,7 +151,7 @@ public:
         return 'a';
     }
     virtual
-    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) = 0;
+    void returnResult(t result, FlatMap<string_view, Object*>& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) = 0;
     virtual
     ~AscalFrame() {};
     void clearStackIfAnotherStatementProceeds()
@@ -204,7 +205,7 @@ public:
         this->initialOperands.setData(runtime.operands);
         this->initialOperators.setData(runtime.operators);
     }
-    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
+    void returnResult(t result, FlatMap<string_view, Object*>& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer)
         {
@@ -243,7 +244,7 @@ public:
         this->initialOperands.setData(runtime.operands);
         this->initialOperators.setData(runtime.operators);
     }
-    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
+    void returnResult(t result, FlatMap<string_view, Object*>& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer)
         {
@@ -279,7 +280,7 @@ public:
         this->initialOperands.setData(runtime.operands);
         this->initialOperators.setData(runtime.operators);
     }
-    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
+    void returnResult(t result, FlatMap<string_view, Object*>& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer)
         {
@@ -341,7 +342,7 @@ public:
         this->initialOperands.setData(runtime.operands);
         this->initialOperators.setData(runtime.operators);
     }
-    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
+    void returnResult(t result, FlatMap<string_view, Object*>& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer && obj)
         {
@@ -378,7 +379,7 @@ public:
         //bitwise or with the 2^5 bit 32 sets isFunction true
         this->flagRegisters |= 32;
     }
-    void returnResult(t result, MemoryMap& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
+    void returnResult(t result, FlatMap<string_view, Object*>& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) override
     {
         if(this->returnPointer)
         {

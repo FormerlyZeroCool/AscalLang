@@ -31,14 +31,16 @@ public:
 	    {
 	        SubStr name = ParsingUtil::getVarName(frame->exp,this->keyWord.length() + 1);
 			frame->index = name.end + 1;
-	        if(runtime.memory.count(name.data) > 0)
+			const auto rec = runtime.memory.find(name.data);
+	        if(rec != runtime.memory.end())
 	        {
 
-	            std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), (runtime.memory)[name.data]);
+	            std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), *(*rec).getValue());
 	            if(position != runtime.userDefinedFunctions.end())
 	                runtime.userDefinedFunctions.erase(position);
 
 	            runtime.memory.erase(name.data);
+				runtime.memMan.obj_free((*rec).getValue());
 	    	    if(*runtime.boolsettings["o"])
 	            	std::cout<<"Erased "<<name.data<<" from memory."<<std::endl;
 	        }
