@@ -211,7 +211,7 @@ FlatMap& operator=(const FlatMap &o)
     if(this->data && o.capacity != this->capacity)
     {
         this->clear();
-        delete data;
+        delete[] data;
         this->data = new Chunk<t,u>[this->getCapacity()];
     }
     else if(data)
@@ -267,5 +267,5 @@ void clear()
 }
 private:
     Chunk<t, u> *data;
-    uint64_t capacity = 64;
+    uint64_t capacity = 32;
 };

@@ -108,7 +108,7 @@ CommandLineParams commandLineParams;
 std::streambuf* stream_buffer_cin;
 std::istream ascal_cin;
 //Interpreter Settings FlatMap for toggle flags, like show time, or operations
-std::map<std::string,setting<bool> > boolsettings;
+FlatMap<std::string,setting<bool> > boolsettings;
 //list of previous expressions for u command in interpretParam fn
 stack<std::string> lastExp;
 //list of previous undone expressions for r command in interpretParam fn

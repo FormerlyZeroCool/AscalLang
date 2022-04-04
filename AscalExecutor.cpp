@@ -219,31 +219,15 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
 
         boolsettings[set.getCommand()] = set;
 
-        set = setting<bool> (
+        //set = setting<bool> (
                 /*name*/
-                    "Use scientific notation for output of numbers larger than 999,999",
+         //           "Use scientific notation for output of numbers larger than 999,999",
                 /*command line command*/
-                    "sci",
+         //           "sci",
                 /*variable*/
-                    true);
+          //          true);
 
-        boolsettings[set.getCommand()] = set;
-        set = setting<bool>(
-            /*name*/
-                "Debug Ascal Mode",
-            /*command line command*/
-                "d",
-            /*variable*/
-                false);
-        boolsettings[set.getCommand()] = set;
-        set = setting<bool>(
-            /*name*/
-                "Keep Interpreter listening for input to stdin",
-            /*command line command*/
-                "l",
-            /*variable*/
-                true);
-        boolsettings[set.getCommand()] = set;
+        //boolsettings[set.getCommand()] = set;
         set = setting<bool>(
             /*name*/
                 "Auto Memoize all function calls to improve multiple recursive function performance,\nwill cause erroneous calculations if not using pure mathematical functions.",
@@ -564,7 +548,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             while(!currentFrame->initialOperators.isEmpty())
                 currentFrame->initialOperators.pop();
          }
-         else if(ParsingUtil::isalpha(currentChar) && ((frame->exp.size() > i + 1 && ParsingUtil::isalpha(frame->exp[i+1])) || !Calculator<double>::isOperator(currentChar)))
+         else if(ParsingUtil::isalpha(currentChar))
          {
              //This needs to be updated, and simplified it makes conditional jumps very expensive
              uint32_t ind = i;
@@ -757,10 +741,10 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             {
                 currentFrame->initialOperators.push(currentChar);
             }
-            else if(currentChar == ';')
+            /*else if(currentChar == ';')
             {
                 currentFrame->clearStackIfAnotherStatementProceeds();
-            }
+            }*/
           }
         //Finally pop all values off initial stack onto final stacks for processing
         while(!currentFrame->initialOperands.isEmpty() || !currentFrame->initialOperators.isEmpty())
