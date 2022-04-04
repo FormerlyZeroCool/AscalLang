@@ -143,6 +143,15 @@ iterator<t, u> insert(const Chunk<t, u> &&rec)
 {
     return this->insert(rec);
 }
+int64_t allocatedCount()
+{
+    int64_t count = 0;
+    for(int64_t i = 0; i < this->getCapacity(); i++)
+    {
+        count += this->data[i].allocated;
+    }
+    return count;
+}
 iterator<t, u> insert(const Chunk<t, u> &rec)
 {
     uint64_t hash = this->hash(rec.getKey());
@@ -150,8 +159,7 @@ iterator<t, u> insert(const Chunk<t, u> &rec)
     while(data[hash].allocated)
     {
         hashCount++;
-        hash ^= hash >> 3;
-        hash ^= hash >> 1;
+        hash = rehash(hash);
         if(hashCount >= 2 && data[hash].allocated)
         {
             this->resize(this->capacity<<1);
@@ -161,7 +169,13 @@ iterator<t, u> insert(const Chunk<t, u> &rec)
     data[hash].construct(rec);
     return iterator<t, u>(&data[hash], &data[this->getCapacity() - 1]);
 }
-
+int64_t rehash(uint64_t hash)
+{
+    const auto ohash = hash;
+    hash ^= ohash << 3 ^ ohash >> 3;
+    hash ^= (ohash << 4) | (ohash >> 4);
+    return hash & (this->capacity-1);
+}
 iterator<t, u> find(const t &key)
 {
     uint64_t hash = this->hash(key);
@@ -169,8 +183,7 @@ iterator<t, u> find(const t &key)
     while(data[hash] != key && hashCount < 2)
     {   
         hashCount++;
-        hash ^= hash >> 3;
-        hash ^= hash >> 1;
+        hash = rehash(hash);
     }
 
     return iterator<t, u>(hashCount < 2 ? &data[hash] : nullptr, &data[this->getCapacity() - 1]);
