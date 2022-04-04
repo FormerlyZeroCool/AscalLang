@@ -108,10 +108,6 @@ int64_t getCapacity()
 {
     return this->capacity;
 }
-uint64_t hash(const t &key)
-{
-    return std::hash<t>()(key) & (this->capacity-1);
-}
 u& operator[](const t key)
 {
     const auto it = this->find(key);
@@ -156,37 +152,44 @@ iterator<t, u> insert(const Chunk<t, u> &rec)
 {
     uint64_t hash = this->hash(rec.getKey());
     uint_fast32_t hashCount = 0;
-    while(data[hash].allocated)
+    while(data[hash & (this->capacity-1)].allocated)
     {
         hashCount++;
         hash = rehash(hash);
-        if(hashCount >= 2 && data[hash].allocated)
+        if(hashCount >= 2 && data[hash & (this->capacity-1)].allocated)
         {
             this->resize(this->capacity<<1);
             hash = this->hash(rec.getKey());
         }
     } 
+    hash &= (this->capacity-1);
     data[hash].construct(rec);
+    //const auto alloced = this->allocatedCount();
+    //std::cout<<"capacity, alloced, fill% "<<this->getCapacity()<<", "<<alloced<<", "<<((alloced*1.0)/this->getCapacity())<<"\n";
     return iterator<t, u>(&data[hash], &data[this->getCapacity() - 1]);
 }
-int64_t rehash(uint64_t hash)
+uint64_t hash(const t &key)
 {
-    const auto ohash = hash;
-    hash ^= ohash << 3 ^ ohash >> 3;
-    hash ^= (ohash << 4) | (ohash >> 4);
-    return hash & (this->capacity-1);
+    return std::hash<t>()(key);
+}
+int64_t rehash(int64_t hash)
+{
+    const auto ohash = hash + 1997;
+    hash ^= (hash << 31) ^ (hash >> 29);
+    hash ^= (ohash << 15) ^ (ohash);
+    return hash + 1997;
 }
 iterator<t, u> find(const t &key)
 {
     uint64_t hash = this->hash(key);
     int_fast8_t hashCount = 0;
-    while(data[hash] != key && hashCount < 2)
+    while(data[hash & (this->capacity-1)] != key && hashCount < 2)
     {   
         hashCount++;
         hash = rehash(hash);
     }
 
-    return iterator<t, u>(hashCount < 2 ? &data[hash] : nullptr, &data[this->getCapacity() - 1]);
+    return iterator<t, u>(hashCount < 2 ? &data[hash & (this->capacity-1)] : nullptr, &data[this->getCapacity() - 1]);
 }
 FlatMap(const FlatMap<t, u> &o): capacity(o.capacity)
 {
@@ -264,5 +267,5 @@ void clear()
 }
 private:
     Chunk<t, u> *data;
-    uint64_t capacity = 128;
+    uint64_t capacity = 64;
 };
