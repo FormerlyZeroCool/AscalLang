@@ -19,11 +19,12 @@ public:
 	void action(AscalFrame<double>* frame) override
 	{
 	    int index = frame->index+6;
-	    while(frame->exp[index++] == ' '){}
-	    SubStr varName = ParsingUtil::getVarName(frame->exp,index);
+	    while(frame->exp[index] == ' '){ index++; }
+	    SubStrSV subexp = ParsingUtil::getExprInStringSV(frame->exp, index, '(', ')', ';');
+	    SubStrSV varName = ParsingUtil::getVarNameSV(frame->exp, static_cast<uint32_t>(subexp.start));
 	    index += varName.data.length();
 
-	    if(frame->getLocalMemory()->count(varName.data) || frame->getParamMemory()->count(varName.data) || runtime.memory.find(varName.data) != runtime.memory.end())
+	    if(runtime.getObjectNoError(frame, varName.data))
 	    {
 	    	frame->initialOperands.push(1);
 	    }
@@ -31,7 +32,7 @@ public:
 	    {
 	    	frame->initialOperands.push(0);
 	    }
-		frame->index = index;
+		frame->index = subexp.end;
 
 	}
 };

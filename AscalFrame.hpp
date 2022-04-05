@@ -156,7 +156,7 @@ public:
     ~AscalFrame() {};
     void clearStackIfAnotherStatementProceeds()
     {
-        /*this->index++;
+        this->index++;
         bool clear = false;
         while(!clear && this->exp.size() > index)
         {
@@ -181,7 +181,7 @@ public:
             {
                 this->initialOperators.pop();
             }
-        }*/
+        }
     }
 };
 static uint16_t runningNumber = 1;

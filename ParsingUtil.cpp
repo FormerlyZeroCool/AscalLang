@@ -50,7 +50,7 @@ SubStrSV ParsingUtil::getVarNameSV(const std::string &s,uint32_t &index)
     begin = begin>s.length()?s.length():begin;
     return SubStrSV(string_view(s, begin, index+1), begin, index);
 }
-SubStrSV ParsingUtil::getVarNameSV(string_view s,uint32_t &index)
+SubStrSV ParsingUtil::getVarNameSV(string_view s,uint32_t index)
 {
     int begin = index;
     while(s.length() > index && !ParsingUtil::isalpha(s[index]))

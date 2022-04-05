@@ -69,6 +69,7 @@ public:
 	    elseIndex = elseIndex==-1?invalidIndex:elseIndex;
         
             thenIndex = frame->exp.find(this->thenText,index);
+
             //Parsing boolean expression
             while(frame->exp[index] == ' ' && index < endIndex && index < thenIndex)
             {

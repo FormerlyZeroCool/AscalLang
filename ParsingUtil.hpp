@@ -127,7 +127,7 @@ public:
 	template <typename string>
 	static SubStr getVarName(const string &s,int index);
 	static SubStrSV getVarNameSV(const std::string &s,uint32_t &index);
-	static SubStrSV getVarNameSV(string_view s,uint32_t &index);
+	static SubStrSV getVarNameSV(string_view s,uint32_t index);
 	static SubStr getNewVarName(const std::string &data);
 	//Generic string stuff
 	template <typename string1, typename string2>
@@ -421,7 +421,7 @@ SubStrSV ParsingUtil::getExprInStringSV(const string &line,uint32_t index,char o
 {
     uint32_t i = index;
     uint8_t subLevel = 0;
-    while(i < line.size() && line[i] != lineBreak && line[i] != opening)
+    while(i < line.size() && line[i] == ' ' && line[i] != opening)
     {
         i++;
     }

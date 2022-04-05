@@ -207,7 +207,7 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
             /*variable*/
                 false);
 
-        boolsettings[set.getCommand()] = set;
+        boolsettings.insert(set.getCommand(), set);
 
         set = setting<bool> (
                 /*name*/
@@ -217,17 +217,17 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
                 /*variable*/
                     true);
 
-        boolsettings[set.getCommand()] = set;
+        boolsettings.insert(set.getCommand(), set);
 
-        //set = setting<bool> (
+        set = setting<bool> (
                 /*name*/
-         //           "Use scientific notation for output of numbers larger than 999,999",
+                    "Use scientific notation for output of numbers larger than 999,999",
                 /*command line command*/
-         //           "sci",
+                    "sci",
                 /*variable*/
-          //          true);
+                    true);
 
-        //boolsettings[set.getCommand()] = set;
+        boolsettings[set.getCommand()] = set;
         set = setting<bool>(
             /*name*/
                 "Auto Memoize all function calls to improve multiple recursive function performance,\nwill cause erroneous calculations if not using pure mathematical functions.",
@@ -235,7 +235,7 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
                 "memoize",
             /*variable*/
                 false);
-        boolsettings[set.getCommand()] = set;
+        boolsettings.insert(set.getCommand(), set);
         set = setting<bool>(
             /*name*/
                 "Print time taken to run calculation",
@@ -243,7 +243,7 @@ AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* s
                 "t",
             /*variable*/
                 false);
-        boolsettings[set.getCommand()] = set;
+        boolsettings.insert(set.getCommand(), set);
         }//bracket to remove set variable from program memory
           /*
            * End of initialization values in settings hashmap
@@ -741,10 +741,10 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             {
                 currentFrame->initialOperators.push(currentChar);
             }
-            /*else if(currentChar == ';')
+            else if(currentChar == ';')
             {
                 currentFrame->clearStackIfAnotherStatementProceeds();
-            }*/
+            }
           }
         //Finally pop all values off initial stack onto final stacks for processing
         while(!currentFrame->initialOperands.isEmpty() || !currentFrame->initialOperators.isEmpty())

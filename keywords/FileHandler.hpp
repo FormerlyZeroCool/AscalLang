@@ -21,7 +21,9 @@ public:
 	    std::ifstream inputFile;
 	    while(expr[startIndex] == ' ' || expr[startIndex] == ':')
 	        startIndex++;
-	    std::string filePath = expr.substr(startIndex,expr.find(';')-startIndex).str();
+		auto endIndex = expr.find(';');
+		endIndex += (endIndex<0) * (expr.length() + 1);
+	    std::string filePath = expr.substr(startIndex,endIndex-startIndex).str();
 	    inputFile.open(filePath);
 	    if(!inputFile)
 	    {
