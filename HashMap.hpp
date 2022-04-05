@@ -155,7 +155,7 @@ iterator<t, u> insert(const Chunk<t, u> &rec)
     while(data[hash & (this->capacity-1)].allocated)
     {
         hashCount++;
-        hash = rehash(hash);
+        hash = this->rehash(hash);
         if(hashCount >= 2 && data[hash & (this->capacity-1)].allocated)
         {
             this->resize(this->capacity<<1);
@@ -183,13 +183,14 @@ iterator<t, u> find(const t &key)
 {
     uint64_t hash = this->hash(key);
     int_fast8_t hashCount = 0;
-    while(data[hash & (this->capacity-1)] != key && hashCount < 2)
+    bool nequal = 0;
+    while((nequal = (data[hash & (this->capacity-1)] != key)) && hashCount < 2)
     {   
         hashCount++;
         hash = rehash(hash);
     }
 
-    return iterator<t, u>(hashCount < 2 ? &data[hash & (this->capacity-1)] : nullptr, &data[this->getCapacity() - 1]);
+    return iterator<t, u>(!nequal ? &data[hash & (this->capacity-1)] : nullptr, &data[this->getCapacity() - 1]);
 }
 FlatMap(const FlatMap<t, u> &o): capacity(o.capacity)
 {
