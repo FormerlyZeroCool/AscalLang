@@ -205,7 +205,7 @@ public:
         index = codeBlock.end + startOfCodeBlock;
         while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
             index++;
-        frame->index = (index-2<frame->exp.size()?index-2:frame->exp.size());
+        frame->index = codeBlock.start+codeBlock.end;//(index-2<frame->exp.size()?index-2:frame->exp.size());
 
     }
 };
