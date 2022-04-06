@@ -24,17 +24,13 @@ public:
 	    {
 	            index++;
 	    }
-
+			SubStrSV booleanEx = ParsingUtil::getExprInStringSV(frame->exp, index, '(', ')', '{');
 	        uint32_t startOfBoolExp = index;
 	        uint32_t startOfCodeBlock = index;
 	        SubStr codeBlock("",0,0);
 
-	        while(frame->exp[startOfCodeBlock] && frame->exp[startOfCodeBlock] != '{')
-	        {
-	            startOfCodeBlock++;
-	        }
 	        index = startOfCodeBlock;
-	        const string_view booleanExpression = frame->exp.substr(startOfBoolExp,index-startOfBoolExp);
+	        const string_view booleanExpression = booleanEx.data;
 	        if(booleanExpression.size() == 0)
 	        {
 	            throw std::string("Error no boolean expression provided in if.\n");
@@ -110,7 +106,7 @@ public:
 	        }
 	        frame->setComingfromElse(false);
 
-	        frame->index = index-1;
+	        frame->index = frame->exp.size();
 	}
 	//create conditional frame with if be
 	//create subframe with codeblock

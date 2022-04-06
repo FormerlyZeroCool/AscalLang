@@ -43,7 +43,7 @@ public:
         }
         index = startOfCodeBlock;
         codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime.ascal_cin);
-        ParamFrame<double> executionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
+        FunctionSubFrame<double> executionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
         executionFrame.exp = codeBlock.data;
         executionFrame.setIsDynamicAllocation(false);
         executionFrame.setContext(frame->getContext());

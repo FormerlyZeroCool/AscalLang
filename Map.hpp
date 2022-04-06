@@ -87,7 +87,7 @@ private:
 	int count(node<t, u>* p);
 	int leafCount(node<t, u>* p);
 	int elements;
-	node<t, u>* nodeSearch(t dat);
+	node<t, u>* nodeSearch(const t &dat);
 
 public:
 	node<t, u> *root;
@@ -376,7 +376,7 @@ int Map<t, u>::getSize()
 	 return 0;
 }
 template <typename t, typename u>
-node<t, u>* Map<t, u>::nodeSearch(t dat)
+node<t, u>* Map<t, u>::nodeSearch(const t &dat)
 {
 	node<t, u> *p = root;
 	while(p != nullptr && p->data != dat)
@@ -477,9 +477,9 @@ void Map<t, u>::erase(t dat)
 			//std::cout<<"remove right "<<p->data<<std::endl;
 			//Given parent->right = p;
 			parent->right = p->left;
-            parent->right->parent = parent;
 			if(p->left != nullptr)
 			{
+                parent->right->parent = parent;
 				node<t, u>* d  = p->left;
 				while(d != nullptr && d->right != nullptr)
 				{
@@ -492,7 +492,8 @@ void Map<t, u>::erase(t dat)
 			else
             {
 				parent->right = p->right;
-                parent->right->parent = parent;
+                if(parent->right)
+                    parent->right->parent = parent;
             }
 
 			this->pool.destroy(p);
@@ -519,7 +520,7 @@ node<t, u>& Map<t, u>::insert(const t &key, const u &value)
 	else
 	{
 		node<t, u> *last = root;
-        int8_t dir = -1;
+        int8_t dir = 0;
 	    while(p != nullptr && (dir=p->data != key))
 	    {
             last = p;
@@ -549,8 +550,7 @@ node<t, u>& Map<t, u>::insert(const t &key, const u &value)
             p = p->right;
 			elements++;
 		}
-		else
-			p->count++;
+		p->count++;
 	}
     return *p;
 }

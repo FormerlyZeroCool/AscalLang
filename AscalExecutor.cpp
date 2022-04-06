@@ -89,9 +89,18 @@ void AscalExecutor::loadFn(Object function)
 
 Object& AscalExecutor::loadUserDefinedFn(Object &function, FlatMap<string_view, Object*> &mem)
 {
-    Object *obj = this->memMan.constructObj(function);
-    mem.insert(std::make_pair(obj->id, obj));
-    return *obj;
+    const auto rec = mem.find(function.getId());
+    if(rec == mem.end())
+    {
+        Object *obj = this->memMan.constructObj(function);
+        return *(*mem.insert(obj->id, obj)).getValue();
+    }
+    else
+    {
+        this->memMan.obj_free((*rec).getValue());
+        (*rec).getValue() = this->memMan.constructObj(function);
+        return *(*rec).getValue();
+    }
 }
 Object& AscalExecutor::loadUserDefinedFn(Object &function, MemoryMap &mem)
 {
@@ -100,9 +109,7 @@ Object& AscalExecutor::loadUserDefinedFn(Object &function, MemoryMap &mem)
 }
 Object& AscalExecutor::loadUserDefinedFn(Object &function, Map<string_view, Object*> &mem)
 {
-    mem[function.id] = &function;
-    return function;
-
+    return *mem.set(function.getId(), &function).data.second;
 }
 void AscalExecutor::loadInitialFunctions()
 {
@@ -1104,7 +1111,9 @@ expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<doubl
                     //get object data
                     frame->index = varName.start;
                     result.parent = obj;
-                    obj = &(*obj)[AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data->listToString(memory)];
+                    const auto list = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr);
+                    if(list.data)
+                        obj = &(*obj)[list.data->listToString(memory)];
                     varName.end++;
                 }
                 //By string literal
@@ -1169,10 +1178,16 @@ Object* AscalExecutor::resolveNextObjectExpressionPartial(AscalFrame<double>* fr
                     {
                         varName = ParsingUtil::getVarNameSV(frame->exp, ++frame->index);
                         frame->index = varName.start;
-                        varName.data = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data->listToString(memory).data();
+
+                        const auto list = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr);
+                        if(list.data)
+                        {
+                            obj = &(*obj)[list.data->listToString(memory)];
+                            varName.data = list.data->listToString(memory).data();
+                            possible = &obj->getMapUnsafe(varName.data);
+                        }
                         frame->index = varName.end+1;
                         while(frame->index < frame->exp.size() && frame->exp[frame->index++]){}
-                        possible = &obj->getMapUnsafe(varName.data);
                     }
                     //By string literal
                     else if(frame->exp[frame->index] == '\"')

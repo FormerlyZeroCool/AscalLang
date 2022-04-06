@@ -236,7 +236,7 @@ SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_ci
     int openingCount = 0;
     int maxOpeningCount = 0;
     SubStr block("",0,0);
-    std::vector<char> result;
+    std::string result;
     if(data.length()<1024)
         result.reserve(1024);
     else
@@ -266,10 +266,10 @@ SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_ci
 
             for(int i = index<line.size()?index:line.size();line[i] && i <= index+count;i++)
             {
-                result.push_back(line[i]);
+                result += (line[i]);
             }
             if(line[line.size()-1]!=opening && result[result.size()-1] != lineBreak)
-                result.push_back(lineBreak);
+                result += (lineBreak);
         }
         if(openingCount > 0 && line.length() <= index+count)
         {
@@ -291,8 +291,8 @@ SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_ci
     }while(openingCount > 0 && std::cin);
 
     if(maxOpeningCount > 0)
-        result.push_back(closing);
-    block.data = std::string(result.begin(),result.end());
+        result += (closing);
+    block.data = std::move(result);
     block.start = index;
 	block.end = result.size();
     return block;
@@ -489,7 +489,7 @@ bool ParsingUtil::cmpstr(const string1 &s1,const string2 &s2)
 template <typename string>
 SubStr ParsingUtil::getCodeBlock(string &exp, int index, std::istream &cin_ascal)
 {
-    SubStr codeBlock = getExpr(exp,index, cin_ascal);
+    SubStr codeBlock = getExpr(exp, index, cin_ascal, '{', '}', ';');
     if(codeBlock.data.size() == 0)
     {
         codeBlock.loadedNew = true;
@@ -497,7 +497,6 @@ SubStr ParsingUtil::getCodeBlock(string &exp, int index, std::istream &cin_ascal
         while(cin_ascal && codeBlock.data.size() == 0)
         {
         	getLine(cin_ascal,nextLine);
-        	codeBlock = getExpr(nextLine, 0, cin_ascal);
         }
     }
     return codeBlock;

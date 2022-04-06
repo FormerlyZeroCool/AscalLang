@@ -152,11 +152,11 @@ iterator<t, u> insert(const Chunk<t, u> &rec)
 {
     uint64_t hash = this->hash(rec.getKey());
     uint_fast32_t hashCount = 0;
-    while(data[hash & (this->capacity-1)].allocated)
+    while(data[hash & (this->capacity-1)].allocated && data[hash & (this->capacity-1)].getKey() != rec.getKey())
     {
         hashCount++;
         hash = this->rehash(hash);
-        if(hashCount >= 2 && data[hash & (this->capacity-1)].allocated)
+        if(hashCount >= 2 && data[hash & (this->capacity-1)].allocated && data[hash & (this->capacity-1)].getKey() != rec.getKey())
         {
             this->resize(this->capacity<<1);
             hash = this->hash(rec.getKey());

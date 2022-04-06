@@ -142,6 +142,7 @@ void MemoryMap::clear()
 {
     if(this->map.root)
 	    this->map.freeRecursive(this->map.root, freeObjNode, this->getMemMan());
+    this->map.root = nullptr;
 }
 MemoryMap::~MemoryMap()
 {

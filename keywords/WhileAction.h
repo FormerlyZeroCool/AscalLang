@@ -32,12 +32,12 @@ public:
 	    }
 
 	    index = startOfCodeBlock;
-	    const string_view booleanExpression(frame->exp.substr(startOfBoolExp,index-startOfBoolExp));
-	    ParamFrame<double> boolExecutionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
+	    const SubStrSV booleanExpression = ParsingUtil::getExprInStringSV(frame->exp, startOfBoolExp, '(', ')', '{');
+	    FunctionSubFrame<double> boolExecutionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
 	    boolExecutionFrame.setIsDynamicAllocation(false);
-	    boolExecutionFrame.exp = booleanExpression;
+	    boolExecutionFrame.exp = booleanExpression.data;
 	    boolExecutionFrame.setContext(frame->getContext());
-	    if(booleanExpression.size() == 0)
+	    if(booleanExpression.data.size() == 0)
 	    {
 	        throw std::string("Error no boolean expression provided in while.\n");
 	    }
@@ -45,7 +45,7 @@ public:
 	    try{
 		    if(*runtime.boolsettings["o"])
 	        {
-	            std::cout<<"Executing While Boolean Expression: "<<booleanExpression<<"\n";
+	            std::cout<<"Executing While Boolean Expression: "<<booleanExpression.data<<"\n";
 	        }
 	        boolExpValue = runtime.calculateExpression(&boolExecutionFrame);
 	    }
@@ -59,7 +59,7 @@ public:
 	    }
 
 	    codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime.ascal_cin);
-	    ParamFrame<double> executionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
+	    FunctionSubFrame<double> executionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
 	    executionFrame.exp = codeBlock.data;
 	    executionFrame.setIsDynamicAllocation(false);
 	    executionFrame.setContext(frame->getContext());
@@ -87,7 +87,7 @@ public:
 	    	    if(*runtime.boolsettings["o"])
 	            {
 	                std::cout<<"While block Execution Complete.\n\n";
-	                std::cout<<"Jumping back to execute While Boolean Expression: "<<booleanExpression<<"\n";
+	                std::cout<<"Jumping back to execute While Boolean Expression: "<<booleanExpression.data<<"\n";
 	            }
 	        try{
 	        	boolExecutionFrame.index = 0;
@@ -118,7 +118,7 @@ public:
 	    frame->index = 0;
 	    while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
 	        index++;
-	    frame->index = (index-2<frame->exp.size()?index-2:frame->exp.size());
+	    frame->index = codeBlock.start + codeBlock.end;//(index-2<frame->exp.size()?index-2:frame->exp.size());
 	}
 };
 

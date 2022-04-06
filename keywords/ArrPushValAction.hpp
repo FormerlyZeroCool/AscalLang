@@ -21,7 +21,7 @@ public:
 	void action(AscalFrame<double>* frame) override
 	{
         params.statements.clear();
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
+	    SubStrSV exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord);
         params = ParsingUtil::ParseStatementList(exp.data, 0, params);
 	    if(params.statements.size() < 2)
 	    	throw std::string("arrPush(<object/array>,<value as Ascal expression>)");

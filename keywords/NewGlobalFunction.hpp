@@ -37,7 +37,7 @@ public:
             }
             else if(firstCharExp == '[')
             {
-                Object var(runtime.memMan, newVarPart.data,string_view("", 0));
+                Object var(runtime.memMan, newVarPart.data,string_view(" ", 1));
                 obj = &parent->loadChild(var, runtime);
                 runtime.makeArray(*obj);
             }

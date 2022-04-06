@@ -61,7 +61,7 @@ public:
 	    }
 	    std::streambuf* cinrdbuf = inputStream.rdbuf();
 	    inputStream.rdbuf(inputFile.rdbuf());
-	    FunctionFrame<double>* calledFunctionMemory = new FunctionFrame<double>(runtime, runtime.memMan);
+	    FunctionFrame<double>* calledFunctionMemory = runtime.fFramePool.construct(runtime, runtime.memMan);
 	    calledFunctionMemory->setIsDynamicAllocation(false);
 	    while(true)
 	    {
@@ -93,7 +93,7 @@ public:
 	            std::cerr<<exception<<std::endl;
 	        }
 	    }
-	    delete calledFunctionMemory;
+	    runtime.fFramePool.destroy(calledFunctionMemory);
 	    inputFile.close();
 	    inputStream.rdbuf(cinrdbuf);
 	    if(*runtime.boolsettings["o"])

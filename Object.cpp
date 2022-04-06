@@ -736,6 +736,7 @@ void Object::clone(const Object &o)
             memcpy(&location, &newObj, sizeof(Object*));
         }
     }
+    this->objectMap = o.objectMap;
     this->listSize = o.getListSize();
 }
 Object& Object::operator=(const Object &o)
