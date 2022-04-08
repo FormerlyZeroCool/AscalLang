@@ -30,7 +30,7 @@ public:
     ~Pool()
     {
         for(auto block : this->pool)
-            free(block);
+            std::free(block);
     }
     void* malloc()
     {
