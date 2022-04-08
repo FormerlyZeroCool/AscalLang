@@ -1,4 +1,3 @@
-
 #pragma once
 /*
  * HashMap.hpp
@@ -15,6 +14,7 @@ struct Chunk {
     k key;
     v value;
     bool allocated = false;
+    uint8_t displacementCount = 0;
     Chunk(){}
     Chunk(const k &key, const v &value): key(key), value(value), allocated(true)
     {}
@@ -148,14 +148,44 @@ int64_t allocatedCount()
     }
     return count;
 }
+//pushes out allocated block to other location if possible
+//this means deallocatingprevious chunk to make available for new cuckoo's egg(key,value pair)
+bool cuckoo(const Chunk<t, u> &rec, const uint64_t hash, const int_fast8_t count)
+{
+    const uint64_t index = hash & (this->getCapacity() - 1);
+    if(this->data[index].displacementCount <= 1 && this->data[index].allocated && rec.getKey() != this->data[index].getKey())
+    {
+        const t &alternateObject = this->data[index].key;
+        uint64_t altHash = this->hash(alternateObject);
+        for(int_fast8_t i = 0; i < count; i++)
+            altHash = this->rehash(altHash);
+        const uint64_t newIndex = altHash & this->getCapacity() - 1;
+
+        if(!this->data[newIndex].allocated)
+        {
+        //std::cout<<rec.getKey()<<": "<<hash<<"\n"<<alternateObject<<": "<<altHash<<"\n";
+            this->data[newIndex].key = std::move(this->data[index].key);
+            this->data[newIndex].value = std::move(this->data[index].value);
+            this->data[newIndex].allocated = true;
+            this->data[newIndex].displacementCount = this->data[index].displacementCount + 1;
+            this->data[index].displacementCount = 0;
+            this->data[index].allocated = false;
+            return true;
+        }
+    }
+    return false;
+}
 iterator<t, u> insert(const Chunk<t, u> &rec)
 {
     uint64_t hash = this->hash(rec.getKey());
-    uint_fast32_t hashCount = 0;
+    const uint64_t ohash = hash;
+    int_fast8_t hashCount = 0;
+    this->cuckoo(rec, hash, 0);
     while(data[hash & (this->capacity-1)].allocated && data[hash & (this->capacity-1)].getKey() != rec.getKey())
     {
         hashCount++;
         hash = this->rehash(hash);
+        if(hashCount == 1) this->cuckoo(rec, hash, 1);
         if(hashCount >= 2 && data[hash & (this->capacity-1)].allocated && data[hash & (this->capacity-1)].getKey() != rec.getKey())
         {
             this->resize(this->capacity<<1);
@@ -165,7 +195,7 @@ iterator<t, u> insert(const Chunk<t, u> &rec)
     hash &= (this->capacity-1);
     data[hash].construct(rec);
     //const auto alloced = this->allocatedCount();
-    //std::cout<<"capacity, alloced, fill% "<<this->getCapacity()<<", "<<alloced<<", "<<((alloced*1.0)/this->getCapacity())<<"\n";
+    //std::cout<<"capacity, alloced, fill% "<<this->getCapacity()<<", "<<alloced<<", "<<((alloced*100.0)/this->getCapacity())<<"\n";
     return iterator<t, u>(&data[hash], &data[this->getCapacity() - 1]);
 }
 uint64_t hash(const t &key)
@@ -174,9 +204,11 @@ uint64_t hash(const t &key)
 }
 int64_t rehash(int64_t hash)
 {
-    const auto ohash = hash + 1997;
+    static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
+    const auto ohash = hash;
     hash ^= (hash << 31) ^ (hash >> 29);
-    hash ^= (ohash << 15) ^ (ohash);
+    hash += offset;
+    hash ^= ((ohash << 15) ^ (ohash)) * prime;
     return hash + 1997;
 }
 iterator<t, u> find(const t &key)
@@ -268,5 +300,5 @@ void clear()
 }
 private:
     Chunk<t, u> *data;
-    uint64_t capacity = 32;
+    uint64_t capacity = 8;
 };
