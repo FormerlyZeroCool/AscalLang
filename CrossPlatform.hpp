@@ -73,11 +73,19 @@ static void getLine(std::istream &ascal_cin, std::string &line)
 
 static void readLine(std::string &line, std::string prompt)
 {
-    char *readLineBuffer = readline(prompt.c_str());
+    char *readLineBuffer = nullptr;
+    if(prompt.size())
+        readLineBuffer = readline(prompt.c_str());
+    else
+        readLineBuffer = readline("");
+
     auto bufCleaner = std::make_unique<char*>(readLineBuffer);
-    line = readLineBuffer;
-    if (line.size() > 0) {
-      add_history(readLineBuffer);
+    if(readLineBuffer)
+    {
+        line = readLineBuffer;
+        if (line.size() > 0) {
+          add_history(readLineBuffer);
+        }
     }
 }
 static void getLine(std::istream &ascal_cin, std::string &line)
