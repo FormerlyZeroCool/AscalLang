@@ -71,7 +71,7 @@ static void getLine(std::istream &ascal_cin, std::string &line)
 }
 #else
 
-static void readLine(std::string &line, std::string prompt)
+static bool readLine(std::string &line, std::string prompt)
 {
     char *readLineBuffer = nullptr;
     if(prompt.size())
@@ -87,6 +87,7 @@ static void readLine(std::string &line, std::string prompt)
           add_history(readLineBuffer);
         }
     }
+    return readLineBuffer;
 }
 static void getLine(std::istream &ascal_cin, std::string &line)
 {

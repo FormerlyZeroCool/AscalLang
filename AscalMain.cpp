@@ -73,7 +73,8 @@ int main(int argc,char* argv[])
     //if you then remove header files for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
       
       std::string line;
-      CrossPlatform::readLine(line, ">>");
+      if(!CrossPlatform::readLine(line, ">>"))
+        break;
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
       	if(ParsingUtil::firstChar(line, '{'))
