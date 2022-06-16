@@ -9,16 +9,19 @@
 #define KEYWORDS_SHOWOPBOOLSETTING_HPP_
 
 #include "../Keyword.hpp"
+
+	static inline void showOpBoolSetting(KeywordExecutionContext ctx) 
+	{
+	    ctx.runtime().updateBoolSetting("o");
+		ctx.frame().index += Keyword::opcodeSize();
+	}
 class ShowOpBoolSetting: public StKeyword {
 public:
 	ShowOpBoolSetting(AscalExecutor &runtime):
 	StKeyword(runtime)
 	{
 		this->keyWord = "o";
-	}
-	void action(AscalFrame<double>* frame) override
-	{
-	    runtime.updateBoolSetting(frame);
+		this->operation = showOpBoolSetting;
 	}
 };
 

@@ -61,10 +61,10 @@ public:
 	    }
 	    std::streambuf* cinrdbuf = inputStream.rdbuf();
 	    inputStream.rdbuf(inputFile.rdbuf());
-	    FunctionFrame<double>* calledFunctionMemory = runtime.fFramePool.construct(runtime, runtime.memMan);
-	    calledFunctionMemory->setIsDynamicAllocation(false);
 	    while(true)
 	    {
+			FunctionFrame<double>* calledFunctionMemory = runtime.framePool.construct(runtime, runtime.memMan);
+			calledFunctionMemory->setIsDynamicAllocation(false);
 	    	std::string line;
 	        getline(inputFile, line);
 	        calledFunctionMemory->exp = line;
@@ -72,7 +72,6 @@ public:
 	    		break;
 	        //reset so it is like we are executing a new frame with shared memory, and if/else flag state
 	        calledFunctionMemory->index = 0;
-	        calledFunctionMemory->level = 0;
 	        calledFunctionMemory->memoPointer = 0;
 	        calledFunctionMemory->setIsFirstRun(true);
 	        calledFunctionMemory->setAugmented(false);
@@ -93,7 +92,6 @@ public:
 	            std::cerr<<exception<<std::endl;
 	        }
 	    }
-	    runtime.fFramePool.destroy(calledFunctionMemory);
 	    inputFile.close();
 	    inputStream.rdbuf(cinrdbuf);
 	    if(*runtime.boolsettings["o"])

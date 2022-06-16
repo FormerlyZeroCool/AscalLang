@@ -185,7 +185,7 @@ iterator<t, u> insert(const Chunk<t, u> &rec)
     {
         hashCount++;
         hash = this->rehash(hash);
-        if(hashCount == 1) this->cuckoo(rec, hash, 1);
+        if(hashCount == 1 && data[hash & (this->capacity-1)].getKey() != rec.getKey()) this->cuckoo(rec, hash, 1);
         if(hashCount >= 2 && data[hash & (this->capacity-1)].allocated && data[hash & (this->capacity-1)].getKey() != rec.getKey())
         {
             this->resize(this->capacity<<1);
@@ -202,7 +202,7 @@ uint64_t hash(const t &key)
 {
     return std::hash<t>()(key);
 }
-int64_t rehash(int64_t hash)
+int64_t rehash(uint64_t hash)
 {
     static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
     const auto ohash = hash;
@@ -277,7 +277,7 @@ void resize(const uint64_t size)
                 old[i].~Chunk<t, u>();
             }
         }
-        delete[] old;
+        delete old;
     }
 }
 void clear()

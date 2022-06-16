@@ -58,7 +58,7 @@ SubStrSV ParsingUtil::getVarNameSV(string_view s,uint32_t index)
         begin++;
         index++;
     }
-    while(s.length()>index && (ParsingUtil::isalpha(s[index]) || ParsingUtil::isNumeric(s[index])))
+    while(s.length()>index && s[index] != ' ' && (ParsingUtil::isalpha(s[index]) || ParsingUtil::isNumeric(s[index])))
     {
     	index++;
     }

@@ -1,7 +1,7 @@
 //============================================================================
 // Name        : Ascal.cpp
 // Author      : Andrew Rubinstein
-// Version     : v2.02
+// Version     : v3.00.-1
 // Copyright   :
 // Description : An infix expression interpreter, and simple math programming language in C++
 // A.S.Cal.
@@ -70,7 +70,7 @@ int main(int argc,char* argv[])
   while(std::cin && running)
   {
     //this can be replaced with std::cout<<">>"; getline(std::cin, arg);
-    //if you then remove header files for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
+    //if you then remove macro definition in compilation for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
       
       std::string line;
       if(!CrossPlatform::readLine(line, ">>"))

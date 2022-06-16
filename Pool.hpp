@@ -74,7 +74,7 @@ public:
 template <typename t>
 class Pool_t {
     struct Chunk {
-        char data[sizeof(t)];
+        t data;
         Chunk *next = nullptr;
         Chunk(Chunk *next): next(next) {}
         Chunk() {}
@@ -95,11 +95,11 @@ public:
     ~Pool_t()
     {
         for(auto block : this->blocks)
-            delete[] block;
+            free(block);
     }
     void init()
     {   
-        auto ptr = new Chunk[this->poolSize];
+        auto ptr = malloc(this->poolSize * sizeof(Chunk));
         blocks.push_back(ptr);
         this->initBlock(ptr, poolSize);
         last = ptr;
@@ -113,12 +113,12 @@ public:
             last = last->next;
         }
     }
-    void* malloc()
+    constexpr void* malloc()
     {
         Chunk *ptr = this->last->next;
         if(!ptr)
         {
-            ptr = new Chunk[this->poolSize];
+            ptr = malloc(this->poolSize * sizeof(Chunk));
             this->last->next = ptr;
             this->blocks.push_back(ptr);
             this->initBlock(ptr, this->poolSize);

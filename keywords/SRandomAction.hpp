@@ -19,7 +19,7 @@ public:
 	}
 	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
+	    /*SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    double input = runtime.callOnFrame(frame,exp.data);
 	    double ib = input/100000;
 	    input *= 100000;
@@ -42,7 +42,7 @@ public:
 	    {
 	    	std::cout<<"srand("<<(input/100000)<<") = "<<ParsingUtil::to_string(hash)<<'\n';
 	    }
-        frame->index = exp.end;
+        frame->index = exp.end;*/
 	}
 };
 

@@ -23,74 +23,9 @@ public:
         this->elseText = "else";
 	}
 	void action(AscalFrame<double>* frame) override
-	{
-	    //parse expression, start from substr when go up until substr end is found
-	    //extract substring, and save the other parts of the expression
-	    //find when evaluate expression between it and then
-	    //if the expression evaluates to anything other than 0
-	    //then extract the expression proceeding the then statement
-	    //frame->index = 0;
-		static const int invalidIndex = 2000000000;
-	    const int startIndex = frame->index;
+	{/*
 
-        const string_view exp = string_view(frame->exp);
-	    int endIndex = frame->index;
-	    /*this block locates the end keyword for the ascal when block*/{
-	    int i = endIndex;
-	    uint8_t qCount = 0;
-	    while(i < frame->exp.length()-2)
-	    {
-	    	qCount = ((frame->exp[i] == '\"') + qCount) & 1;
-	    	if(frame->exp[i] == 'e' && frame->exp[i+1] == 'n' && frame->exp[i+2] == 'd' && qCount == 0)
-	    	{
-	    		endIndex = i;
-	    		i = invalidIndex;
-	    	}
-	    	i++;
-	    }
-	    }
-	    //string_view endOfExp = string_view(frame->exp).substr(endIndex+3,frame->exp.length());
-	    string_view value;
-	    int index = startIndex + 4;
-	    //should always start after when is finished to build boolean expression
-
-        //find boolean expression after when
-        //find code block to exec if be evals to true
-        //find out if next is when, else, or end
-        //if when take when to end extract to function frame with parent of current push to stack set index to after end
-        //if else take code block after else and put on stack set index to after end
-        //if end set index to after end
-        //then push code block to be exec if true on stack
-        //then push conditional onto stack with boolean expression
-	    int thenIndex;
-	    int whenIndex = startIndex;
-	    double boolExpValue;
-	    int elseIndex = frame->exp.find(this->elseText,frame->index);
-	    elseIndex = elseIndex==-1?invalidIndex:elseIndex;
-        
-            thenIndex = frame->exp.find(this->thenText,index);
-
-            //Parsing boolean expression
-            while(frame->exp[index] == ' ' && index < endIndex && index < thenIndex)
-            {
-                index++;
-            }
-            uint32_t startOfBoolExp = index;
-            while(frame->exp.size() > index && index < endIndex && index < thenIndex)
-            {
-                index++;
-            }
             string_view booleanExpression = exp.substr(startOfBoolExp,index-startOfBoolExp);
-        
-	        if(booleanExpression.size() == 0)
-	        {
-	            throw std::string("Error no boolean expression provided in when.\n");
-	        }
-
-		    if(*runtime.boolsettings["o"])
-	        {
-	            std::cout<<"Executing Boolean Expression: "<<booleanExpression<<'\n';
-	        }
             
             index += 5;//increment index past this when
             thenIndex = frame->exp.find(this->keyWord,index);//find next when
@@ -154,7 +89,112 @@ public:
 	    }
         //frame->initialOperands.push(runtime.callOnFrame(frame, value));
         frame->index = endIndex+3;
+        */
 	}
+
+	virtual void compile(CompilationContext &ctx){
+        //parse expression, start from substr when go up until substr end is found
+	    //extract substring, and save the other parts of the expression
+	    //find when evaluate expression between it and then
+	    //if the expression evaluates to anything other than 0
+	    //then extract the expression proceeding the then statement
+	    //frame->index = 0;
+	    const int startIndex = ctx.src_index;
+
+        const string_view exp = string_view(ctx.source);
+	    uint32_t endIndex = ctx.src_index;
+	    /*this block locates the end keyword for the ascal when block*/{
+	    uint32_t i = endIndex;
+	    uint8_t qCount = 0;
+	    while(i < ctx.source.length()-2)
+	    {
+	    	qCount = ((ctx.source[i] == '\"') + qCount) & 1;
+	    	if(ctx.source[i] == 'e' && ctx.source[i+1] == 'n' && ctx.source[i+2] == 'd' && qCount == 0)
+	    	{
+	    		endIndex = i;
+	    		i = -1;
+	    	}
+	    	i++;
+	    }
+	    }
+	    //string_view endOfExp = string_view(ctx.source).substr(endIndex+3,ctx.source.length());
+	    uint32_t index = startIndex + 4;
+	    //should always start after when is finished to build boolean expression
+
+        //find boolean expression after when
+        //find code block to exec if be evals to true
+        //find out if next is when, else, or end
+        //if when take when to end extract to function frame with parent of current push to stack set index to after end
+        //if else take code block after else and put on stack set index to after end
+        //if end set index to after end
+        //then push code block to be exec if true on stack
+        //then push conditional onto stack with boolean expression
+	    
+	    const uint32_t whenIndex = startIndex;
+	    double boolExpValue;
+	    const uint32_t elseIndex = ctx.source.find(this->elseText, index);
+        
+        const uint32_t thenIndex = ctx.source.find(this->thenText,index);
+
+            //Parsing boolean expression
+            while(ctx.source[index] == ' ' && index < endIndex && index < thenIndex)
+            {
+                index++;
+            }
+            const uint32_t startOfBoolExp = index;
+            while(ctx.source.size() > index && index < endIndex && index < thenIndex)
+            {
+                index++;
+            }
+            string_view booleanExpression = exp.substr(startOfBoolExp,index-startOfBoolExp);
+            const uint32_t boolExpLen = index-startOfBoolExp;
+	        if(booleanExpression.size() == 0)
+	        {
+	            throw std::string("Error no boolean expression provided in when.\n");
+	        }
+
+		    if(*runtime.boolsettings["o"])
+	        {
+	            std::cout<<"Executing Boolean Expression: "<<booleanExpression<<'\n';
+	        }
+            index += 5;//increment index past this when
+            const uint32_t nextWhen = ctx.source.find(this->keyWord,index);//find next when
+            const uint32_t codeBlockEndIndex = std::min(std::min(endIndex, thenIndex),elseIndex);
+            string_view value = ParsingUtil::getExprInStringSV(exp.substr(index, codeBlockEndIndex - index), 0, '{', '}',';').data;//get code block
+        //for each when 
+        //call super class compile first
+        //end of last codeblock
+        //for else 
+        //for end remove end token
+        Keyword::compile(ctx);
+        //start of bool exp end of bool exp
+        string_view boolExpStartOffset = ctx.target.append(0 - ctx.target.getInstructions().length());
+        ctx.target.append(boolExpLen);
+        //start of codeblock end of codeblock 
+        string_view startOfCodeBlockOffset = ctx.target.append(index);
+        ctx.target.append(codeBlockEndIndex - index);
+        //start of next when 
+        string_view nextWhenIndex = ctx.target.append(nextWhen);
+        //ctx.original.compileInstructions(ctx.source.substr(startIndex, boolExpLen), runtime, ctx);
+        /*for(int32_t i = startIndex; i < startIndex + boolExpLen; i++)
+        {
+            ctx.target.append(exp[i]);
+        }*/
+        //ctx.original.compileInstructions(ctx.source.substr(index, codeBlockEndIndex - index), runtime, ctx);
+        for(int32_t i = index; i < codeBlockEndIndex; i++)
+        {
+            ctx.target.append(exp[i]);
+        }
+        ctx.src_index = std::min(nextWhen, endIndex+3);
+    }
+    //so new action algo will be
+    //parse bool exp
+    //parse codeblock
+    //parse remainder
+    //if remainder has when then include it, if only else disinclude it and only include codeblock in remainder
+    //push remainder in subframe
+    //push codeblock in subframe
+    //push boolean expression in conditional frame
 };
 
 #endif /* KEYWORDS_WHENACTION_HPP_ */

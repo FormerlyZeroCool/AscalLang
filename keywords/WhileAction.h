@@ -16,109 +16,76 @@ public:
 	{
 		this->keyWord = "while";
 	}
-	void action(AscalFrame<double>* frame) override
+	void compile(CompilationContext &ctx) override
 	{
-	    int index = frame->index+5;
-	    while(frame->exp[index] == ' ')
+	    int index = ctx.src_index+5;
+	    while(ctx.source[index] == ' ')
 	        index++;
 
 	    int startOfBoolExp = index;
 	    int startOfCodeBlock = index;
-	    SubStr codeBlock("",0,0);
+	     
 
-	    while(startOfCodeBlock < frame->exp.size() && frame->exp[startOfCodeBlock] != '{')
+	    while(startOfCodeBlock < ctx.source.size() && ctx.source[startOfCodeBlock] != '{')
 	    {
 	        startOfCodeBlock++;
 	    }
 
 	    index = startOfCodeBlock;
-	    const SubStrSV booleanExpression = ParsingUtil::getExprInStringSV(frame->exp, startOfBoolExp, '(', ')', '{');
-	    FunctionSubFrame<double> boolExecutionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
-	    boolExecutionFrame.setIsDynamicAllocation(false);
-	    boolExecutionFrame.exp = booleanExpression.data;
-	    boolExecutionFrame.setContext(frame->getContext());
+	    const SubStrSV booleanExpression = ParsingUtil::getExprInStringSV(ctx.source, startOfBoolExp, '(', ')', '{');
+
 	    if(booleanExpression.data.size() == 0)
 	    {
 	        throw std::string("Error no boolean expression provided in while.\n");
 	    }
-	    double boolExpValue;
-	    try{
-		    if(*runtime.boolsettings["o"])
-	        {
-	            std::cout<<"Executing While Boolean Expression: "<<booleanExpression.data<<"\n";
-	        }
-	        boolExpValue = runtime.calculateExpression(&boolExecutionFrame);
-	    }
-	    catch(std::string &exception)
-	    {
-	        throw std::string(exception +"\nIn While Boolean Expression");
-	    }
-	    if(*runtime.boolsettings["o"])
-	    {
-	        std::cout<<"Execution Complete. "<<(boolExpValue?"true":"false")<<"\n\n";
-	    }
-
-	    codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime.ascal_cin);
-	    FunctionSubFrame<double> executionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
-	    executionFrame.exp = codeBlock.data;
-	    executionFrame.setIsDynamicAllocation(false);
-	    executionFrame.setContext(frame->getContext());
-	    if(boolExpValue != 0)
-	    {
-	        while(boolExpValue != 0)
-	        {
-	    	    if(*runtime.boolsettings["o"])
-	            {
-	                std::cout<<"Executing While loop code block:\n"<<codeBlock.data<<'\n';
-	            }
-	            try{
-                    executionFrame.index = 0;
-                    executionFrame.level = 0;
-                    executionFrame.setIsFirstRun(true);
-                    executionFrame.setZeroFlag(false);
-                    runtime.calculateExpression(&executionFrame);
-	                //runtime->callOnFrame(frame,codeBlock.data);
-	            }
-	            catch(std::string &exception)
-	            {
-	                throw std::string(exception + "\nIn While body subexp:");
-	            }
-
-	    	    if(*runtime.boolsettings["o"])
-	            {
-	                std::cout<<"While block Execution Complete.\n\n";
-	                std::cout<<"Jumping back to execute While Boolean Expression: "<<booleanExpression.data<<"\n";
-	            }
-	        try{
-	        	boolExecutionFrame.index = 0;
-	        	boolExecutionFrame.level = 0;
-	        	boolExecutionFrame.setIsFirstRun(true);
-	        	boolExecutionFrame.setZeroFlag(false);
-		        boolExpValue = runtime.calculateExpression(&boolExecutionFrame);
-
-	    	    if(*runtime.boolsettings["o"])
-	            {
-	                if(boolExpValue)
-	                {
-	                    std::cout<<"Execution result true.\nContinuing loop execution.\n\n";
-	                }
-	                else
-	                {
-	                    std::cout<<"Execution result false.\nExiting loop.\n\n";
-	                }
-	            }
-	        }
-	        catch(std::string &exception)
-	        {
-	            throw std::string(exception  + "\nIn While Boolean Expression");
-	        }
-	        }
-	    }
-	    index = codeBlock.end + startOfCodeBlock-2;
-	    frame->index = 0;
-	    while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
+		const uint32_t topOfLoopIndex = ctx.target.getInstructions().size();
+		ctx.target.compileParams(booleanExpression.data, runtime, ctx);
+		const uint32_t afterBoolExpIndex = ctx.target.getInstructions().size();
+		std::cout<<"top of bool exp: "<<topOfLoopIndex<<" after boolExp index: "<<afterBoolExpIndex<<"\n";
+		uint32_t startOJumpLenIndex;
+		{
+			double val = 0;
+            operationType op = readAndPushDouble;
+            ctx.target.append(op);
+			startOJumpLenIndex = ctx.target.getInstructions().size();
+			ctx.target.append(val);
+			
+			this->operation = (jumpIfFalseAction);
+			ctx.target.append(this->operation);
+		}
+		const uint32_t afterJumpBoolIndex = reinterpret_cast<std::uintptr_t>(&ctx.target.getInstructions().back()) - reinterpret_cast<std::uintptr_t>(&ctx.target.getInstructions()[0]);
+		
+	    SubStrSV codeBlock = ParsingUtil::getExprInStringSV(ctx.source, index);
+		std::cout<<"\nins len: "<<ctx.target.getInstructions().size()<<"\n";
+		ctx.target.compileParams(codeBlock.data, runtime, ctx);
+		
+		operationType cs = clearStack;
+		ctx.target.append(cs);
+		const uint32_t afterCodeBlock = ctx.target.getInstructions().size();
+		std::cout<<"after bool exp: "<<afterBoolExpIndex<<" after code block: "<<afterCodeBlock<<"\nins len: "<<ctx.target.getInstructions().size()<<"\n";
+		{
+			uint32_t codeBlockLen_bin = ctx.target.getInstructions().size() - topOfLoopIndex;
+			const double val = 16 + codeBlockLen_bin;
+			std::cout<<"seting jump back amount: "<<val<<"\n";
+                operationType op = readAndPushDouble;
+                ctx.target.append(op);
+			ctx.target.append(val);
+			std::cout<<" instructions len: "<<ctx.target.getInstructions().size()<<"\n";
+			
+			this->operation = jumpBackAction;
+			ctx.target.append(this->operation);
+		}
+		{
+			std::cout<<" instructions len: "<<ctx.target.getInstructions().size()<<"\n";
+			const double val = ctx.target.getInstructions().size() - startOJumpLenIndex - 8;
+			std::cout<<"seting jump forward amount: "<<val<<"\n";
+			memcpy(&ctx.target.getInstructions()[startOJumpLenIndex], &val, sizeof(val));
+		}
+	   	index = codeBlock.end + startOfCodeBlock-2;
+	    ctx.src_index = 0;
+	    while(ctx.source[index] == ';' || ctx.source[index] == ' ' || ctx.source[index] == '}')
 	        index++;
-	    frame->index = codeBlock.start + codeBlock.end;//(index-2<frame->exp.size()?index-2:frame->exp.size());
+	    ctx.src_index = codeBlock.end;//(index-2<frame->exp.size()?index-2:frame->exp.size());
 	}
 };
 

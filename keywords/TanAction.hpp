@@ -9,23 +9,27 @@
 #define KEYWORDS_TANACTION_HPP_
 
 #include "../Keyword.hpp"
+static inline void tanAction(KeywordExecutionContext ctx) 
+{
+	double input = 0;
+	ctx.frame().initialOperands.top(input);
+	ctx.frame().initialOperands.pop();
+    ctx.frame().initialOperands.push(tan(input));
+	#ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+    {
+    	std::cout<<"tan("<<input<<") = "<<tan(input)<<'\n';
+    }
+	#endif
+    ctx.frame().index += Keyword::opcodeSize();
+}
 class TanAction: public OpKeyword {
 public:
 	TanAction(AscalExecutor &runtime):
 	OpKeyword(runtime)
 	{
 		this->keyWord = "tan";
-	}
-	void action(AscalFrame<double>* frame) override
-	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime.callOnFrame(frame,exp.data);
-	    frame->initialOperands.push(tan(input));
-	    if(*runtime.boolsettings["o"])
-	    {
-	    	std::cout<<"tan("<<input<<") = "<<tan(input)<<'\n';
-	    }
-	    frame->index = exp.end;
+		this->operation = tanAction;
 	}
 };
 

@@ -18,7 +18,7 @@ public:
 	{
 		this->keyWord = "arrErase";
 	}
-	void action(AscalFrame<double>* frame) override
+	/*void action(AscalFrame<double>* frame) override
 	{
         params.statements.clear();
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
@@ -35,7 +35,7 @@ public:
 	    	std::cout<<"pushed value "<<params.statements[1].data<<" to list "<<params.statements[0].data<<" at position: "<<(list->getListSize())<<"\n";
 	    }
 	    frame->index = exp.end;
-	}
+	}*/
 };
 
 #endif /* KEYWORDS_PUSHVALACTION_HPP_ */

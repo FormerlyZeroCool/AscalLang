@@ -11,15 +11,16 @@
 #include <cmath>
 #include <iostream>
 
-template <class t>
-class Calculator {
-private:
-    static std::map<char,t (*)(t&,t&)> operations;
-    t add(t &and1,t &and2){    return and1+and2;}
-    t subtract(t &and1,t &and2){return and1-and2;}
-    t multiply(t &and1,t &and2){return and1*and2;}
-    t divide(t &and1,t &and2){return and2!=0?and1/and2:throw std::string("Error division by zero.");}
-    t doubleModulus(t &and1,t &and2)
+    template <typename t>
+    static inline t add(t &and1,t &and2){ return and1+and2;}
+    template <typename t>
+    static inline t subtract(t &and1,t &and2){return and1-and2;}
+    template <typename t>
+    static inline t multiply(t &and1,t &and2){return and1*and2;}
+    template <typename t>
+    static inline t divide(t &and1,t &and2){return and2!=0?and1/and2:throw std::string("Error division by zero.");}
+    template <typename t>
+    static inline t doubleModulus(t &and1,t &and2)
     {
         t result;
           if(and2 != 0)
@@ -45,8 +46,10 @@ private:
           }
           return result;
     }
-    t exponentiate(t &and1,t &and2){return std::pow(and1,and2);}
-    t permute(t &and1,t &and2){
+    template <typename t>    
+    static inline t exponentiate(t &and1,t &and2){return std::pow(and1,and2);}
+    template <typename t>
+    static inline t permute(t &and1,t &and2){
         t result =  1;
 
         for(int i = 0;i<and2 && and1 - i > 1;i++)
@@ -54,8 +57,9 @@ private:
             result *= and1 - i;
         }
         return result;
-    }
-    t combinations(t &and1,t &and2)
+    }  
+    template <typename t>
+    static inline t combinations(t &and1,t &and2)
     {
         t result =  1;
         for(int i = 0;i<and2 && and1 - i > 1;i++)
@@ -64,11 +68,21 @@ private:
         }
         return result;
     }
-    t log(t &and1,t &and2){ return std::log(and2)/std::log(and1); }
-    t rootOp(t &and1,t &and2){ return std::pow(and2,1/and1); }
-    t equals(t &and1,t &and2){ return and1==and2; }
-    t lessThan(t &and1,t &and2){ return and1<and2; }
-    t greaterThan(t &and1,t &and2){ return and1>and2; }
+    template <typename t>
+    static inline t log(t &and1,t &and2){ return std::log(and2)/std::log(and1); }
+    template <typename t>
+    static inline t rootOp(t &and1,t &and2){ return std::pow(and2,1/and1); }
+    template <typename t>
+    static inline t equals(t &and1,t &and2){ return and1==and2; }
+    template <typename t>
+    static inline t lessThan(t &and1,t &and2){ return and1<and2; }
+    template <typename t>
+    static inline t greaterThan(t &and1,t &and2){ return and1>and2; }
+
+template <class t>
+class Calculator {
+private:
+    static std::map<char,t (*)(t&,t&)> operations;
 public:
     Calculator(){}
 

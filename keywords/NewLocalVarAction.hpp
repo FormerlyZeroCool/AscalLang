@@ -16,6 +16,7 @@ public:
 	{
 		this->keyWord = "cloc";
 	}
+	/*
 	void action(AscalFrame<double>* frame) override
 	{
 		uint32_t index = frame->index+4;
@@ -45,6 +46,6 @@ public:
 	        std::cout<<std::endl<<"New local var: "<<localName.data<< " = "<<value<<std::endl;
 	    }
 	}
-};
+*/};
 
 #endif /* KEYWORDS_NEWLOCALVARACTION_HPP_ */

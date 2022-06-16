@@ -75,9 +75,9 @@ public:
 					exp += ParsingUtil::to_string(xi);
 					exp += ')';
 		            calledFunction->exp = exp;
-		            outPuts.push_back(
-		                    std::pair<double, double>(xi, runtime.calculateExpression(calledFunction))
-		            );
+		            //outPuts.push_back(
+		              //      std::pair<double, double>(xi, runtime.calculateExpression(calledFunction))
+		            //);
 					exp.clear();
 		        }
 		    }

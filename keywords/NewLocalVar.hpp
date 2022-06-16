@@ -9,6 +9,67 @@
 #define KEYWORDS_NEWLOCALVAR_HPP_
 
 #include "../Keyword.hpp"
+
+static inline void makeArray(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+}
+static inline void makeDouble(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    double value = -1;
+    memcpy(&value, &ctx.frame().exp[ctx.frame().index], sizeof(double));
+    ctx.frame().index += sizeof(double);
+    std::cout<<"localdouble: "<<value<<"\n";
+    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE, value));
+}
+static inline void makeDoubleParameter(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    double value = -1;
+    auto &localMem = (*ctx.runtime().currentStack)[ctx.runtime().currentStack->size() - ((ctx.runtime().currentStack->size() > 1) << 1)]->initialOperands;
+    localMem.top(value);
+    localMem.pop();
+    std::cout<<"paramdouble: "<<value<<" StackIndex: "<<ctx.frame().getLocalMemory().size()<<"\n";
+    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE,value));
+}
+static inline void makeObjectParameter(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    StackDataRecord value;
+    auto &localMem = (*ctx.runtime().currentStack)[ctx.runtime().currentStack->size() - ((ctx.runtime().currentStack->size() > 1) << 1)]->localMemory;
+    localMem.top(value);
+    localMem.pop();
+    //std::cout<<"paramdouble: "<<value<<"\n";
+    ctx.frame().getLocalMemory().push(value);
+}
+static inline void makeFunction(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    uint64_t size = -1;
+    memcpy(&size, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+    ctx.frame().index += sizeof(uint64_t);
+    const auto nameIndex = ctx.frame().index;
+    ctx.frame().index += size;
+    uint64_t bodySize = -1;
+    memcpy(&bodySize, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+    ctx.frame().index += sizeof(uint64_t);
+    Object *obj = ctx.runtime().memMan.constructObj(string_view(&ctx.frame().exp[nameIndex], size), 
+                        string_view(&ctx.frame().exp[ctx.frame().index], bodySize));
+    ctx.frame().index += bodySize;
+    //std::cout<<"localobj: "<<obj->getId()<<" id: "<<ctx.frame().getLocalMemory().size()<<"\n";
+    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::OWNED, obj));
+}
+static inline void returnAndPop(KeywordExecutionContext ctx)
+{
+    double data;
+    ctx.frame().initialOperands.top(data);
+    ctx.runtime().currentStack->pop();
+    ctx.runtime().deleteFrame(&ctx.frame());
+    ctx.runtime().currentStack->top(ctx.frame_ptr);
+    ctx.frame_ptr->initialOperands.push(data);
+    //    std::cout<<data<<"\n";
+}
 class NewLocalVar: public StKeyword {
 public:
     NewLocalVar(AscalExecutor &runtime):
@@ -16,72 +77,93 @@ public:
     {
         this->keyWord = "loc";
     }
-    void action(AscalFrame<double>* frame) override
+    void compile(CompilationContext &ctx) override
     {
         Object *nobj = nullptr;
-        SubStr localName = ParsingUtil::getVarName(frame->exp,frame->exp.find("loc",frame->index)+4);
+        SubStrSV localName = ParsingUtil::getVarNameSV(ctx.source,ctx.source.find("loc",ctx.src_index)+4);
         static uint32_t startOfExp;
-        startOfExp = frame->exp.find('=', frame->index)+1;
-        const char firstCharExp = ParsingUtil::getFirstChar(frame->exp.substr(startOfExp));
+        if(ctx.source[localName.end + 1] == '(')
+        {
+            ParsingUtil::ParseStatementList(ctx.source, localName.end+1, this->params);
+        }
+        startOfExp = ctx.source.find('=', ctx.src_index)+1;
+        const char firstCharExp = ParsingUtil::getFirstChar(ctx.source.substr(startOfExp));
+
+        SubStrSV subexp = ParsingUtil::getExprInStringSV(ctx.source, startOfExp);
         if(firstCharExp == '[')
         {
-            Object obj(runtime.memMan, localName.data);
+            /*Object obj(runtime.memMan, localName.data);
             nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());
-            runtime.makeArray(*nobj);
+            runtime.makeArray(*nobj);*/
         }
         else if(firstCharExp == '\"')
         {
-            Object obj(runtime.memMan, localName.data);
+            /*Object obj(runtime.memMan, localName.data);
             nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());
-            runtime.makeString(*nobj);
+            runtime.makeString(*nobj);*/
         }
-        else
+        if(!ParsingUtil::isDouble(subexp.data))
         {
-            SubStr subexp = ParsingUtil::getExpr(frame->exp, startOfExp, runtime.ascal_cin);
-            if(!ParsingUtil::isObj(subexp.data))
+            Object newLocal = Object(runtime.memMan, string_view("", 0));
+
+            CompilationContext body_ctx(subexp.data, newLocal, runtime);
+            ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
+            //this->operation = makeSelfParameter;
+            //body_ctx.target.append(this->operation);
+            for(const SubStrSV &param : this->params.statements)
             {
-                if(!ParsingUtil::isDouble(subexp.data))
+                std::cout<<param.data<<"\n";
+                if(param.data[0] != '&')
                 {
-                    Object newLocal = Object(runtime.memMan, localName.data,subexp.data,"");
-                    newLocal.compileInstructions();
-                    nobj = &runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory());
-                }
-                else
-                {
-                    Object obj(runtime.memMan, localName.data);
-                    const uint32_t nullIndex = ParsingUtil::isNumeric(subexp.data[subexp.data.size()-1])?subexp.data.size():subexp.data.size()-1;
-                    char tmp = subexp.data[nullIndex];
-                    subexp.data[nullIndex] = 0;
-                    obj.setDouble(atof(&subexp.data[0]));
-                    subexp.data[nullIndex] = tmp;
-                    nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());
-                }
-                if(*runtime.boolsettings["o"])
-                {
-                    std::cout<<std::endl<<"New Local function: "<<localName.data<< " exp: "<<nobj->instructionsToFormattedString()<<std::endl;
-                }
-            }
-            else
-            {
-                SubStrSV rightVarStart = ParsingUtil::getVarNameSV(frame->exp,startOfExp);
-                Object *newVar = runtime.resolveNextObjectExpression(frame, rightVarStart).data;
-                if(newVar)
-                {
-                    runtime.loadUserDefinedFn(*newVar, *frame->getLocalMemory());
-                }
-                else
-                {
-                    Object newLocal = Object(runtime.memMan, localName.data,subexp.data, "");
-                    newLocal.compileInstructions();
-                    runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory());
-                }
-                if(*runtime.boolsettings["o"])
-                {
-                    std::cout<<std::endl<<"New Local function: "<<localName.data<< " exp: "<<newVar->toString()<<std::endl;
+                    std::cout<<"generating code for loading double param\n";
+                    body_ctx.addDoubleLocal(param.data, 0);
+                    this->operation = makeDoubleParameter;
+                    body_ctx.target.append(this->operation);
                 }
             }
 
+            newLocal.LexCodeAndCompile(this->runtime, body_ctx);
+            //nobj = &runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory());
+
+            this->operation = makeFunction;
+            uint64_t countDoubleParams = 0, countObjectParams = 0;
+            ctx.target.append(this->operation);
+            ctx.target.append((uint64_t)(localName.data.size()));
+            for(int i = 0; i < localName.data.size(); i++)
+            {
+                ctx.target.append(localName.data[i]);
+            }
+            ctx.target.append((uint64_t)(body_ctx.target.getInstructions().size() + Keyword::opcodeSize()));
+            for(int i = 0; i < body_ctx.target.getInstructions().size(); i++)
+            {
+                ctx.target.append(body_ctx.target.getInstructions()[i]);
+            }
+            this->operation = returnAndPop;
+            ctx.target.append(this->operation);
+            ctx.addOwnedLocal(localName.data, this->params.statements.size());
+            std::cout<<"not a double not obj\n"<<"exp: "<<subexp.data<<"\n";
         }
+        else
+        {
+            /*Object obj(runtime.memMan, localName.data);
+            obj.setDouble(atof(&subexp.data[0]));
+            nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());*/
+            const uint32_t nullIndex = ParsingUtil::isNumeric(subexp.data[subexp.data.size()-1])?subexp.data.size():subexp.data.size()-1;
+            
+            this->operation = makeDouble;
+            ctx.target.append(this->operation);
+            /*ctx.target.append((uint64_t)(localName.data.size()));
+            for(int i = 0; i < localName.data.size(); i++)
+            {
+                ctx.target.append(localName.data[i]);
+            }*/
+            char tmp = subexp.data[nullIndex];
+            subexp.data[nullIndex] = 0;
+            ctx.target.append((double) atof(&subexp.data[0]));
+            subexp.data[nullIndex] = tmp;
+            ctx.addDoubleLocal(localName.data, 0);
+        }
+    ctx.src_index = subexp.end;
 
     }
 };

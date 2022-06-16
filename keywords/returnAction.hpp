@@ -48,8 +48,6 @@ public:
 	    }
 	    while(!frame->initialOperands.isEmpty())
 	    	frame->initialOperands.pop();
-	    while(!frame->initialOperators.isEmpty())
-	    	frame->initialOperators.pop();
 	    frame->index = frame->exp.size();
 	}
 };
