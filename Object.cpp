@@ -109,6 +109,8 @@ const uint8_t Object::initialOffset = sizeof(double);
             {
                 if(ctx.source[ctx.src_index + 1] == '=' && (ctx.source[ctx.src_index] == '<' || ctx.source[ctx.src_index] == '>'))
                     ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
+                else if(ctx.source[ctx.src_index + 1] == '=' && ctx.source[ctx.src_index] == '!')
+                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
                 else
                     ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::OPERATOR));
                 //ctx.target.append(AscalExecutor::OPERATOR);
@@ -171,19 +173,25 @@ const uint8_t Object::initialOffset = sizeof(double);
     {
         Object *obj = nullptr;
         size_t paramsCount = 0;
-        ctx.frame().index += Keyword::opcodeSize();
-        memcpy(&obj, &ctx.frame().exp[ctx.frame().index], sizeof(Object*));
-        ctx.frame().index += sizeof(Object*);
-        memcpy(&paramsCount, &ctx.frame().exp[ctx.frame().index], sizeof(size_t));
-        ctx.frame().index += sizeof(size_t);
-        
-        
-        AscalFrame<double> *newFrame = ctx.runtime().framePool.construct(ctx.runtime());
-        ctx.runtime().currentStack->push(newFrame);
+        ctx.getData(obj, ctx.frame().index + sizeof(Object*));
+        ctx.getData(paramsCount, ctx.frame().index + sizeof(Object*) * 2);
+        ctx.frame().index += sizeof(size_t) + sizeof(Object*) * 2;
+        auto newFrame = ctx.runtime().framePool.construct(ctx.runtime());
+        double var;
+        for(int i = 0; i < paramsCount; i++)
+        {
+            ctx.frame().initialOperands.top(var);
+            ctx.frame().initialOperands.pop();
+            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, var));
+        }
+        newFrame->initialOperands.resetStart();
         newFrame->exp = obj->getInstructions();
         newFrame->index = 0;
-        //std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";
+        ctx.runtime().frameStack.push(newFrame);
         ctx.frame_ptr = newFrame;
+        #ifdef debug
+        std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";
+        #endif
     }
     
     
@@ -397,6 +405,20 @@ const uint8_t Object::initialOffset = sizeof(double);
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
+    inline void notEqualToOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b >= a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<">="<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
     void compileOperator(CompilationContext &ctx, StackSegment<CompilationContext::Token> &stack)
     {
         operationType op = noop;
@@ -455,6 +477,10 @@ const uint8_t Object::initialOffset = sizeof(double);
         {
             op = greaterThanOrEqualToOp;
         }
+        else if(thisOp.source == string_view("!=", 2))
+        {
+            op = notEqualToOp;
+        }
         else if(thisOp.source == string_view("<", 1))
         {
             op = lessThanOp;
@@ -466,30 +492,32 @@ const uint8_t Object::initialOffset = sizeof(double);
         
         ctx.target.append(op);
     }
-    void localDoubleVarRead(KeywordExecutionContext ctx)
-    {
-        ctx.frame().index += Keyword::opcodeSize();
-        uint64_t index = -1;
-        memcpy(&index, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
-        ctx.frame().index += sizeof(uint64_t);
-        //std::cout<<"Loading data for var id: "<<index<<"\n";
-        ctx.frame().initialOperands.push(ctx.frame().localMemory[index].data.number);
-        //std::cout<<"value: "<<ctx.frame().localMemory[index].data.number<<"\n";
-    }
     void localFunctionCall(KeywordExecutionContext ctx)
     {
-        ctx.frame().index += Keyword::opcodeSize();
         uint64_t value = -1;
-        memcpy(&value, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+        ctx.getData(value, ctx.frame().index + sizeof(uint64_t));
 
         //std::cout<<"Loading frame for fun: "<<value;
-        ctx.frame().index += sizeof(uint64_t)*2;
-        Object *obj = ctx.frame().localMemory[0].data.obj;
-        AscalFrame<double> *newFrame = ctx.runtime().framePool.construct(ctx.runtime());
-        ctx.runtime().currentStack->push(newFrame);
+        uint64_t paramsCount;
+        ctx.getData(paramsCount, ctx.frame().index + sizeof(uint64_t) * 2);
+        //std::cout<<"stack index value: "<<value<<" paramsCount: "<<paramsCount<<"\n";
+        ctx.frame().index += sizeof(uint64_t) * 3;
+        Object *obj = (ctx.frame().localMemory)[value].data.obj;
+
+        auto newFrame = ctx.runtime().framePool.construct(ctx.runtime());
         newFrame->exp = obj->getInstructions();
         newFrame->index = 0;
+        newFrame->localMemory.push(StackDataRecord(StackDataRecord::REFERENCED, obj));
+        for(int i = 0; i < paramsCount; i++)
+        {
+            double data;
+            ctx.frame().initialOperands.top(data);
+            ctx.frame().initialOperands.pop();
+            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, data));
+        }
+
         //std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";
+        ctx.runtime().frameStack.push(newFrame);
         ctx.frame_ptr = newFrame;
     }
     void Object::compileTokens(CompilationContext &ctx, uint32_t end)
@@ -519,7 +547,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                 const auto it = ctx.runtime.memory.find(token.source);
                 const auto localIt = ctx.localMemory.find(token.source);
                 std::cout<<"parsing varname: "<<token.source<<"\n";
-                if(it != ctx.runtime.memory.end())
+                if(it != ctx.runtime.memory.end() && localIt == ctx.localMemory.end())
                 {
                     Object *current = (*it).getValue();
                     if(current->isDouble())

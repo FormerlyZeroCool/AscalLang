@@ -19,6 +19,10 @@ public:
     {
         this->start = this->data->size();
     }
+    inline void setStart(uint32_t newStart) noexcept
+    {
+        this->start = newStart;
+    }
 	inline void setData(stack<t> &dat) noexcept
 	{
 		data = &dat;
@@ -168,7 +172,7 @@ void StackSegment<t>::top(t*&data) const noexcept
 template <typename t>
 bool StackSegment<t>::isEmpty() const noexcept
 {
-	return this->start == this->data->size();
+	return this->start >= this->data->size();
 }
 template <typename t>
 size_t StackSegment<t>::length() const noexcept

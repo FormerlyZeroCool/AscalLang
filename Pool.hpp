@@ -85,7 +85,7 @@ class Pool_t {
     int_fast64_t index = 0;
 public:
     Pool_t() {
-        this->poolSize = 1024;
+        this->poolSize = 4096;
         this->init();
     }
     Pool_t(int64_t blocks) {
@@ -99,7 +99,7 @@ public:
     }
     void init()
     {   
-        auto ptr = malloc(this->poolSize * sizeof(Chunk));
+        auto ptr = reinterpret_cast<Chunk *>(std::malloc(this->poolSize * sizeof(Chunk)));
         blocks.push_back(ptr);
         this->initBlock(ptr, poolSize);
         last = ptr;
@@ -118,7 +118,7 @@ public:
         Chunk *ptr = this->last->next;
         if(!ptr)
         {
-            ptr = malloc(this->poolSize * sizeof(Chunk));
+            ptr = reinterpret_cast<Chunk *>(std::malloc(this->poolSize * sizeof(Chunk)));
             this->last->next = ptr;
             this->blocks.push_back(ptr);
             this->initBlock(ptr, this->poolSize);
@@ -127,7 +127,7 @@ public:
         this->last = ptr;
         return reinterpret_cast<void*>(&ptr->data);
     }
-    void free(void* ptr)
+    constexpr void free(void* ptr)
     {
         Chunk *p = reinterpret_cast<Chunk *>(ptr);
         p->next = this->last->next;

@@ -8,6 +8,7 @@
 #ifndef KEYWORDS_WHENACTION_HPP_
 #define KEYWORDS_WHENACTION_HPP_
 
+
 #include "../Keyword.hpp"
 class WhenAction: public OpKeyword {
 	private:
@@ -92,17 +93,123 @@ public:
         */
 	}
 
-	virtual void compile(CompilationContext &ctx){
+    void compileWhen(CompilationContext &ctx, string_view boolExp, uint32_t &jumpBackDistIndex, const uint32_t startOfBody, const uint32_t endOfBody)
+    {
+        /*compile boolean expression and add jump instruction*/
+        ctx.target.compileParams(boolExp, ctx.runtime, ctx);
+        const double jumpDist = 0;
+        this->operation = jumpIfFalseInlineAction;
+        ctx.target.append(this->operation);
+        const uint64_t jumpDistIndex = ctx.target.getInstructions().size();
+        ctx.target.append(jumpDist);
+        string_view codeblock = ctx.source.substr(startOfBody, endOfBody - startOfBody);
+
+        std::cout<<"compiling when bool exp: "<<boolExp<<"  body: "<<codeblock<<"\n";
+        /*Compile expression to exec if true, and add jump past end instruction*/
+        ctx.target.compileParams(codeblock, ctx.runtime, ctx);
+        this->operation = jumpForwardInlineAction;
+        ctx.target.append(this->operation);
+        jumpBackDistIndex = ctx.target.getInstructions().size();
+        ctx.target.append(jumpDist);
+        //set jump if false jump dist to jump past codeblock to next when
+        double jump = ctx.target.getInstructions().size() - jumpDistIndex;
+        ctx.writeToTargetAtByte(jump, jumpDistIndex);
+    }
+	virtual void compile(CompilationContext &ctx) {
+        ctx.src_index += this->keyWord.size();
+        uint32_t i = ctx.src_index;
+        const uint32_t startOfBoolExp = i;
+        i = ctx.source.find(this->thenText, i) + this->thenText.size();
+        if(i == -1)
+            throw std::string("Error malformed when statement, no proceeding then.");
+        
+        const uint32_t endOfBoolExp = i - 1;
+        string_view boolExp(ctx.source.substr(startOfBoolExp, endOfBoolExp - startOfBoolExp));
+        const uint32_t startOfBody = i + 1;
+
+	    uint8_t qCount = 0;
+	    uint8_t braceCount = 0;
+        while(i + 2 < ctx.source.size())
+        {
+	        qCount = ((ctx.source[i] == '\"') + qCount) & 1;
+	        braceCount += (ctx.source[i] == '{') - (ctx.source[i] == '}');
+            if(braceCount == 0 && qCount == 0)
+            {
+                if(i + 3 < ctx.source.size())
+                {
+                    if(ctx.source[i] == 'w' && ctx.source[i+1] == 'h' && ctx.source[i+2] == 'e'  && ctx.source[i+3] == 'n')
+                    {
+                        uint32_t jumpBackDistIndex = 0;//will be assigned in compileWhen call
+                        this->compileWhen(ctx, boolExp, jumpBackDistIndex, startOfBody, i);
+                        ctx.src_index = i;
+                        ctx.syncTokenIndexToSrcIndex();
+
+                        /*Recursive call for compiling next when*/
+                        std::cout<<"Recursive call\n";
+                        this->compile(ctx);
+                        std::cout<<"End recursive call\n";
+
+                        /*Handle setting jump to end after successful execution of codeblock via jumpBackAction jump*/
+                        double jump = (ctx.target.getInstructions().size() - jumpBackDistIndex);
+                        ctx.writeToTargetAtByte(jump, jumpBackDistIndex);
+                        break;
+                    }
+                    else if(ctx.source[i] == 'e' && ctx.source[i+1] == 'l' && ctx.source[i+2] == 's'  && ctx.source[i+3] == 'e')
+                    {
+                        uint32_t jumpBackDistIndex = 0;//will be assigned in compileWhen call
+                        this->compileWhen(ctx, boolExp, jumpBackDistIndex, startOfBody, i);
+                        const uint32_t startOfElseBlock = i + 5;
+                        while(i + 2 < ctx.source.size())
+                        {
+	                        qCount = ((ctx.source[i] == '\"') + qCount) & 1;
+	                        braceCount += (ctx.source[i] == '{') - (ctx.source[i] == '}');
+                            if(!qCount && !braceCount && ctx.source[i] == 'e' && ctx.source[i+1] == 'n' && ctx.source[i+2] == 'd')
+                            {
+                                break;
+                            }
+                            i++;
+                        }
+                        const uint32_t endOfElseBlock = i - 1;
+                        string_view elseBlock(ctx.source.substr(startOfElseBlock, endOfElseBlock - startOfElseBlock));
+                        ctx.target.compileParams(elseBlock, ctx.runtime, ctx);
+                        double jump = (ctx.target.getInstructions().size() - jumpBackDistIndex);
+                        ctx.writeToTargetAtByte(jump, jumpBackDistIndex);
+                        break;
+                    }
+                    else if(ctx.source[i] == 'e' && ctx.source[i+1] == 'n' && ctx.source[i+2] == 'd')
+                    {
+                        uint32_t jumpBackDistIndex = 0;//will be assigned in compileWhen call
+                        this->compileWhen(ctx, boolExp, jumpBackDistIndex, startOfBody, i);
+                        double jump = (ctx.target.getInstructions().size() - jumpBackDistIndex);
+                        ctx.writeToTargetAtByte(jump, jumpBackDistIndex);
+                        break;
+                    }
+                }
+                else if(ctx.source[i] == 'e' && ctx.source[i+1] == 'n' && ctx.source[i+2] == 'd')
+                {
+                    uint32_t jumpBackDistIndex = 0;//will be assigned in compileWhen call
+                    this->compileWhen(ctx, boolExp, jumpBackDistIndex, startOfBody, i);
+                    double jump = (ctx.target.getInstructions().size() - jumpBackDistIndex);
+                    ctx.writeToTargetAtByte(jump, jumpBackDistIndex);
+                    break;
+                }
+            }
+            i++;
+        }
+    }
+    #ifdef crap
+	virtual void compile_old(CompilationContext &ctx) {
         //parse expression, start from substr when go up until substr end is found
 	    //extract substring, and save the other parts of the expression
 	    //find when evaluate expression between it and then
 	    //if the expression evaluates to anything other than 0
 	    //then extract the expression proceeding the then statement
 	    //frame->index = 0;
-	    const int startIndex = ctx.src_index;
+	   const int startIndex = ctx.src_index;
 
         const string_view exp = string_view(ctx.source);
 	    uint32_t endIndex = ctx.src_index;
+        
 	    /*this block locates the end keyword for the ascal when block*/{
 	    uint32_t i = endIndex;
 	    uint8_t qCount = 0;
@@ -112,7 +219,7 @@ public:
 	    	if(ctx.source[i] == 'e' && ctx.source[i+1] == 'n' && ctx.source[i+2] == 'd' && qCount == 0)
 	    	{
 	    		endIndex = i;
-	    		i = -1;
+	    		i = -1U;//uint so this becomes largest possible value
 	    	}
 	    	i++;
 	    }
@@ -187,6 +294,7 @@ public:
         }
         ctx.src_index = std::min(nextWhen, endIndex+3);
     }
+    #endif
     //so new action algo will be
     //parse bool exp
     //parse codeblock

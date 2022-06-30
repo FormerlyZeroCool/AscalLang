@@ -59,27 +59,27 @@ public:
 	    while(ctx.source.size() > startIndex && ctx.source[startIndex] == ' ')
 	        startIndex++;
 	    SubStrSV subexp = ParsingUtil::getExprInStringSV(ctx.source,startIndex, '{', '}', ';');
-        auto it = ctx.runtime.memory.find(varName.data);
-        if(it != ctx.runtime.memory.end())
-        {
-            ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
-			//if(ParsingUtil::isObj())
-            this->operation = setGlobalDoubleOp;
-            ctx.target.append(this->operation);
-            ctx.target.append((*it).getValue());
-        }
+		auto localIt = ctx.localMemory.find(varName.data);
+		ctx.src_index  = subexp.end;
+		if(localIt != ctx.localMemory.end())
+		{
+        	ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
+			const CompilationContext::LocalRecord localRec = (*localIt).getValue();
+			this->operation = setLocalDoubleOp;
+			ctx.target.append(this->operation);
+			ctx.target.append((uint64_t) (localRec.stack_index));
+		}
 		else
 		{
-			auto localIt = ctx.localMemory.find(varName.data);
-			ctx.src_index  = subexp.end;
-			if(localIt != ctx.localMemory.end())
-			{
-            	ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
-				const CompilationContext::LocalRecord localRec = (*localIt).getValue();
-				this->operation = setLocalDoubleOp;
-				ctx.target.append(this->operation);
-				ctx.target.append((uint64_t) (localRec.stack_index));
-			}
+        	auto it = ctx.runtime.memory.find(varName.data);
+        	if(it != ctx.runtime.memory.end())
+        	{
+        	    ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
+        	    this->operation = setGlobalDoubleOp;
+        	    ctx.target.append(this->operation);
+        	    ctx.target.append((*it).getValue());
+        	}
+			
 		}
 
 	}

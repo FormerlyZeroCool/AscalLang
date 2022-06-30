@@ -126,6 +126,7 @@ public:
 	       case '=': return true;
 	       case '<': return true;
 	       case '>': return true;
+	       case '!': return true;
 	    }
 	    return false;
 	}

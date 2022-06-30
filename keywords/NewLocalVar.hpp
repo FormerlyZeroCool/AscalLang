@@ -20,24 +20,24 @@ static inline void makeDouble(KeywordExecutionContext ctx)
     double value = -1;
     memcpy(&value, &ctx.frame().exp[ctx.frame().index], sizeof(double));
     ctx.frame().index += sizeof(double);
-    std::cout<<"localdouble: "<<value<<"\n";
+    //std::cout<<"localdouble: "<<value<<"\n";
     ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE, value));
 }
 static inline void makeDoubleParameter(KeywordExecutionContext ctx)
 {
     ctx.frame().index += Keyword::opcodeSize();
     double value = -1;
-    auto &localMem = (*ctx.runtime().currentStack)[ctx.runtime().currentStack->size() - ((ctx.runtime().currentStack->size() > 1) << 1)]->initialOperands;
+    auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->initialOperands;
     localMem.top(value);
     localMem.pop();
-    std::cout<<"paramdouble: "<<value<<" StackIndex: "<<ctx.frame().getLocalMemory().size()<<"\n";
+    //std::cout<<"paramdouble: "<<value<<" StackIndex: "<<ctx.frame().getLocalMemory().size()<<"\n";
     ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE,value));
 }
 static inline void makeObjectParameter(KeywordExecutionContext ctx)
 {
     ctx.frame().index += Keyword::opcodeSize();
     StackDataRecord value;
-    auto &localMem = (*ctx.runtime().currentStack)[ctx.runtime().currentStack->size() - ((ctx.runtime().currentStack->size() > 1) << 1)]->localMemory;
+    auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->localMemory;
     localMem.top(value);
     localMem.pop();
     //std::cout<<"paramdouble: "<<value<<"\n";
@@ -62,12 +62,12 @@ static inline void makeFunction(KeywordExecutionContext ctx)
 }
 static inline void returnAndPop(KeywordExecutionContext ctx)
 {
-    double data;
-    ctx.frame().initialOperands.top(data);
-    ctx.runtime().currentStack->pop();
-    ctx.runtime().deleteFrame(&ctx.frame());
-    ctx.runtime().currentStack->top(ctx.frame_ptr);
-    ctx.frame_ptr->initialOperands.push(data);
+    //double data;
+    //ctx.frame().initialOperands.top(data);
+    ctx.runtime().frameStack.pop();
+    ctx.runtime().framePool.destroy(&ctx.frame());
+    ctx.runtime().frameStack.top(ctx.frame_ptr);
+    //ctx.frame_ptr->initialOperands.push(data);
     //    std::cout<<data<<"\n";
 }
 class NewLocalVar: public StKeyword {
@@ -106,22 +106,21 @@ public:
         {
             Object newLocal = Object(runtime.memMan, string_view("", 0));
 
+            ctx.addOwnedLocal(localName.data, this->params.statements.size());
             CompilationContext body_ctx(subexp.data, newLocal, runtime);
-            ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
+            //ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
+            body_ctx.addRefedLocal(localName.data, this->params.statements.size());
             //this->operation = makeSelfParameter;
             //body_ctx.target.append(this->operation);
-            for(const SubStrSV &param : this->params.statements)
+            for(int32_t i = this->params.statements.size() - 1; i >= 0; i--)
             {
-                std::cout<<param.data<<"\n";
+                const auto &param = this->params.statements[i];
+                std::cout<<param.data<<" stack index: "<<body_ctx.lastVarIndex<<"\n";
                 if(param.data[0] != '&')
                 {
-                    std::cout<<"generating code for loading double param\n";
                     body_ctx.addDoubleLocal(param.data, 0);
-                    this->operation = makeDoubleParameter;
-                    body_ctx.target.append(this->operation);
                 }
             }
-
             newLocal.LexCodeAndCompile(this->runtime, body_ctx);
             //nobj = &runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory());
 
@@ -140,7 +139,6 @@ public:
             }
             this->operation = returnAndPop;
             ctx.target.append(this->operation);
-            ctx.addOwnedLocal(localName.data, this->params.statements.size());
             std::cout<<"not a double not obj\n"<<"exp: "<<subexp.data<<"\n";
         }
         else

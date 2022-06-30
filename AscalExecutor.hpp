@@ -79,8 +79,9 @@ Keyword* getKeywordFromPtrToOpcode(uint8_t *start)
     return opcode;
 }
 static inline const uint8_t KEYWORD_IDENTIFIER = 128, DOUBLE = 129, OPERATOR = 130, VARIABLE = 131, DELIMITER = 132, ARRAY_OBJ = 133;
-    StackSegment<AscalFrame<double> *> *currentStack = nullptr;
+
     ObjectPool<AscalFrame<double> > framePool;
+stack<AscalFrame<double>* > frameStack;
 /////////////////////////////
 //Program Global Memory Declaration
 stack<double> operands;
@@ -115,7 +116,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	double callOnFrameFormatted(AscalFrame<double>* callingFrame,std::string subExp);
 	double calculateExpression(AscalFrame<double>* frame);
     void createFrame(StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, ParsedStatementList &params, int i,uint64_t hash);
-	void clearStackOnError(bool printStack, std::string &error, StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
+	void clearStackOnError(bool printStack, std::string &error, stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
 
 	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName);
     expressionResolution resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV &varName, Object *obj = nullptr);
@@ -123,6 +124,14 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	Object& getObject(AscalFrame<double>* frame, string_view functionName);
 	Object* getObjectNoError(AscalFrame<double>* frame, string_view functionName);
 
+	template <typename STRING>
+	constexpr void log(const STRING& var)
+	{
+		#ifdef debug
+		if(*this->boolsettings["o"])
+		std::cout<<var<<"\n";
+		#endif
+	}
 	template <typename t>
 	void cleanOnError(bool timeInstruction, t start, t end);
 	double calcWithOptions(AscalFrame<double>* frame);

@@ -41,7 +41,7 @@ static inline void makeDoubleParameter(KeywordExecutionContext ctx)
 {
     ctx.frame().index += Keyword::opcodeSize();
     double value = -1;
-    auto &localMem = (*ctx.runtime().currentStack)[ctx.runtime().currentStack->size() - ((ctx.runtime().currentStack->size() > 1) << 1)]->initialOperands;
+    auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->initialOperands;
     localMem.top(value);
     localMem.pop();
 	#ifdef debug
@@ -53,7 +53,7 @@ static inline void makeObjectParameter(KeywordExecutionContext ctx)
 {
     ctx.frame().index += Keyword::opcodeSize();
     StackDataRecord value;
-    auto &localMem = (*ctx.runtime().currentStack)[ctx.runtime().currentStack->size() - ((ctx.runtime().currentStack->size() > 1) << 1)]->localMemory;
+    auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->localMemory;
     localMem.top(value);
     localMem.pop();
     //std::cout<<"paramdouble: "<<value<<"\n";
@@ -82,12 +82,11 @@ static inline void makeFunction(KeywordExecutionContext ctx)
 }
 static inline void returnAndPop(KeywordExecutionContext ctx)
 {
-    double data;
-    ctx.frame().initialOperands.top(data);
-    ctx.runtime().currentStack->pop();
-    ctx.runtime().deleteFrame(&ctx.frame());
-    ctx.runtime().currentStack->top(ctx.frame_ptr);
-    ctx.frame_ptr->initialOperands.push(data);
+    auto &runtime = ctx.runtime();
+    ctx.runtime().frameStack.pop();
+    ctx.frame().initialOperands.resetStart();
+    ctx.runtime().framePool.destroy(&ctx.frame());
+    runtime.frameStack.top(ctx.frame_ptr);
     //    std::cout<<data<<"\n";
 }
 };
@@ -134,14 +133,13 @@ public:
             //ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
             //this->operation = makeSelfParameter;
             //body_ctx.target.append(this->operation);
-            for(const SubStrSV &param : this->params.statements)
+            for(int32_t i = this->params.statements.size() - 1; i >= 0; i--)
             {
+                const auto &param = this->params.statements[i];
                 std::cout<<param.data<<"\n";
                 if(param.data[0] != '&')
                 {
                     body_ctx.addDoubleLocal(param.data, 0);
-                    this->operation = Global::makeDoubleParameter;
-                    body_ctx.target.append(this->operation);
                 }
             }
 

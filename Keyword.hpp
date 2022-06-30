@@ -4,7 +4,6 @@
  *  Created on: Dec 9, 2020
  *      Author: andrewrubinstein
  */
-
 #ifndef KEYWORD_HPP_
 #define KEYWORD_HPP_
 #include <unordered_map>
@@ -28,6 +27,11 @@ struct KeywordExecutionContext {
 	constexpr AscalExecutor& runtime() const noexcept
 	{
 		return frame_ptr->runtime;
+	}
+	template <typename PLAIN_OLD_OBJECT>
+	constexpr void getData(PLAIN_OLD_OBJECT &data, uint32_t byte)
+	{
+		memcpy(&data, &frame().exp[byte], sizeof(PLAIN_OLD_OBJECT));
 	}
 
 };
@@ -84,6 +88,16 @@ inline void noop(KeywordExecutionContext ctx) { ctx.frame().index += Keyword::op
 inline void clearStackExcept1(KeywordExecutionContext ctx) { ctx.frame().index += Keyword::opcodeSize(); while(ctx.frame().initialOperands.size() > 1){ctx.frame().initialOperands.pop();} }
 inline void clearStack(KeywordExecutionContext ctx) { ctx.frame().index += Keyword::opcodeSize(); ctx.frame().initialOperands.clear(); }
 
+inline void localDoubleVarRead(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    uint64_t index = -1;
+    memcpy(&index, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+    ctx.frame().index += sizeof(uint64_t);
+    //std::cout<<"Loading data for var id: "<<index<<"\n";
+    ctx.frame().initialOperands.push(ctx.frame().localMemory[index].data.number);
+    //std::cout<<"value: "<<ctx.frame().localMemory[index].data.number<<"\n";
+}
 inline void jumpIfFalseAction(KeywordExecutionContext ctx) 
 {
 	double jmp = -1, boolVal = 0;
@@ -104,6 +118,26 @@ inline void jumpIfFalseAction(KeywordExecutionContext ctx)
     }
 	#endif
 }
+inline void jumpIfFalseInlineAction(KeywordExecutionContext ctx) 
+{
+	double jmp = -1, boolVal = 0;
+	ctx.frame().initialOperands.top(boolVal);
+	ctx.frame().initialOperands.pop();
+	ctx.frame().index += Keyword::opcodeSize();
+	ctx.getData(jmp, ctx.frame().index);
+	if(!boolVal && abs(jmp) > Keyword::opcodeSize())
+	{
+		ctx.frame().index += jmp;
+	}
+	else
+    	ctx.frame().index += sizeof(jmp);
+	#ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+    {
+    	std::cout<<"jump if false("<<boolVal<<"): "<<jmp<<'\n';
+    }
+	#endif
+}
 inline void jumpBackAction(KeywordExecutionContext ctx) 
 {
 	double jmp = 0;
@@ -114,6 +148,32 @@ inline void jumpBackAction(KeywordExecutionContext ctx)
     if(*ctx.runtime().boolsettings["o"])
     {
     	std::cout<<"jump back: "<<jmp<<'\n';
+    }
+	#endif
+}
+inline void jumpForwardInlineAction(KeywordExecutionContext ctx) 
+{
+	double jmp = 0;
+	ctx.frame().index += Keyword::opcodeSize();
+	ctx.getData(jmp, ctx.frame().index);
+	ctx.frame().index += jmp;
+	#ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+    {
+    	std::cout<<"jump forward: "<<jmp<<'\n';
+    }
+	#endif
+}
+inline void jumpBackInlineAction(KeywordExecutionContext ctx) 
+{
+	double jmp = 0;
+	ctx.frame().index += Keyword::opcodeSize();
+	ctx.getData(jmp, ctx.frame().index);
+	ctx.frame().index -= jmp;
+	#ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+    {
+    	std::cout<<"jump forward: "<<jmp<<'\n';
     }
 	#endif
 }

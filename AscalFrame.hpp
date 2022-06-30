@@ -20,12 +20,12 @@
 #include "MemoryMap.hpp"
 #include "HashMap.hpp"
 struct StackDataRecord {
-    static inline const uint8_t DOUBLE = 0, OWNED = 1, REFERENCED = 2;
+    static inline const uint64_t DOUBLE = 0, OWNED = 1, REFERENCED = 2;
     union {
         Object *obj;
         double number;
     } data;
-    uint8_t type = -1;
+    uint64_t type = -1;
     StackDataRecord() { data.obj = (nullptr); }
     StackDataRecord(uint8_t type, Object *obj): type(type) { data.obj = (obj); }
     StackDataRecord(uint8_t type, double number): type(type) { data.number = (number); }
@@ -54,12 +54,12 @@ protected:
     //+1 sets if result flag to true, sp no else cases wil be initally executed
     //+8 sets isDynamicAllocation true, so that the calculateExpression functions is responsible for managin the memory allocated for this frame
     //+64 designates the frame as never run
-    uint16_t flagRegisters = 1 + 8 + 64;
+    //uint16_t flagRegisters = 1 + 8 + 64;
 
 public:
     AscalExecutor &runtime;
-    uint32_t index = 0;
     string_view exp;
+    uint32_t index = 0;
     StackSegment<double> initialOperands;
     StackSegment<StackDataRecord> localMemory;
     inline Object* getContext()
@@ -77,7 +77,7 @@ public:
     }
     //The retrieve data from flag registers functions bitmask all the bits that don't represent the data the user wishes to retreive
     //Then auto cast the byte to a bool
-    inline bool ifResultFlag() { return flagRegisters & (uint16_t)1; };
+    /*inline bool ifResultFlag() { return flagRegisters & (uint16_t)1; };
     inline bool ifFlag() { return flagRegisters & (uint16_t)2; };
     inline bool comingfromElse() { return flagRegisters & (uint16_t)4; };
     inline bool isDynamicAllocation() { return flagRegisters & (uint16_t)8; };
@@ -132,7 +132,7 @@ public:
     {
         flagRegisters &= (uint16_t)(65535-1024);
         flagRegisters ^= (uint16_t)(1024*value);
-    };
+    };*/
     inline auto& getLocalMemory(){ return localMemory; };
     
     void returnResult(t result, FlatMap<string_view, Object*>& globalMemory, StackSegment<AscalFrame<double>*> &executionStack, AscalExecutor &executionEnv) 
@@ -161,7 +161,7 @@ public:
     }
     ~AscalFrame() {
         freeOwnedObjects();
-    };
+    }
 };
 static uint16_t runningNumber = 1;
 

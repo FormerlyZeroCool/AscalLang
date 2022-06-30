@@ -33,6 +33,7 @@
 //#include "keywords/JumpNZ.hpp"
 //#include "keywords/EvalSetZF.hpp"
 #include "keywords/LenAction.hpp"
+#include "keywords/IncAction.hpp"
 //#include "keywords/LoadStrAction.hpp"
 #include "keywords/MemoizeOperations.hpp"
 #include "keywords/NewGlobalFunction.hpp"
@@ -51,6 +52,7 @@
 //#include "keywords/PrintVarAction.hpp"
 #include "keywords/QuitAction.hpp"
 #include "keywords/RandomAction.hpp"
+#include "keywords/WhenAction.hpp"
 //#include "keywords/RedoAction.hpp"
 //#include "keywords/returnAction.hpp"
 //#include "keywords/RunAction.hpp"
@@ -102,6 +104,7 @@ public:
 			addKeyWord<ArcCosAction>();
 			addKeyWord<ArcSinAction>();
 			addKeyWord<ArcTanAction>();
+			addKeyWord<IncAction>();
 			addKeyWord<CosAction>();
 			addKeyWord<SinAction>();
 			addKeyWord<TanAction>();
@@ -118,6 +121,7 @@ public:
 			addKeyWord<SetAction>();
 			addKeyWord<NewLocalVar>();
 			addKeyWord<NewGlobalFunction>();
+			addKeyWord<WhenAction>();
 /*
 			addKeyWord<DerivefnAction>();
 			addKeyWord<ArrGetValAction>();
@@ -149,7 +153,6 @@ public:
 			addKeyWord<SRandomAction>();
 			addKeyWord<TryAction>();
 			addKeyWord<UndoAction>();
-			addKeyWord<WhenAction>();
 			addKeyWord<JumpZF>();
 			addKeyWord<JumpNZ>();
 			addKeyWord<EvalSetZF>();

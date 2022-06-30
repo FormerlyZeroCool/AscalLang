@@ -45,13 +45,11 @@ public:
 		uint32_t startOJumpLenIndex;
 		{
 			double val = 0;
-            operationType op = readAndPushDouble;
-            ctx.target.append(op);
+			
+			this->operation = (jumpIfFalseInlineAction);
+			ctx.target.append(this->operation);
 			startOJumpLenIndex = ctx.target.getInstructions().size();
 			ctx.target.append(val);
-			
-			this->operation = (jumpIfFalseAction);
-			ctx.target.append(this->operation);
 		}
 		const uint32_t afterJumpBoolIndex = reinterpret_cast<std::uintptr_t>(&ctx.target.getInstructions().back()) - reinterpret_cast<std::uintptr_t>(&ctx.target.getInstructions()[0]);
 		
@@ -65,19 +63,17 @@ public:
 		std::cout<<"after bool exp: "<<afterBoolExpIndex<<" after code block: "<<afterCodeBlock<<"\nins len: "<<ctx.target.getInstructions().size()<<"\n";
 		{
 			uint32_t codeBlockLen_bin = ctx.target.getInstructions().size() - topOfLoopIndex;
-			const double val = 16 + codeBlockLen_bin;
+			const double val = 8 + codeBlockLen_bin;
 			std::cout<<"seting jump back amount: "<<val<<"\n";
-                operationType op = readAndPushDouble;
-                ctx.target.append(op);
-			ctx.target.append(val);
 			std::cout<<" instructions len: "<<ctx.target.getInstructions().size()<<"\n";
 			
-			this->operation = jumpBackAction;
+			this->operation = jumpBackInlineAction;
 			ctx.target.append(this->operation);
+			ctx.target.append(val);
 		}
 		{
 			std::cout<<" instructions len: "<<ctx.target.getInstructions().size()<<"\n";
-			const double val = ctx.target.getInstructions().size() - startOJumpLenIndex - 8;
+			const double val = ctx.target.getInstructions().size() - startOJumpLenIndex;
 			std::cout<<"seting jump forward amount: "<<val<<"\n";
 			memcpy(&ctx.target.getInstructions()[startOJumpLenIndex], &val, sizeof(val));
 		}

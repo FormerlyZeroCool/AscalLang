@@ -1,4 +1,5 @@
 
+
 /*
  * AscalExecutor.cpp
  *
@@ -350,7 +351,7 @@ void AscalExecutor::deleteFrame(AscalFrame<double> *frame)
     this->framePool.destroy(frame);    
 }
 
-void AscalExecutor::clearStackOnError(bool printStack, std::string &error, StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame)
+void AscalExecutor::clearStackOnError(bool printStack, std::string &error, stack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame)
 {
             if(printStack)
             {
@@ -359,11 +360,12 @@ void AscalExecutor::clearStackOnError(bool printStack, std::string &error, Stack
                 if(errorStartMarker<0 || errorStartMarker > error.length())
                     errorStartMarker = 0;
                 data<<error.substr(0, errorStartMarker);
-                while(!executionStack.isEmpty())
+                while(executionStack.size() > 1)
                 {
                     executionStack.top(currentFrame);
                         data << currentFrame->getType() << "   ~:"<<currentFrame->exp<<'\n';
-                    if(currentFrame->isDynamicAllocation()){
+                    //if(currentFrame->isDynamicAllocation())
+                    {
                         deleteFrame(currentFrame);
                     }
                     executionStack.pop();
@@ -374,10 +376,11 @@ void AscalExecutor::clearStackOnError(bool printStack, std::string &error, Stack
             }
             else
             {
-                while(!executionStack.isEmpty())
+                while(executionStack.size() > 1)
                 {
                     executionStack.top(currentFrame);
-                    if(currentFrame->isDynamicAllocation()){
+                    //if(currentFrame->isDynamicAllocation())
+                    {
                         deleteFrame(currentFrame);
                     }
                     executionStack.pop();
@@ -385,13 +388,11 @@ void AscalExecutor::clearStackOnError(bool printStack, std::string &error, Stack
             }
             this->cachedRtnObject = nullptr;
 }
-stack<AscalFrame<double>*> frameStack;
 double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 {
-    StackSegment<AscalFrame<double>* > executionStack(frameStack);
-    executionStack.push(frame);
+    frameStack.push(frame);
     operationType operation = nullptr;
-    this->currentStack = &executionStack;
+    //this->currentStack = &frameStack;
     try{
         while(frame->index < frame->exp.length())
         {
@@ -405,18 +406,17 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             frame->initialOperands.top(data);
         }
 
-        currentStack = nullptr;
         return data;
     }
     catch(std::string &error)
     {
-        clearStackOnError(true, error, executionStack, frame, frame);
+        clearStackOnError(true, error, frameStack, frame, frame);
         throw error;
     }
     catch(int exitCode)
     {
         std::string s = frame->exp.str();
-        clearStackOnError(false, s, executionStack, frame, frame);
+        clearStackOnError(false, s, frameStack, frame, frame);
         throw exitCode;
     }
 }
