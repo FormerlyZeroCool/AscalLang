@@ -18,7 +18,7 @@ const uint8_t Object::initialOffset = sizeof(double);
         
         this->LexCodeAndCompile(runtime, ctx);
         
-        std::array<uint8_t, 256> buffer{};
+        char buffer[256];
         memcpy(&buffer[0], &ctx.target.getInstructions()[0], 256<ctx.target.getInstructions().size()?256:ctx.target.getInstructions().size());
         int counter = 0;
         for(int j = 0; j < 16; j++){
@@ -523,7 +523,7 @@ const uint8_t Object::initialOffset = sizeof(double);
     void Object::compileTokens(CompilationContext &ctx, uint32_t end)
     {
         end = end < ctx.lastTokens.size() ? end : ctx.lastTokens.size();
-        StackSegment<CompilationContext::Token> stack = ctx.stack;
+        StackSegment<CompilationContext::Token> stack = ctx.tokenStack;
         stack.push(CompilationContext::Token(string_view("(", 1), ctx.src_index, CompilationContext::Token::OPERATOR));
         const auto &tokens = ctx.lastTokens;
         for(uint32_t &i = ctx.currentToken; i < end; i++)

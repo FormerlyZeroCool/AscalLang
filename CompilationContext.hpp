@@ -46,7 +46,7 @@ class CompilationContext {
     };
     std::vector<Token> lastTokens;
     uint32_t currentToken = 0;
-    stack<CompilationContext::Token> stack; 
+    stack<CompilationContext::Token> tokenStack; 
     string_view source;
     Object &target;
     AscalExecutor &runtime;
