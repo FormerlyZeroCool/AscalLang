@@ -1164,7 +1164,6 @@ void Object::deallocateId(void *ptr, size_t bufSize)
             this->objectMap.getMemMan().large_id_free(ptr);
             break;
         case (0):
-            assert(ptr == nullptr);
             break;
         default:
             free(ptr);
@@ -1187,7 +1186,6 @@ void Object::deallocateInstructions(void *ptr, size_t bufSize)
             this->objectMap.getMemMan().vlarge_free(ptr);
             break;
         case (0):
-            assert(ptr == nullptr);
             break;
         default:
             free(static_cast<void*>(ptr));
