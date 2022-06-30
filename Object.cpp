@@ -8,7 +8,7 @@
 #include "Object.hpp"
 #include "AscalExecutor.hpp"
 #include "CompilationContext.hpp"
-#include "KeyWord.hpp"
+#include "Keyword.hpp"
 
 const uint8_t Object::initialOffset = sizeof(double);
     void Object::compileInstructions(AscalExecutor &runtime)
