@@ -168,6 +168,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
         //obj.loadChild(pushMethod, *this);
 	}
 	Object& loadFn(Object function);
+	Object& loadUserDefinedFn(Object &&function, FlatMap<string_view, Object*> &mem);
 	Object& loadUserDefinedFn(Object &function, FlatMap<string_view, Object*> &mem);
 	Object& loadUserDefinedFn(Object &function, MemoryMap &mem);
 	Object& loadUserDefinedFn(Object &function, Map<string_view, Object*> &mem);

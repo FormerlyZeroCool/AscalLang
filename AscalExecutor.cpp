@@ -83,6 +83,10 @@ Object& AscalExecutor::loadFn(Object function)
     return inserted;
 }
 
+Object& AscalExecutor::loadUserDefinedFn(Object &&function, FlatMap<string_view, Object*> &mem)
+{
+    return this->loadUserDefinedFn(function, mem);
+}
 Object& AscalExecutor::loadUserDefinedFn(Object &function, FlatMap<string_view, Object*> &mem)
 {
     const auto rec = mem.find(function.getId());

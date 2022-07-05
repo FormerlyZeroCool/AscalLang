@@ -18,7 +18,7 @@ const uint8_t Object::initialOffset = sizeof(double);
         
         this->LexCodeAndCompile(runtime, ctx);
         
-        char buffer[256];
+        uint8_t buffer[256];
         memcpy(&buffer[0], &ctx.target.getInstructions()[0], 256<ctx.target.getInstructions().size()?256:ctx.target.getInstructions().size());
         int counter = 0;
         for(int j = 0; j < 16; j++){

@@ -119,6 +119,10 @@ public:
     std::vector<SubStrSV> params;
     Object* getThis();
     //returns end index of params in string
+    void setObject() {
+        this->flagRegisters &= (1<<16) - 3;
+        this->flagRegisters |= 1;
+    }
     inline void setDouble(double d);
     inline void setDoubleAtIndex(uint32_t index, double d)
     {

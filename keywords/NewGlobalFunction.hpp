@@ -127,10 +127,12 @@ public:
         }
         if(!ParsingUtil::isDouble(subexp.data))
         {
-            Object newLocal = Object(runtime.memMan, string_view("", 0));
+            Object &newLocal = ctx.runtime.loadUserDefinedFn(Object(runtime.memMan, localName.data), ctx.runtime.memory);
+            newLocal.setObject();
 
             CompilationContext body_ctx(subexp.data, newLocal, runtime);
-            //ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
+            //body_ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
+            //body_ctx.lastVarIndex--;
             //this->operation = makeSelfParameter;
             //body_ctx.target.append(this->operation);
             for(int32_t i = this->params.statements.size() - 1; i >= 0; i--)
