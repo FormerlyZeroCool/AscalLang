@@ -3,28 +3,41 @@
 # Makefile for lab 6, part 1
 #
 
-CC  = gcc
+CC  = g++
 CXX = g++
-
-INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp
+#for linux
+INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp -I/usr/include/readline
+#for mac os
+#INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp 
 UTILINCLUDES = queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp
 CFLAGS   = -o3 -Wall
 CXXFLAGS = -o3 -std=c++17 -Wall
-
-LDFLAGS = 
-LDLIBS = 
-
+#for linux distros
+LDFLAGS = -lreadline -L/usr/lib/x86_64-linux-gnu
+LDLIBS = -lreadline -L/usr/lib/x86_64-linux-gnu
+#for mac os
+#LDFLAGS = -L/usr/local/opt/readline/lib -lreadline
+#LDLIBS = -L/usr/local/opt/readline/lib -lreadline
 .PHONY: default
 default: AscalMain
-AscalMain:  AscalMain.o Object.o AscalParameters.o ObjectKey.o string_view.o
-	g++ -o ascal AscalMain.o Object.o AscalParameters.o ObjectKey.o string_view.o
+AscalMain:  AscalMain.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o
+
 # header dependency
 AscalMain.o: AscalMain.cpp $(INCLUDES)  $(UTILINCLUDES) 
 
-Object.o: Object.cpp Object.hpp
-AscalParameters.o: 
-ObjectKey.o:
+Object.o:
+
+AscalParameters.o:
+
 string_view.o:
+Ascal.o: 
+AscalExecutor.o:
+ParsingUtil.o:
+PRNG.o:
+Keyword.o:
+MemoryMap.o:
+MemoryManager.o:
+SubStr.o:
 .PHONY: clean
 clean:
 	rm -f *.o *~  ascal
