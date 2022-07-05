@@ -178,7 +178,6 @@ bool cuckoo(const Chunk<t, u> &rec, const uint64_t hash, const int_fast8_t count
 iterator<t, u> insert(const Chunk<t, u> &rec)
 {
     uint64_t hash = this->hash(rec.getKey());
-    const uint64_t ohash = hash;
     int_fast8_t hashCount = 0;
     this->cuckoo(rec, hash, 0);
     while(data[hash & (this->capacity-1)].allocated && data[hash & (this->capacity-1)].getKey() != rec.getKey())
@@ -277,7 +276,7 @@ void resize(const uint64_t size)
                 old[i].~Chunk<t, u>();
             }
         }
-        delete old;
+        delete[] old;
     }
 }
 void clear()
