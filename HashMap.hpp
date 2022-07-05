@@ -273,10 +273,10 @@ void resize(const uint64_t size)
             if(old[i].allocated)
             {
                 this->insert(old[i]);
-                old[i].~Chunk<t, u>();
+                //old[i].~Chunk<t, u>();
             }
         }
-        free(old);
+        delete[] (old);
     }
 }
 void clear()
