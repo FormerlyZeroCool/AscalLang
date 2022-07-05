@@ -140,7 +140,7 @@ public:
 };
 
 template <typename t>
-StackSegment<t>::StackSegment(stack<t> &dat): start(dat.size()), data(&dat) {}
+StackSegment<t>::StackSegment(stack<t> &dat): data(&dat), start(dat.size()) {}
 
 template <typename t>
 void StackSegment<t>::push(const t &data) noexcept

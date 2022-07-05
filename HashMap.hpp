@@ -276,7 +276,7 @@ void resize(const uint64_t size)
                 old[i].~Chunk<t, u>();
             }
         }
-        delete[] old;
+        free(old);
     }
 }
 void clear()
