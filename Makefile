@@ -10,8 +10,8 @@ INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.
 #for mac os if linux version doesn't work
 #INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp -I/usr/local/Cellar/boost/1.76.0/include -I/usr/local/opt/readline/include 
 UTILINCLUDES = queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp
-CFLAGS   = -o3 -Wall
-CXXFLAGS = -o3 -std=c++17 -Wall -Dlibreadline -g
+CFLAGS   = -O3 -Wall
+CXXFLAGS = -O3 -std=c++17 -Wall -Dlibreadline
 #for most distros
 LDFLAGS = -lreadline 
 LDLIBS = -lreadline 
