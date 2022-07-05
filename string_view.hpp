@@ -71,10 +71,10 @@ using sv = string_view;
 template <> struct std::hash<sv>
 {
     //fnv-1a
-  size_t operator()(const sv &x) const
+  uint64_t operator()(const sv &x) const
   {
       static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
-      size_t hash = offset;
+      uint64_t hash = offset;
       for(uint32_t i = 0; i < x.length(); i++)
       {
           hash ^= (x[i]);
