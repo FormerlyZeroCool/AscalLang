@@ -6,24 +6,26 @@
 CC  = g++
 CXX = g++
 #for linux
-INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp -I/usr/include/readline
-#for mac os
-#INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp 
+INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp -I/usr/include/readline 
+#for mac os if linux version doesn't work
+#INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp -I/usr/local/Cellar/boost/1.76.0/include -I/usr/local/opt/readline/include 
 UTILINCLUDES = queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp
 CFLAGS   = -o3 -Wall
-CXXFLAGS = -o3 -std=c++17 -Wall
-#for linux distros
-LDFLAGS = -lreadline -L/usr/lib/x86_64-linux-gnu
-LDLIBS = -lreadline -L/usr/lib/x86_64-linux-gnu
-#for mac os
-#LDFLAGS = -L/usr/local/opt/readline/lib -lreadline
-#LDLIBS = -L/usr/local/opt/readline/lib -lreadline
+CXXFLAGS = -o3 -std=c++17 -Wall -Dlibreadline
+#for most distros
+LDFLAGS = -lreadline 
+LDLIBS = -lreadline 
+#for debian if previous fails
+#LDFLAGS = -lreadline -L/usr/lib/x86_64-linux-gnu 
+#LDLIBS = -lreadline -L/usr/lib/x86_64-linux-gnu 
 .PHONY: default
-default: AscalMain
+default: ascal
+ascal: AscalMain
+	mv AscalMain ascal
 AscalMain:  AscalMain.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o
 
 # header dependency
-AscalMain.o: AscalMain.cpp $(INCLUDES)  $(UTILINCLUDES) 
+AscalMain.o: AscalMain.cpp 
 
 Object.o:
 

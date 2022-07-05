@@ -41,7 +41,7 @@
 template <typename t>
 class AscalFrame;
 class Keyword;
-class StackDataRecord;
+struct StackDataRecord;
 struct expressionResolution {
     Object *data = nullptr;
     Object *parent = nullptr;
