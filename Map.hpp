@@ -565,7 +565,9 @@ template <typename t, typename u>
 void Map<t, u>::emptyTree()
 {
     if(this->root)
+	{
         this->freeRecursive(this->root);
+	}
     
 	elements = 0;
 }
