@@ -163,6 +163,5 @@ public:
         freeOwnedObjects();
     }
 };
-static uint16_t runningNumber = 1;
 
 #endif /* ASCALFRAME_HPP_ */
