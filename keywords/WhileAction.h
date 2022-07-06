@@ -51,30 +51,21 @@ public:
 			startOJumpLenIndex = ctx.target.getInstructions().size();
 			ctx.target.append(val);
 		}
-		const uint32_t afterJumpBoolIndex = reinterpret_cast<std::uintptr_t>(&ctx.target.getInstructions().back()) - reinterpret_cast<std::uintptr_t>(&ctx.target.getInstructions()[0]);
-		
 	    SubStrSV codeBlock = ParsingUtil::getExprInStringSV(ctx.source, index);
-		std::cout<<"\nins len: "<<ctx.target.getInstructions().size()<<"\n";
 		ctx.target.compileParams(codeBlock.data, runtime, ctx);
 		
 		operationType cs = clearStack;
 		ctx.target.append(cs);
-		const uint32_t afterCodeBlock = ctx.target.getInstructions().size();
-		std::cout<<"after bool exp: "<<afterBoolExpIndex<<" after code block: "<<afterCodeBlock<<"\nins len: "<<ctx.target.getInstructions().size()<<"\n";
 		{
 			uint32_t codeBlockLen_bin = ctx.target.getInstructions().size() - topOfLoopIndex;
 			const double val = 8 + codeBlockLen_bin;
-			std::cout<<"seting jump back amount: "<<val<<"\n";
-			std::cout<<" instructions len: "<<ctx.target.getInstructions().size()<<"\n";
 			
 			this->operation = jumpBackInlineAction;
 			ctx.target.append(this->operation);
 			ctx.target.append(val);
 		}
 		{
-			std::cout<<" instructions len: "<<ctx.target.getInstructions().size()<<"\n";
 			const double val = ctx.target.getInstructions().size() - startOJumpLenIndex;
-			std::cout<<"seting jump forward amount: "<<val<<"\n";
 			memcpy(&ctx.target.getInstructions()[startOJumpLenIndex], &val, sizeof(val));
 		}
 	   	index = codeBlock.end + startOfCodeBlock-2;

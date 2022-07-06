@@ -11,7 +11,7 @@
 #include "AscalFrame.hpp"
 #include "Keyword.hpp"
 
-
+/*
 static uint64_t hashfnv(const char *cptr, size_t len)
 {
     static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
@@ -22,7 +22,8 @@ static uint64_t hashfnv(const char *cptr, size_t len)
         hash *= prime;
     }
     return hash;
-}
+}*/
+/*
 template <typename string_type>
 static uint64_t hashFunctionCall(string_type &exp)
 {
@@ -37,7 +38,7 @@ static uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
         hash *= prime;
     }
     return hash;
-}
+}*/
 
 template <class t>
 static void printStack(stack<t> &operands)

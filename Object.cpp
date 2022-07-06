@@ -637,7 +637,6 @@ const uint8_t Object::initialOffset = sizeof(double);
                         std::cout<<"next token after local: "<<endIt->source<<"\n";
                         if(endIt != tokens.end() && endIt->source[0] == '(')
                         {
-                            uint32_t paramsStartSource = ctx.getSrcIndex(*endIt);
                             ctx.src_index = endIt->start;
                             SubStrSV exp = ParsingUtil::getFollowingExprSV(ctx.source, ctx.src_index, string_view("", 0));
                                 std::cout<<"param op: "<<exp.data<<"\n";
@@ -1135,7 +1134,7 @@ void Object::eraseList(long index)
             if(this->isObjList())
             {
                 this->objectMap.getMemMan().obj_free(reinterpret_cast<Object*>(element));
-                memcpy(element, reinterpret_cast<Object*>(element) + 1, elementsToMove * sizeof(uint64_t));
+                memcpy(element, reinterpret_cast<Object**>(element) + 1, elementsToMove * sizeof(uint64_t));
             }
             else
                 memcpy(element, reinterpret_cast<double*>(element) + 1, elementsToMove * sizeof(uint64_t));

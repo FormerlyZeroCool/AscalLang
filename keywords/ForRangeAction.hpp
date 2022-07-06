@@ -24,7 +24,6 @@ public:
         uint32_t index = ctx.src_index+this->opcodeSize();
         while(ctx.source.size() > index && ParsingUtil::isalpha(ctx.source[index]))
             index++;
-        SubStrSV itVar = ParsingUtil::getVarNameSV(ctx.source, index);
         const int postRangeIndex = ctx.source.find("range", index)+5;
         SubStrSV limitExpr = ParsingUtil::getExprInStringSV(ctx.source, postRangeIndex, '(', ')', '{');
         //std::cout<<"ivar: "<<itVar.data<< " ivar len: "<< itVar.data.length()<<" limit: "<<limitExpr.data<<"\nexpr: "<<ctx.source<<"\n";
@@ -41,7 +40,6 @@ public:
             startOfCodeBlock++;
         }
         index = startOfCodeBlock;
-        const SubStrSV codeBlock = ParsingUtil::getExprInStringSV(ctx.source, index);
         
         
     }

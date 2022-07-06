@@ -148,7 +148,7 @@ public:
     {
         return 'f';
     }
-    AscalFrame(AscalExecutor &runtime): runtime(runtime), localMemory(runtime.dataStack), initialOperands(runtime.operands) {}
+    AscalFrame(AscalExecutor &runtime): runtime(runtime), initialOperands(runtime.operands), localMemory(runtime.dataStack) {}
     void freeOwnedObjects(){
         for(int i = 0; i < this->localMemory.size(); i++)
         {

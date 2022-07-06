@@ -235,7 +235,6 @@ void Object::clearList()
 {
     if(this->inp && this->isObjList())
     {
-        uint64_t index = 0;
         for(uint32_t i = 0; i < this->getListSize(); i++)
         {
             Object *obj = nullptr;

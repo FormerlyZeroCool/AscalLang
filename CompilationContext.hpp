@@ -54,8 +54,8 @@ class CompilationContext {
     uint64_t paramsCount = 0;
     FlatMap<string_view, LocalRecord > localMemory;
     int32_t src_index;
-    CompilationContext(string_view src, Object &target, AscalExecutor &runtime): target(target), source(src),
-        runtime(runtime), src_index(0), localMemory()
+    CompilationContext(string_view src, Object &target, AscalExecutor &runtime): source(src), target(target),
+        runtime(runtime), localMemory(), src_index(0)
     {
         //target.resizeInstructions(src.length() + Object::SMALL_EXP);
         this->target.clearList();

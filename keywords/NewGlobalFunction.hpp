@@ -99,8 +99,6 @@ public:
     }
     void compile(CompilationContext &ctx) override
     {
-        std::cout<<"Hello compiling let!\n";
-        Object *nobj = nullptr;
         SubStrSV localName = ParsingUtil::getVarNameSV(ctx.source,ctx.source.find("let",ctx.src_index)+4);
         static uint32_t startOfExp;
         if(ctx.source[localName.end + 1] == '(')
@@ -149,7 +147,6 @@ public:
             //nobj = &runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory());
 
             this->operation = Global::makeFunction;
-            uint64_t countDoubleParams = 0, countObjectParams = 0;
             ctx.target.append(this->operation);
             ctx.target.append((uint64_t)(localName.data.size()));
             for(int i = 0; i < localName.data.size(); i++)

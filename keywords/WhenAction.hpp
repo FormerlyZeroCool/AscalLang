@@ -12,8 +12,6 @@
 #include "../Keyword.hpp"
 class WhenAction: public OpKeyword {
 	private:
-	const uint32_t bufSize = 8192;
-	char buffer[8192];
     std::string thenText, elseText;
 public:
 	WhenAction(AscalExecutor &runtime):
@@ -23,83 +21,14 @@ public:
         this->thenText = "then";
         this->elseText = "else";
 	}
-	void action(AscalFrame<double>* frame) override
-	{/*
-
-            string_view booleanExpression = exp.substr(startOfBoolExp,index-startOfBoolExp);
-            
-            index += 5;//increment index past this when
-            thenIndex = frame->exp.find(this->keyWord,index);//find next when
-            thenIndex = thenIndex==-1?endIndex+1:thenIndex;//find end token of code block
-            const int codeBlockEndIndex = std::min(std::min(endIndex,thenIndex),elseIndex);
-            value = ParsingUtil::getExprInStringSV(exp.substr(index, codeBlockEndIndex - index), 0, '{', '}',';').data;//get code block
-        if(codeBlockEndIndex == elseIndex)
-        {
-            frame->index = codeBlockEndIndex + 4;
-            string_view remainder = frame->exp.substr(codeBlockEndIndex + 4, endIndex - (codeBlockEndIndex + 4));
-                
-            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
-            executionFrame->returnPointer = frame;
-            executionFrame->exp = remainder;
-            executionFrame->setIsDynamicAllocation(true);
-            executionFrame->setContext(frame->getContext());
-            runtime.currentStack->push(executionFrame);
-        }
-        else if(codeBlockEndIndex == endIndex+1)
-        {
-                
-            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
-            executionFrame->returnPointer = frame;
-            executionFrame->exp = "";
-            executionFrame->setIsDynamicAllocation(true);
-            executionFrame->setContext(frame->getContext());
-            runtime.currentStack->push(executionFrame);
-        }
-        else
-        {
-            string_view remainder = frame->exp.substr(codeBlockEndIndex, 3 + endIndex - codeBlockEndIndex);
-                
-            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
-            executionFrame->returnPointer = frame;
-            executionFrame->exp = remainder;
-            executionFrame->setIsDynamicAllocation(true);
-            executionFrame->setContext(frame->getContext());
-            runtime.currentStack->push(executionFrame);
-        }
-                                                   
-        {
-            AscalFrame<double> *executionFrame = runtime.sFramePool.construct(runtime, frame);
-            executionFrame->returnPointer = frame;
-            executionFrame->exp = value;
-            executionFrame->setIsDynamicAllocation(true);
-            executionFrame->setContext(frame->getContext());
-            runtime.currentStack->push(executionFrame);
-        }
-        {
-            AscalFrame<double> *executionFrame = runtime.cFramePool.construct(runtime, frame);
-            executionFrame->returnPointer = frame;
-            executionFrame->exp = booleanExpression;
-            executionFrame->setIsDynamicAllocation(true);
-            executionFrame->setContext(frame->getContext());
-            runtime.currentStack->push(executionFrame);
-        }
-	    if(*runtime.boolsettings["o"])
-	    {
-	        std::cout<<"Executing Branch: "<<value<<" Params: "<<AscalExecutor::printMemory(*frame->getParamMemory()," = ",false,"|");
-	        std::cout<<"\n";
-	    }
-        //frame->initialOperands.push(runtime.callOnFrame(frame, value));
-        frame->index = endIndex+3;
-        */
-	}
-
-    void compileWhen(CompilationContext &ctx, string_view boolExp, uint32_t &jumpBackDistIndex, const uint32_t startOfBody, const uint32_t endOfBody)
+    void compileWhen(CompilationContext &ctx, string_view boolExp, uint32_t &jumpBackDistIndex, const uint32_t startOfBody, const uint32_t endOfBody) const 
     {
+        operationType operation = nullptr;
         /*compile boolean expression and add jump instruction*/
         ctx.target.compileParams(boolExp, ctx.runtime, ctx);
         const double jumpDist = 0;
-        this->operation = jumpIfFalseInlineAction;
-        ctx.target.append(this->operation);
+        operation = jumpIfFalseInlineAction;
+        ctx.target.append(operation);
         const uint64_t jumpDistIndex = ctx.target.getInstructions().size();
         ctx.target.append(jumpDist);
         string_view codeblock = ctx.source.substr(startOfBody, endOfBody - startOfBody);
@@ -107,15 +36,15 @@ public:
         std::cout<<"compiling when bool exp: "<<boolExp<<"  body: "<<codeblock<<"\n";
         /*Compile expression to exec if true, and add jump past end instruction*/
         ctx.target.compileParams(codeblock, ctx.runtime, ctx);
-        this->operation = jumpForwardInlineAction;
-        ctx.target.append(this->operation);
+        operation = jumpForwardInlineAction;
+        ctx.target.append(operation);
         jumpBackDistIndex = ctx.target.getInstructions().size();
         ctx.target.append(jumpDist);
         //set jump if false jump dist to jump past codeblock to next when
         double jump = ctx.target.getInstructions().size() - jumpDistIndex;
         ctx.writeToTargetAtByte(jump, jumpDistIndex);
     }
-	virtual void compile(CompilationContext &ctx) {
+	virtual void compile(CompilationContext &ctx) override {
         ctx.src_index += this->keyWord.size();
         uint32_t i = ctx.src_index;
         const uint32_t startOfBoolExp = i;
