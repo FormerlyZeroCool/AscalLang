@@ -19,7 +19,8 @@ LDLIBS = -lreadline
 #LDFLAGS = -lreadline -L/usr/lib/x86_64-linux-gnu 
 #LDLIBS = -lreadline -L/usr/lib/x86_64-linux-gnu 
 .PHONY: default
-default: ascal
+default: 
+	make clean && time make -j 7 ascal
 ascal: AscalMain
 	mv AscalMain ascal
 AscalMain:  AscalMain.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o
