@@ -160,7 +160,7 @@ public:
             }
             this->operation = Global::returnAndPop;
             ctx.target.append(this->operation);
-            std::cout<<"not a double not obj\n"<<"exp: "<<subexp.data<<"\n";
+            //std::cout<<"not a double not obj\n"<<"exp: "<<subexp.data<<"\n";
         }
         else
         {

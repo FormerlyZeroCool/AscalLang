@@ -33,7 +33,7 @@ public:
         ctx.target.append(jumpDist);
         string_view codeblock = ctx.source.substr(startOfBody, endOfBody - startOfBody);
 
-        std::cout<<"compiling when bool exp: "<<boolExp<<"  body: "<<codeblock<<"\n";
+        //std::cout<<"compiling when bool exp: "<<boolExp<<"  body: "<<codeblock<<"\n";
         /*Compile expression to exec if true, and add jump past end instruction*/
         ctx.target.compileParams(codeblock, ctx.runtime, ctx);
         operation = jumpForwardInlineAction;
