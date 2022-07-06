@@ -92,7 +92,7 @@ public:
     void copyToInstructions(string_view);
     template <typename PLAIN_OLD_OBJECT>//Must be a plain ole object!
     string_view append(const PLAIN_OLD_OBJECT value) {
-        std::cout<<"remaining bytes in buffer: "<<(int)(this->instructionBufferSizeId - this->instructions.length())<<"\n";
+        //std::cout<<"remaining bytes in buffer: "<<(int)(this->instructionBufferSizeId - this->instructions.length())<<"\n";
         if((int)(this->instructionBufferSizeId - this->instructions.length()) <= sizeof(value))
         {
             this->resizeInstructionsCopyDealloc();

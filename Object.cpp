@@ -19,6 +19,7 @@ const uint8_t Object::initialOffset = sizeof(double);
         this->LexCodeAndCompile(runtime, ctx);
         
         uint8_t buffer[256];
+        memset(buffer, 0, sizeof(buffer));
         memcpy(&buffer[0], &ctx.target.getInstructions()[0], 256<ctx.target.getInstructions().size()?256:ctx.target.getInstructions().size());
         int counter = 0;
         for(int j = 0; j < 16; j++){
@@ -529,10 +530,10 @@ const uint8_t Object::initialOffset = sizeof(double);
         for(uint32_t &i = ctx.currentToken; i < end; i++)
         {
             const auto token = tokens[i];
-            std::cout<<"current token id: "<<ctx.currentToken<<"\n"<<"type: "<<token.type<<"\n";
+            //std::cout<<"current token id: "<<ctx.currentToken<<"\n"<<"type: "<<token.type<<"\n";
             if(token.type == CompilationContext::Token::NUMBER)
             {
-                std::cout<<"loading num: "<<token.source<<"\n";
+                //std::cout<<"loading num: "<<token.source<<"\n";
                 operationType op = readAndPushDouble;
                 ctx.target.append(op);
                 ctx.target.append(token.constantValue);
@@ -546,7 +547,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                 Object *parent = nullptr;
                 const auto it = ctx.runtime.memory.find(token.source);
                 const auto localIt = ctx.localMemory.find(token.source);
-                std::cout<<"parsing varname: "<<token.source<<"\n";
+                //std::cout<<"parsing varname: "<<token.source<<"\n";
                 if(it != ctx.runtime.memory.end() && localIt == ctx.localMemory.end())
                 {
                     Object *current = (*it).getValue();
@@ -566,7 +567,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                             uint32_t paramsStartSource = ctx.getSrcIndex(*endIt);
 
 	                        SubStrSV exp = ParsingUtil::getFollowingExprSV(ctx.source, paramsStartSource, string_view("", 0));
-                                std::cout<<"param op: "<<exp.data<<"\n";
+                                //std::cout<<"param op: "<<exp.data<<"\n";
 	                        ParsingUtil::ParseStatementList(exp.data,0,ctx.runtime.paramsBuffer);
                             
                             for(uint32_t j = 0; j < ctx.runtime.paramsBuffer.statements.size(); j++)
