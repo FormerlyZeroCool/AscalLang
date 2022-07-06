@@ -114,7 +114,6 @@ public:
             for(int32_t i = this->params.statements.size() - 1; i >= 0; i--)
             {
                 const auto &param = this->params.statements[i];
-                std::cout<<param.data<<" stack index: "<<body_ctx.lastVarIndex<<"\n";
                 if(param.data[0] != '&')
                 {
                     body_ctx.addDoubleLocal(param.data, 0);
@@ -137,7 +136,6 @@ public:
             }
             this->operation = returnAndPop;
             ctx.target.append(this->operation);
-            std::cout<<"not a double not obj\n"<<"exp: "<<subexp.data<<"\n";
         }
         else
         {

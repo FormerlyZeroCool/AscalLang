@@ -42,12 +42,12 @@ const uint8_t Object::initialOffset = sizeof(double);
         
         this->LexCodeAndCompile(runtime, ctx);
         
-        std::cout<< ctx.target.getInstructions() << "\n";
+        //std::cout<< ctx.target.getInstructions() << "\n";
     }
 
     void Object::compileParams(string_view s, AscalExecutor &runtime, CompilationContext &ctx)
     {
-        std::cout<<"instruction length before param compilation: "<<ctx.target.getInstructions().size()<<"\n";
+        //std::cout<<"instruction length before param compilation: "<<ctx.target.getInstructions().size()<<"\n";
         uint32_t start = 0, end = ctx.currentToken;
         std::uintptr_t endptr = reinterpret_cast<std::uintptr_t>(&s.back());
         std::uintptr_t startptr = reinterpret_cast<std::uintptr_t>(&s[0]);
@@ -57,9 +57,9 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.currentToken = start;
         while(ctx.lastTokens.size() > end && reinterpret_cast<std::uintptr_t>(&ctx.lastTokens[end].source.back()) <= endptr)
             end++;
-        std::cout<<"sub start: "<<ctx.currentToken<<" end: "<<(end)<<"\n";
+        //std::cout<<"sub start: "<<ctx.currentToken<<" end: "<<(end)<<"\n";
         this->compileTokens(ctx, end);
-        std::cout<<"instruction length after param compilation: "<<ctx.target.getInstructions().size()<<"\n";
+        //std::cout<<"instruction length after param compilation: "<<ctx.target.getInstructions().size()<<"\n";
     }
 
     void Object::LexCodeAndCompile(AscalExecutor &runtime, CompilationContext &ctx)
@@ -99,7 +99,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                 int index = ctx.src_index;
                 const auto number = ParsingUtil::getNextDouble(ctx.source, index);
                 ctx.lastTokens.push_back(CompilationContext::Token(ctx.source.substr(ctx.src_index, index - ctx.src_index), ctx.src_index, CompilationContext::Token::NUMBER));
-                std::cout<<"source Parsed num: "<<number<<" Len: "<<(index - ctx.src_index)<<"\n";
+                //std::cout<<"source Parsed num: "<<number<<" Len: "<<(index - ctx.src_index)<<"\n";
                 ctx.src_index = index;
                 ctx.lastTokens.back().constantValue = number;
                 //ctx.target.append(AscalExecutor::DOUBLE);
@@ -141,7 +141,7 @@ const uint8_t Object::initialOffset = sizeof(double);
             {
                 ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::null));
                 
-                std::cout<<"source Parsed char: "<<ctx.source[ctx.src_index]<<" ind: "<<(ctx.src_index)<<"\n"<<"isnum: "<<ParsingUtil::isNumeric(ctx.source[ctx.src_index])<<"\n";
+                //std::cout<<"source Parsed char: "<<ctx.source[ctx.src_index]<<" ind: "<<(ctx.src_index)<<"\n"<<"isnum: "<<ParsingUtil::isNumeric(ctx.source[ctx.src_index])<<"\n";
                 //ctx.target.append(ctx.source[ctx.src_index++]);
                 ctx.src_index++;
             }
@@ -628,18 +628,18 @@ const uint8_t Object::initialOffset = sizeof(double);
                 {
                     const auto current = (*localIt).getValue();
 
-                        std::cout<<"local variable compiliation\n";
+                        //std::cout<<"local variable compiliation\n";
                     if(current.isObject())
                     {
                         //make sure to have params executed and pushed to results stack beforehand
                         //create frame push paramsCount params to data stack from parent function
                         endIt = tokens.begin() + i + 1;
-                        std::cout<<"next token after local: "<<endIt->source<<"\n";
+                        //std::cout<<"next token after local: "<<endIt->source<<"\n";
                         if(endIt != tokens.end() && endIt->source[0] == '(')
                         {
                             ctx.src_index = endIt->start;
                             SubStrSV exp = ParsingUtil::getFollowingExprSV(ctx.source, ctx.src_index, string_view("", 0));
-                                std::cout<<"param op: "<<exp.data<<"\n";
+                                //std::cout<<"param op: "<<exp.data<<"\n";
                             ParsingUtil::ParseStatementList(exp.data,0,ctx.runtime.paramsBuffer);
                             int32_t j = ctx.runtime.paramsBuffer.statements.size() - 1;
                             auto ctBackup = i;
@@ -659,11 +659,11 @@ const uint8_t Object::initialOffset = sizeof(double);
                         ctx.target.append(opLocalFunctionCall);
                         ctx.target.append((uint64_t) current.stack_index);
                         ctx.target.append((uint64_t) ctx.runtime.paramsBuffer.statements.size());
-                        std::cout<<"loading local function call\n";
+                        //std::cout<<"loading local function call\n";
                     }
                     else if(current.isDouble())
                     {
-                        std::cout<<"loading local variable load double\nstack index: "<<current.stack_index<<"\n";
+                        //std::cout<<"loading local variable load double\nstack index: "<<current.stack_index<<"\n";
                         operationType opLocalDoubleVarRead = localDoubleVarRead;
                         ctx.target.append(opLocalDoubleVarRead);
                         ctx.target.append((uint64_t) current.stack_index);
@@ -674,12 +674,12 @@ const uint8_t Object::initialOffset = sizeof(double);
             }
             else if(token.type == CompilationContext::Token::OPERATOR && token.source[0] == ')')
             {
-                std::cout<<"handling op: "<<token.source<<"\n";
+                //std::cout<<"handling op: "<<token.source<<"\n";
                 CompilationContext::Token nextOp;
                 stack.top(nextOp);
                 while(!stack.isEmpty() && nextOp.source[0] != '(')
                 {
-                    std::cout<<"should not be (: "<<nextOp.source<<"\n";
+                    //std::cout<<"should not be (: "<<nextOp.source<<"\n";
                     //to do
                     compileOperator(ctx, stack);
                     stack.pop();
@@ -687,14 +687,14 @@ const uint8_t Object::initialOffset = sizeof(double);
                 }
                 if(!stack.isEmpty()) {
                     stack.top(nextOp);
-                    std::cout<<"should be (: "<<nextOp.source<<"\n";
+                    //std::cout<<"should be (: "<<nextOp.source<<"\n";
                     stack.pop();
                 }
                 //stack.push(token);
             }
             else if(token.type == CompilationContext::Token::OPERATOR)
             {
-                std::cout<<"loading op: "<<token.source<<"\n";
+                //std::cout<<"loading op: "<<token.source<<"\n";
                 CompilationContext::Token nextOp;
                 stack.top(nextOp);
                 if(token.source[0] != '(')
@@ -709,16 +709,16 @@ const uint8_t Object::initialOffset = sizeof(double);
             }
             else if(token.type == CompilationContext::Token::KEYWORD)
             {
-                std::cout<<"loading keyword: "<<token.source<<"\n";
+                //std::cout<<"loading keyword: "<<token.source<<"\n";
                 //string_view source = token.source;
                 //source.resize(strlen(source.c_str()));
                 const auto keyword = ctx.runtime.inputMapper.find(token.source);
                 ctx.src_index = token.start;
                 (*keyword).getValue()->compile(ctx);
-                std::cout<<"keyword: "<<token.source<<" compiled.\n";
+                //std::cout<<"keyword: "<<token.source<<" compiled.\n";
                 ctx.syncTokenIndexToSrcIndex();
-                if(tokens.size() > i)
-                    std::cout<<"nextToken: "<<tokens[i].source<<"\n";
+                //if(tokens.size() > i)
+                  //  std::cout<<"nextToken: "<<tokens[i].source<<"\n";
             }
             else if(token.type == CompilationContext::Token::DELIMITER)
             {
@@ -737,17 +737,17 @@ const uint8_t Object::initialOffset = sizeof(double);
             }
             else
             {
-                std::cout<<"loading junk: "<<token.source<<"\n";
+                //std::cout<<"loading junk: "<<token.source<<"\n";
 
                 //ctx.target.append(token.source[0]);
             }
         }
-                std::cout<<"finishing exp: "<<ctx.source<<"\n";
+                //std::cout<<"finishing exp: "<<ctx.source<<"\n";
                 CompilationContext::Token nextOp;
                 stack.top(nextOp);
                 while(!stack.isEmpty() && nextOp.source[0] != '(')
                 {
-                    std::cout<<"should not be (: "<<nextOp.source<<"\n";
+                    //std::cout<<"should not be (: "<<nextOp.source<<"\n";
                     compileOperator(ctx, stack);
                     stack.pop();
                     stack.top(nextOp);
@@ -755,7 +755,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                 //not needed because of stack's destructor
                 if(!stack.isEmpty()) {
                     stack.top(nextOp);
-                    std::cout<<"should be (: "<<nextOp.source<<"\n";
+                    //std::cout<<"should be (: "<<nextOp.source<<"\n";
                     stack.pop();
                 }
         
