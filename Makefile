@@ -3,8 +3,8 @@
 # Makefile for lab 6, part 1
 #
 
-CC  = clang++
-CXX = clang++
+CC  = g++
+CXX = g++
 #for linux
 INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp -I/usr/include/readline 
 #for mac os if linux version doesn't work
