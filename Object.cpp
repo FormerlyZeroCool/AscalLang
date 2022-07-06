@@ -76,7 +76,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                 const auto keyword = runtime.inputMapper.find(varName.data);
                 if(keyword != runtime.inputMapper.end())
                 {
-                std::cout<<"parsed keyword: \""<<varName.data<<"\"\n";
+                //std::cout<<"parsed keyword: \""<<varName.data<<"\"\n";
                     ctx.lastTokens.push_back(CompilationContext::Token(varName.data, varName.start, CompilationContext::Token::KEYWORD));
                     ctx.src_index += varName.data.length();
                     //ctx.lastTokens.push_back(CompilationContext::Token(varName.data, varName.start, CompilationContext::Token::KEYWORD_END));
