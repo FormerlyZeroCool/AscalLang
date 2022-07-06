@@ -15,7 +15,12 @@
 #include "AscalExecutor.hpp"
 #include "ParsingUtil.hpp"
 #include "CompilationContext.hpp"
-
+namespace asc {
+inline double abs(double value) noexcept
+{
+	return value < 0 ? value * -1 : value;
+}
+}
 //create a wrapper class that has pointers to functions
 struct KeywordExecutionContext {
     AscalFrame<double> *&frame_ptr;
@@ -105,7 +110,7 @@ inline void jumpIfFalseAction(KeywordExecutionContext ctx)
 	ctx.frame().initialOperands.pop();
 	ctx.frame().initialOperands.top(boolVal);
 	ctx.frame().initialOperands.pop();
-	if(!boolVal && abs(jmp) > Keyword::opcodeSize())
+	if(!boolVal && asc::abs(jmp) > Keyword::opcodeSize())
 	{
 		ctx.frame().index += jmp;
 	}
@@ -125,7 +130,7 @@ inline void jumpIfFalseInlineAction(KeywordExecutionContext ctx)
 	ctx.frame().initialOperands.pop();
 	ctx.frame().index += Keyword::opcodeSize();
 	ctx.getData(jmp, ctx.frame().index);
-	if(!boolVal && abs(jmp) > Keyword::opcodeSize())
+	if(!boolVal && asc::abs(jmp) > Keyword::opcodeSize())
 	{
 		ctx.frame().index += jmp;
 	}
