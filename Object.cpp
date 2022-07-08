@@ -173,7 +173,7 @@ const uint8_t Object::initialOffset = sizeof(double);
     void functionCallSetup(KeywordExecutionContext ctx)
     {
         Object *obj = nullptr;
-        size_t paramsCount = 0;
+        uint64_t paramsCount = 0;
         ctx.getData(obj, ctx.frame().index + sizeof(Object*));
         ctx.getData(paramsCount, ctx.frame().index + sizeof(Object*) * 2);
         ctx.frame().index += sizeof(size_t) + sizeof(Object*) * 2;

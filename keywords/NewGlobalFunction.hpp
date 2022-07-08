@@ -110,7 +110,6 @@ public:
 
         SubStrSV subexp = ParsingUtil::getExprInStringSV(ctx.source, startOfExp);
 
-        const uint32_t executionStart = ctx.target.getInstructions().size();
         if(firstCharExp == '[')
         {
             /*Object obj(runtime.memMan, localName.data);
@@ -125,14 +124,10 @@ public:
         }
         if(!ParsingUtil::isDouble(subexp.data))
         {
-            Object &newLocal = ctx.runtime.loadUserDefinedFn(Object(runtime.memMan, localName.data), ctx.runtime.memory);
-            newLocal.setObject();
+            Object &newVar = ctx.runtime.loadUserDefinedFn(Object(runtime.memMan, localName.data), ctx.runtime.memory);
+            newVar.setObject();
 
-            CompilationContext body_ctx(subexp.data, newLocal, runtime);
-            //body_ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
-            //body_ctx.lastVarIndex--;
-            //this->operation = makeSelfParameter;
-            //body_ctx.target.append(this->operation);
+            CompilationContext body_ctx(subexp.data, newVar, runtime);
             for(int32_t i = this->params.statements.size() - 1; i >= 0; i--)
             {
                 const auto &param = this->params.statements[i];
@@ -143,8 +138,7 @@ public:
                 }
             }
 
-            newLocal.LexCodeAndCompile(this->runtime, body_ctx);
-            //nobj = &runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory());
+            newVar.LexCodeAndCompile(this->runtime, body_ctx);
 
             this->operation = Global::makeFunction;
             ctx.target.append(this->operation);
@@ -160,7 +154,6 @@ public:
             }
             this->operation = Global::returnAndPop;
             ctx.target.append(this->operation);
-            //std::cout<<"not a double not obj\n"<<"exp: "<<subexp.data<<"\n";
         }
         else
         {
@@ -181,11 +174,6 @@ public:
             ctx.target.append((double) atof(&subexp.data[0]));
             subexp.data[nullIndex] = tmp;
         }
-        const uint32_t executionEnd = ctx.target.getInstructions().size();
-        string_view initGlobal = ctx.target.getInstructions().substr(executionStart, executionEnd - executionStart);
-        AscalFrame<double> frame(ctx.runtime);
-        frame.exp = initGlobal;
-        ctx.runtime.calculateExpression(&frame);
         ctx.src_index = subexp.end;
 
     }
