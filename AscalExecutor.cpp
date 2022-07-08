@@ -397,13 +397,11 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 {
     frameStack.push(frame);
     operationType operation = nullptr;
-    //this->currentStack = &frameStack;
     try{
         while(frame->index < frame->exp.length())
         {
-            memcpy(&operation, &frame->exp[frame->index], sizeof(void*));
+            frame->getObjectAt(operation, frame->index);
             operation(KeywordExecutionContext(frame));
-            //std::cout<<"current index: "<<frame->index<<" len: "<<frame->exp.size()<<"\n";
         }
         double data = 0;
         if(!frame->initialOperands.isEmpty())

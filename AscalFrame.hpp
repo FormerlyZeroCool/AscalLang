@@ -162,6 +162,11 @@ public:
     ~AscalFrame() {
         freeOwnedObjects();
     }
+    template <typename T>
+    void getObjectAt(T& obj, uint32_t index)
+    {
+        memcpy(&obj, &this->exp[this->index], sizeof(T));
+    }
 };
 
 #endif /* ASCALFRAME_HPP_ */

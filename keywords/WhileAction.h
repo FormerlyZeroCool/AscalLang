@@ -40,8 +40,6 @@ public:
 	    }
 		const uint32_t topOfLoopIndex = ctx.target.getInstructions().size();
 		ctx.target.compileParams(booleanExpression.data, runtime, ctx);
-		const uint32_t afterBoolExpIndex = ctx.target.getInstructions().size();
-		std::cout<<"top of bool exp: "<<topOfLoopIndex<<" after boolExp index: "<<afterBoolExpIndex<<"\n";
 		uint32_t startOJumpLenIndex;
 		{
 			double val = 0;
@@ -58,7 +56,7 @@ public:
 		ctx.target.append(cs);
 		{
 			uint32_t codeBlockLen_bin = ctx.target.getInstructions().size() - topOfLoopIndex;
-			const double val = 8 + codeBlockLen_bin;
+			const double val = sizeof(void*) + codeBlockLen_bin;
 			
 			this->operation = jumpBackInlineAction;
 			ctx.target.append(this->operation);
