@@ -69,12 +69,14 @@ stack<char> processOperators;
 AscalFrame<double>* cachedRtnObject = nullptr;
 public:
 size_t rememberedFromMemoTableCount;
-std::unordered_map<uint64_t,double> memoPad;
 struct ColorRGBA {
 	uint8_t r,g,b,a = 0;
 	ColorRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
 	ColorRGBA(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b), a(0) {}
 };
+//TODO
+//std::vector<std::string, ColorRGBA> colorMap;
+std::vector<ColorRGBA> colorMap;
 std::map<std::string, ColorRGBA> colorMap;
 std::unordered_map<uint64_t,double> memoPad;
 /////////////////////////////
