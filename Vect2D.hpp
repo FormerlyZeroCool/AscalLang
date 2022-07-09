@@ -5,8 +5,8 @@
  *      Author: andrew
  */
 
-#ifndef VECT2D_HPP_
-#define VECT2D_HPP_
+#ifndef VECT2D_H_
+#define VECT2D_H_
 
 #include <vector>
 template <typename t>
@@ -29,8 +29,8 @@ public:
 	}
 	void insertAt(int x,int y,t value)
 	{
-		if(this->size()>x+ y*width)
-			(*this)[x+ y*width] = value;
+		if(this->size() > x + y * width && x|y)
+			(*this)[x + y*width] = value;
 		else
 		{
 			while(this->size()<x+ y*width)
@@ -42,4 +42,4 @@ public:
 	}
 };
 
-#endif /* VECT2D_HPP_ */
+#endif /* VECT2D_H_ */

@@ -1,6 +1,8 @@
-#pragma once
+#ifndef STACK_HPP__
+#define STACK_HPP__
 #include <iostream>
 #include <vector>
+#include <deque>
 template <typename t>
 struct singlelinknode
 {
@@ -103,9 +105,7 @@ if(head != nullptr)
   head = p;
 }
 else
-{
-  std::cout<<"Stack is empty! Can't pop.";
-}
+{std::cout<<"Stack is empty! Can't pop.";}
 
     }
 template <typename t>
@@ -120,20 +120,29 @@ template <typename t>
   }
 
 template <typename t>
-class stack : public std::vector<t>{
+class stack : public std::deque<t>{
 
 public:
 	stack(){}
-	void push(t data);
-	void pop();
-	void top(t&data);
-	void top(t*&data);
-	bool isEmpty();
-	int length();
+	inline void push(const t &data);
+	inline void push(const t &&data);
+  inline void pop();
+	inline void top(t&data);
+	inline void top(t*&data);
+    inline t& get()
+    {
+        return (*this)[this->size()-1];
+    }
+	inline bool isEmpty();
+	inline size_t length();
 };
-
 template <typename t>
-void stack<t>::push(t data)
+void stack<t>::push(const t &data)
+{
+	this->push_back(data);
+}
+template <typename t>
+void stack<t>::push(const t &&data)
 {
 	this->push_back(data);
 }
@@ -144,6 +153,7 @@ void stack<t>::pop()
 	{
 		this->pop_back();
 	}
+    else throw std::string("You popped an empty list!");
 }
 template <typename t>
 bool stack<t>::isEmpty()
@@ -151,7 +161,7 @@ bool stack<t>::isEmpty()
 	return this->size() == 0;
 }
 template <typename t>
-int stack<t>::length()
+size_t stack<t>::length()
 {
 	return this->size();
 }
@@ -172,3 +182,4 @@ void stack<t>::top(t*&data)
 		data = &(*this)[this->size()-1];
 	}
 }
+#endif

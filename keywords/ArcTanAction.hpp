@@ -9,23 +9,23 @@
 #define KEYWORDS_ARCTANACTION_HPP_
 
 #include "../Keyword.hpp"
-class ArcTanAction: public Keyword {
+class ArcTanAction: public OpKeyword {
 public:
-	ArcTanAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ArcTanAction(AscalExecutor &runtime):
+		OpKeyword(runtime)
 	{
 		this->keyWord = "arctan";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime->callOnFrame(frame,exp.data);
+	    double input = runtime.callOnFrame(frame,exp.data);
 	    frame->initialOperands.push(atan(input));
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"arctan("<<input<<") = "<<atan(input)<<'\n';
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+	    frame->index = exp.end;
 	}
 };
 

@@ -10,28 +10,29 @@
 #include "../Keyword.hpp"
 #include "../AscalExecutor.hpp"
 #include "../ParsingUtil.hpp"
-class PrintString: public Keyword {
+class PrintString: public StKeyword {
+private:
+    ParsedStatementList params;
 public:
-	PrintString(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-		Keyword(runtime, memory, boolsettings)
+	PrintString(AscalExecutor &runtime):
+		StKeyword(runtime)
 	{
 		this->keyWord = "printStr";
 	}
 
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    std::vector<SubStr> params = Object("","",exp.data).params;
-	    if(params.size() < 1)
+	    SubStrSV exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord);
+	    ParsingUtil::ParseStatementList(exp.data, 0, params);
+	    if(params.statements.size() < 1)
 	    	throw std::string("loadStr (<object name>)");
-	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
-	    Object *obj = runtime->resolveNextExprSafe(frame, vns);
-	    obj->printList(*memory);
-	    if(*(*boolsettings)["o"])
+	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params.statements[0].start);
+	    Object *obj = runtime.resolveNextExprSafe(frame, vns);
+	    std::cout << obj->listToString(runtime.memory);
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"loadstr("<<") = "<<(char)(65)<<'\n';
 	    }
-	    return MAX;
 	}
 };
 

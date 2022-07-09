@@ -10,23 +10,23 @@
 
 #include "../Keyword.hpp"
 #include "FileHandler.hpp"
-class RunAction: public Keyword {
+class RunAction: public StKeyword {
 private:
 public:
-	RunAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	RunAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "run";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    try{
-	        if(*(*boolsettings)["o"])
+		    if(*runtime.boolsettings["o"])
 	        {
 	        	std::cout<<"Attempting to run file\n";
 	        }
-	        FileHandler::loadFile(runtime, frame->exp, 4, runtime->ascal_cin);
-	        if(*(*boolsettings)["o"])
+	        FileHandler::loadFile(runtime, frame->exp, 4, runtime.ascal_cin);
+		    if(*runtime.boolsettings["o"])
 	        {
 	        	std::cout<<"Finished running file\n";
 	        }
@@ -34,7 +34,6 @@ public:
 	    {
 	        throw std::string("while running file\n"+exception);
 	    }
-	    return MAX;
 	}
 };
 

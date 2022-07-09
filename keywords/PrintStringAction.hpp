@@ -9,53 +9,58 @@
 #define KEYWORDS_PRINTSTRINGACTION_HPP_
 
 #include "../Keyword.hpp"
-class PrintStringAction: public Keyword {
+class PrintStringAction: public StKeyword {
 public:
-	PrintStringAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	PrintStringAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "printTxt";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	        const int startOfPrint = frame->exp.find("\"",frame->index)+1;
+	        const int startOfPrint = frame->exp.find("\"",frame->index+keyWord.length()-2)+1;
+	        //std::cout<<"sop: "<<startOfPrint<<"\n";
 	        const int endOfPrint = frame->exp.find("\"",startOfPrint);
+	        //std::cout<<"eop: "<<endOfPrint<<"\n"<<frame->exp<<"\n";
+
 	        if(endOfPrint <= startOfPrint)
 	            throw std::string("Error, no terminating \" in print string command");
 
-	        std::string result;
+	        string_view working;
+	        std::stringstream result;
+            uint32_t index = 0;
 	        if(endOfPrint != -1)
 	        {
-	            result = frame->exp.substr(startOfPrint,endOfPrint-startOfPrint);
-	            int index = 0;
-	            SubStr subexp("",0,0);
-	            while(result[index] && result[index] != '\"')
+	            working = frame->exp.substr(startOfPrint,endOfPrint-startOfPrint);
+	            SubStrSV subexp(string_view(),0,0);
+	            while(index < working.length() && working[index] != '\"')
 	            {
-	                if(result[index] == '(')
+	                if(working[index] == '(')
 	                {
-	                    SubStr subexp = ParsingUtil::getExpr(result,index,runtime->ascal_cin,'(',')',';');
-	                    std::string value = ParsingUtil::to_string(runtime->callOnFrame(frame, subexp.data));
-	                    std::string first = result.substr(0,index);
-	                    std::string last = result.substr(index+subexp.end-2,frame->exp.size());
-
-	                    result = first+value+last;
-	                    index = first.size()+value.size()-1;
+	                    SubStrSV subexp = ParsingUtil::getExprInStringSV(working,index,'(',')',';');
+	                    result << ParsingUtil::to_string(runtime.callOnFrame(frame, subexp.data));
+	                    index += subexp.data.size();
 	                }
-	                else if(result.size()-index>3 && result[index] == 'e' &&
-	                        result[index+1] == 'n' && result[index+2] == 'd' && result[index+3] == 'l')
+	                else if(working.size()-index > 3 &&
+	                		working[index] == 'e' && working[index+1] == 'n' && working[index+2] == 'd' && working[index+3] == 'l')
 	                {
-	                    result = result.substr(0,index)+'\n'+result.substr(index+4,result.size());
+	                    result<<'\n';
+	                    index += 4; //"endl".size()
 	                }
-	                index++;
+	                else
+	                {
+	                	result<<working[index];
+	                	index++;
+	                }
 	            }
 	            index++;
 	        }
 	        else
 	        {
-	            result = "";
+	            working = "";
 	        }
-	        std::cout<<result;
-	        return MAX;
+	        //frame->index = startOfPrint + index;
+	        std::cout<<result.str();
 	}
 };
 

@@ -9,38 +9,77 @@
 #define KEYWORDS_SETACTION_HPP_
 
 #include "../Keyword.hpp"
-class SetAction: public Keyword {
+class SetAction: public StKeyword {
 public:
-	SetAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	SetAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "set";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-
 		static const std::string keyWord = "set";
-	    SubStr varName = ParsingUtil::getVarName(frame->exp,frame->exp.find(keyWord,frame->index)+keyWord.size());
-	    int startIndex = frame->exp.find("=",varName.end)+1;
-	    while(frame->exp[startIndex] && frame->exp[startIndex] == ' ')
+		uint32_t index = frame->index+keyWord.size();
+	    SubStrSV varName = ParsingUtil::getVarNameSV(frame->exp, index);
+	    uint32_t startIndex = frame->exp.find("=",varName.end)+1;
+	    while(frame->exp.size() > startIndex && frame->exp[startIndex] == ' ')
 	        startIndex++;
-	    SubStr subexp = ParsingUtil::getExpr(frame->exp,startIndex,runtime->ascal_cin);
-	    std::string value = ParsingUtil::to_string(runtime->callOnFrame(frame,subexp.data));
-	    Object *obj = runtime->resolveNextExprSafe(frame, varName);
-	    if(!ParsingUtil::isObj(subexp.data))
+	    string_view subexp;
 	    {
-	        std::string value = ParsingUtil::to_string(runtime->callOnFrame(frame,subexp.data));
-	        *obj = Object(obj->id,value,"");
+	    	uint32_t sibk = startIndex;
+	    	subexp = ParsingUtil::getExprInStringSV(frame->exp,startIndex, '{', '}', ';');
+	    	startIndex = sibk;
 	    }
-	    else
+	    expressionResolution res = runtime.resolveNextObjectExpression(frame, varName);
+        Object *obj = res.data;
+        if(!obj && res.parent)
+        {
+            frame->initialOperands.pop();
+            if(!ParsingUtil::isDouble(subexp))
+            {
+                res.parent->setDoubleAtIndex(res.listIndex, runtime.callOnFrame(frame,subexp));
+            }
+            else
+            {
+                char tmp = subexp[subexp.size()];
+                subexp[subexp.size()] = 0;
+                res.parent->setDoubleAtIndex(res.listIndex, atof(&subexp[0]));
+                subexp[subexp.size()] = tmp;
+            }
+        }
+        else if(obj){
+	    if(!ParsingUtil::isObj(subexp))
 	    {
-	    	SubStr rightHandObjectLookup = ParsingUtil::getVarName(frame->exp, startIndex);
-	    	Object *rightObj = runtime->resolveNextExprSafe(frame, rightHandObjectLookup);
-	    	*obj = *rightObj;
+	    	if(!ParsingUtil::isDouble(subexp))
+	    	{
+	    		obj->setDouble(runtime.callOnFrame(frame,subexp));
+	    	}
+	    	else
+	    	{
+	    		char tmp = subexp[subexp.size()];
+	    		subexp[subexp.size()] = 0;
+	    		obj->setDouble(atof(&subexp[0]));
+	    		subexp[subexp.size()] = tmp;
+	    	}
+    	    //if(*runtime.boolsettings["o"])
+    	    //{
+    	    //	std::cout<<"set "<<varName.data<<" = "<< obj->getDouble()<<"\n";
+    	    //}
 	    }
-
-	    return MAX;
+	    else 
+	    {
+	    	SubStrSV rightHandObjectLookup = ParsingUtil::getVarNameSV(frame->exp, startIndex);
+	    	Object *rightObj = runtime.resolveNextExprSafe(frame, rightHandObjectLookup);
+	    	obj->copyExceptID(*rightObj);
+            
+		    if(*runtime.boolsettings["o"])
+		    {
+		    	std::cout<<"set "<<varName.data<<" = "<<obj->toString()<<"\n";
+		    }
+	    }
+        
 	}
+  }
 };
 
 #endif /* KEYWORDS_SETACTION_HPP_ */

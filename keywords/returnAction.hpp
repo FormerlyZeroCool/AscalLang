@@ -8,23 +8,23 @@
 #ifndef KEYWORDS_RETURNACTION_HPP_
 #define KEYWORDS_RETURNACTION_HPP_
 #include "../Keyword.hpp"
-class returnAction: public Keyword {
+class returnAction: public OpKeyword {
 public:
-	returnAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	returnAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "return";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 		frame->index += keyWord.length();
 		uint32_t index = frame->index;
 	    SubStr objname = ParsingUtil::getVarName(frame->exp, frame->index);
 	    Object *obj;
-	    if(runtime->getCachedRtnObject())
+	    if(runtime.getCachedRtnObject())
 	    {
-	    	frame->returnPointer = runtime->getCachedRtnObject();
-	    	runtime->setCachedRtnObject(nullptr);
+	    	frame->returnPointer = runtime.getCachedRtnObject();
+	    	runtime.setCachedRtnObject(nullptr);
 	    }
 	    if(frame->returnPointer)
 	    {
@@ -33,9 +33,9 @@ public:
 	    	string_view rtnVal(frame->exp, index, endIndex);
 	    	if(ParsingUtil::isObj(rtnVal))
 	    	{
-	    	    obj = runtime->resolveNextExprSafe(frame, objname);
+	    	    obj = runtime.resolveNextExprSafe(frame, objname);
 	    		frame->returnPointer->setObjectReturnRegister(obj);
-		        if(*(*boolsettings)["o"])
+	    	    if(*runtime.boolsettings["o"])
 		        {
 		            std::cout<<"Returning "<<(obj?"object":"value of expression")<<": "<<(obj?obj->toString():rtnVal.str())<<'\n';
 		        }
@@ -43,14 +43,14 @@ public:
 	    	else
 	    	{
 	    		frame->returnPointer->setReturnFlag(true);
-	    		frame->returnPointer->initialOperands.push_back(runtime->callOnFrame(frame, rtnVal.str()));
+	    		frame->returnPointer->initialOperands.push_back(runtime.callOnFrame(frame, rtnVal.str()));
 	    	}
 	    }
 	    while(!frame->initialOperands.isEmpty())
 	    	frame->initialOperands.pop();
 	    while(!frame->initialOperators.isEmpty())
 	    	frame->initialOperators.pop();
-	    return "a";
+	    frame->index = frame->exp.size();
 	}
 };
 

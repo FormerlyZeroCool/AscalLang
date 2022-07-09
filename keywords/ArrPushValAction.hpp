@@ -9,28 +9,31 @@
 #define KEYWORDS_ARRPUSHVALACTION_HPP_
 
 #include "../Keyword.hpp"
-class ArrPushValAction: public Keyword {
+class ArrPushValAction: public OpKeyword {
+private:
+    ParsedStatementList params;
 public:
-	ArrPushValAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	ArrPushValAction(AscalExecutor &runtime):
+		OpKeyword(runtime)
 	{
 		this->keyWord = "arrPush";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    std::vector<SubStr> params = Object("","",exp.data).params;
-	    if(params.size() < 2)
+        params.statements.clear();
+	    SubStrSV exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord);
+        params = ParsingUtil::ParseStatementList(exp.data, 0, params);
+	    if(params.statements.size() < 2)
 	    	throw std::string("arrPush(<object/array>,<value as Ascal expression>)");
-	    double valueToPush = runtime->callOnFrame(frame,params[1].data);
-	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params[0].start);
-	    Object *list = runtime->resolveNextExprSafe(frame, vns);
-	    list->pushList(Object("", ParsingUtil::to_string(valueToPush), ""));
-	    if(*(*boolsettings)["o"])
+	    double valueToPush = runtime.callOnFrame(frame,params.statements[1].data);
+	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size()+params.statements[0].start);
+	    Object *list = runtime.resolveNextExprSafe(frame, vns);
+	    list->pushList(valueToPush);
+	    if(*runtime.boolsettings["o"])
 	    {
-	    	std::cout<<"pushed value "<<params[1].data<<" to list "<<params[0].data<<" at position: "<<(list->getListSize())<<"\n";
+	    	std::cout<<"pushed value "<<params.statements[1].data<<" to list "<<params.statements[0].data<<" at position: "<<(list->getListSize())<<"\n";
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+	    frame->index = exp.end;
 	}
 };
 

@@ -10,12 +10,17 @@
 #include <vector>
 #include <unordered_map>
 #include "Object.hpp"
+#include "StackSegment.hpp"
 
-class AscalParameters: public std::vector<Object*> {
+class AscalParameters: public StackSegment<Object*> {
 private:
 	uint16_t useCount;
 public:
 	AscalParameters();
+	void setMemory(stack<Object*> &mem)
+	{
+		this->setData(mem);
+	}
 	AscalParameters& operator++();
 	AscalParameters& operator+=(int);
 	int getUseCount();

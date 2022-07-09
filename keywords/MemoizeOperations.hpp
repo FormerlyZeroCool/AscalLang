@@ -9,17 +9,16 @@
 #define KEYWORDS_MEMOIZEOPERATIONS_HPP_
 
 #include "../Keyword.hpp"
-class MemoizeOperations: public Keyword {
+class MemoizeOperations: public StKeyword {
 public:
-	MemoizeOperations(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	MemoizeOperations(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "memoize";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    runtime->updateBoolSetting(frame);
-	    return MAX;
+	    runtime.updateBoolSetting(frame);
 	}
 };
 

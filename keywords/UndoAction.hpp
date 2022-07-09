@@ -9,27 +9,26 @@
 #define KEYWORDS_UNDOACTION_HPP_
 
 #include "../Keyword.hpp"
-class UndoAction: public Keyword {
+class UndoAction: public StKeyword {
 public:
-	UndoAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	UndoAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "u";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    double value = 0;
-	    if(!runtime->lastExp.isEmpty()){
+	    if(!runtime.lastExp.isEmpty()){
 	        std::string last = "";
-	        runtime->lastExp.top(last);
-	        runtime->lastExp.pop();
-	        runtime->undoneExp.push(last);
+	        runtime.lastExp.top(last);
+	        runtime.lastExp.pop();
+	        runtime.undoneExp.push(last);
 	        std::cout<<last<<std::endl;
-	        value = runtime->callOnFrame(frame,"print "+last);
+	        value = runtime.callOnFrame(frame,"print "+last);
 	    }
 	    else
 	        std::cout<<"No previous statements"<<std::endl;
-	    return MAX;
 	}
 };
 

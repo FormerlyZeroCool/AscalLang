@@ -9,25 +9,25 @@
 #define KEYWORDS_SLEEPACTION_HPP_
 
 #include "../Keyword.hpp"
-class SleepAction: public Keyword {
+class SleepAction: public OpKeyword {
 public:
-	SleepAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	SleepAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "sleep";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime->callOnFrame(frame, exp.data);
+	    double input = runtime.callOnFrame(frame, exp.data);
 
 	    CrossPlatform::usleep(((long)input));
 
-        if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"sleeping for "<<input<<" micro-seconds\n";
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+        frame->index = exp.end;
 	}
 };
 

@@ -6,52 +6,35 @@
  */
 
 #include "AscalExecutor.hpp"
+#include "AscalFrame.hpp"
 #include "Keyword.hpp"
 
 
-static const std::hash<std::string> hashfn;
-static uint64_t hashFunctionCall(std::string &exp)
+static uint64_t hashfnv(const char *cptr, size_t len)
 {
-    return hashfn(exp);
+    static const uint64_t prime = 0x100000001b3, offset = 0xcbf29ce484222325;
+    size_t hash = offset;
+    for(uint32_t i = 0; i < len; i++)
+    {
+        hash ^= (cptr[i]) | ((unsigned int)cptr[i]<<8L);
+        hash *= prime;
+    }
+    return hash;
 }
-static uint64_t h;
+template <typename string_type>
+static uint64_t hashFunctionCall(string_type &exp)
+{
+    return hashfnv(exp.c_str(), exp.size());
+}
 static uint64_t hashFunctionCall(uint64_t hash,AscalParameters& params)
 {
-	h = hash;
-    for(Object *s:params)
+    static const uint64_t prime = 0x100000001b3;
+    for(auto *s:params)
     {
-        hash += hashfn(s->getInstructions());
-        hash ^= hash>>2;
-        hash ^= hash<<5;
-        hash ^= hash>>12;
-        hash ^= hash<<18;
-        hash ^= hash>>21;
-        hash ^= hash<<26;
-        hash ^= hash<<29;
+        hash ^= hashfnv(s->getInstructions().c_str(), s->getInstructions().size());
+        hash *= prime;
     }
-    return hash+h;
-}
-static uint64_t hash(AscalFrame<double>* currentFrame)
-{
-	uint64_t frameptr = (uint64_t) currentFrame;
-	uint64_t rtnptr =   (uint64_t) currentFrame->returnPointer;
-	uint64_t paramsptr = (uint64_t) currentFrame->getParamMemory();
-	uint64_t locvarptr = (uint64_t) currentFrame->getLocalMemory();
-	uint64_t hash = ((frameptr<<(1 + (15&rtnptr)))^currentFrame->memoPointer^paramsptr^locvarptr);
-	hash ^= paramsptr>>16;
-	hash ^= paramsptr<<16;
-	hash ^= rtnptr>>6;
-	hash ^= rtnptr<<26;
-	hash ^= currentFrame->memoPointer>>3;
-	hash ^= currentFrame->memoPointer<<20;
-	hash ^= hash>>5;
-	hash ^= hash<<10;
-	hash ^= hash>>15;
-	hash ^= hash<<20;
-	hash ^= hash<<28;
-	hash += frameptr<<8;
-	hash += currentFrame->memoPointer;
-	return hash;
+    return hash;
 }
 
 template <class t>
@@ -70,180 +53,283 @@ static void printStack(stack<t> &operands)
 
 void AscalExecutor::addKeyWord(Keyword *key)
 {
-	inputMapper[key->getName()] = key;
+    inputMapper.insert(key->getName(),key);
 }
 void AscalExecutor::updateBoolSetting(AscalFrame<double>* frame)
-	{
-
-	    lastExp.pop();
-	    SubStr id = ParsingUtil::getVarName(frame->exp,frame->index);
-	    int endOfId = id.start+id.data.length();
-	    while(frame->exp[endOfId] == ' ')
-	    	endOfId++;
-	    SubStr expression = ParsingUtil::getVarNameOrNum(frame->exp,endOfId);
-	    short value = expression.data.length()>0?callOnFrame(frame, expression.data):-1;
-	    setting<bool> set = boolsettings[id.data];
-	    //inverts setting value via operator overloads of = and *
-	    bool data = value<0?!*set:value;
-	    setting<bool> newSetting(set.getName(),set.getCommand(),data);
-	    boolsettings[set.getCommand()] = newSetting;
-	    if(*boolsettings["o"])
-	    {
-	        std::cout<<set.getName()<<" Status: "<<data<<"\n";
-	    }
-	}
+    {
+        if(!lastExp.isEmpty())
+            lastExp.pop();
+        SubStr id = ParsingUtil::getVarName(frame->exp,frame->index);
+        int endOfId = id.start+id.data.length();
+        while(frame->exp[endOfId] == ' ')
+            endOfId++;
+        SubStr expression = ParsingUtil::getVarNameOrNum<string_view, string_view>(frame->exp,endOfId);
+        short value = expression.data.length()>0?callOnFrame(frame, expression.data):-1;
+        setting<bool> set = boolsettings[id.data];
+        //inverts setting value via operator overloads of = and *
+        bool data = value<0?!*set:value;
+        setting<bool> newSetting(set.getName(),set.getCommand(),data);
+        boolsettings[set.getCommand()] = newSetting;
+        if(*boolsettings["o"])
+        {
+            std::cout<<set.getName()<<" Status changed to: "<<(data?"On":"Off")<<"\n";
+        }
+    }
 AscalExecutor::~AscalExecutor() {
-	for(auto &[key,value]:inputMapper)
-	{
-		delete value;
-	}
+    for(auto &chunk:inputMapper)
+    {
+        delete chunk.getValue();
+    }
 }
-
 void AscalExecutor::loadFn(Object function)
 {
-        memory[function.id] = function;
-        systemDefinedFunctions.push_back(function);
+    loadUserDefinedFn(function, memory);
+    systemDefinedFunctions.push_back(function);
 }
 
-template <typename t>
-void AscalExecutor::loadUserDefinedFn(Object &function, t &mem)
+Object& AscalExecutor::loadUserDefinedFn(Object &function, FlatMap<string_view, Object*> &mem)
 {
-
-
-    if(!ParsingUtil::containsOperator(function.id))
+    const auto rec = mem.find(function.getId());
+    if(rec == mem.end())
     {
-        mem[function.id] = function;
-        if((void*)&mem == (void*)&memory)
-        	userDefinedFunctions.push_back(function);
+        Object *obj = this->memMan.constructObj(function);
+        return *(*mem.insert(obj->id, obj)).getValue();
     }
     else
     {
-        std::cerr<<"Error loading "<<function.id<<" due to the use of an operator in its name"<<std::endl;
-        std::cerr<<"Operators: "<< '=' <<','<< '>' << ',' << '<' <<','<< '$' <<','<<
-                'P' <<','<< '@' <<','<< '+' <<','<< '-' <<','<<
-                '*'<<','<< '/' <<','<< '^' <<','<< '%' <<','<< 'C';
-        throw std::string("Error Operator in Variable Name");
+        this->memMan.obj_free((*rec).getValue());
+        (*rec).getValue() = this->memMan.constructObj(function);
+        return *(*rec).getValue();
     }
+}
+Object& AscalExecutor::loadUserDefinedFn(Object &function, MemoryMap &mem)
+{
+    return mem.insert(function);
+
+}
+Object& AscalExecutor::loadUserDefinedFn(Object &function, Map<string_view, Object*> &mem)
+{
+    return *mem.set(function.getId(), &function).data.second;
 }
 void AscalExecutor::loadInitialFunctions()
 {
+
     //Unary boolean Operations
-    loadFn(Object("not","value=0",""));
-    loadFn(Object("true","value=0=0",""));
-    loadFn(Object("True","1",""));
-    loadFn(Object("False","0",""));
+    loadFn(Object(memMan, "not","value=0",""));
+    loadFn(Object(memMan, "true","value=0=0",""));
+    loadFn(Object(memMan, "True","1",""));
+    loadFn(Object(memMan, "False","0",""));
 
     //Calculus Functions
-    loadFn(Object("fprime","x*0+(f(x+0.000001)-f(x))/0.000001",""));
+    loadFn(Object(memMan, "fprime","x*0+(f(x+0.000001)-f(x))/0.000001",""));
 
     //Trig Functions
-    loadFn(Object("sinDeg","sin(toRad(theta))",""));
-    loadFn(Object("csc","1/sin(theta)",""));
-    loadFn(Object("cosDeg","cos(toRad(theta))",""));
-    loadFn(Object("sec","1/cos(theta)",""));
+    loadFn(Object(memMan, "sinDeg","sin(toRad(theta))",""));
+    loadFn(Object(memMan, "csc","1/sin(theta)",""));
+    loadFn(Object(memMan, "cosDeg","cos(toRad(theta))",""));
+    loadFn(Object(memMan, "sec","1/cos(theta)",""));
     //Helpful functions
-    loadFn(Object("fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
-    loadFn(Object("fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};loc z = 0;memoize 1;set z = fr(x);memoize 0;z}",""));
-    loadFn(Object("rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
-    loadFn(Object("ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
-    loadFn(Object("fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
-    loadFn(Object("gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else 0 end}",""));
-    loadFn(Object("sumBetween","(numberzxa,numberzxb){"
+    loadFn(Object(memMan, "fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
+    loadFn(Object(memMan, "fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};loc z = 0;memoize 1;set z = fr(x);memoize 0;z}",""));
+    loadFn(Object(memMan, "rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
+    loadFn(Object(memMan, "ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
+    loadFn(Object(memMan, "fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
+    loadFn(Object(memMan, "gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else b end}",""));
+    loadFn(Object(memMan, "sumBetween","(numberzxa,numberzxb){"
             "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb-1)"
             "else sumOneTo(numberzxb)-sumOneTo(numberzxa-1) end}"
             ,""));
-    loadFn(Object("sumOneTo","(numberzxa*(numberzxa+1))/2",""));
+    loadFn(Object(memMan, "sumOneTo","(numberzxa*(numberzxa+1))/2",""));
     //factorial of >= 171 overflows double datatype
-    loadFn(Object("rfact",
+    loadFn(Object(memMan, "rfact",
             "when (i>1)*(i<171) then rfact(i-1)*i when not(i>1) then 1 else 0 end",""));
-    loadFn(Object("abs","when numberx<0 then numberx*-1 else numberx end",""));
-    loadFn(Object("ln","when argument>0 then e@argument else null end",""));
-    loadFn(Object("log","when argument>0 then 10@argument else null end",""));
-    loadFn(Object("logbx","base@argument",""));
-    loadFn(Object("sqrt","radicand^0.5",""));
-    loadFn(Object("fact","when numberzxa<171 then numberzxaPnumberzxa when not(numberzxa<171) then 0 end",""));
-    loadFn(Object("dist","sqrt((dx)^2+(dy)^2)",""));
-    loadFn(Object("dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
-    loadFn(Object("toDeg","rad*180/pi",""));
-    loadFn(Object("toRad","deg*pi/180",""));
-    loadFn(Object("println","(x){loc counter = 0;while counter<x{set counter = counter +1;print \"endl\";};null",""));
-    loadFn(Object("clear","println(150)",""));
-    loadFn(Object("floor","x-x%1",""));
-    loadFn(Object("ceiling","when x%1=0 then x else x+1-x%1 end",""));
-    loadFn(Object("round","when x%1<0.5 then floor(x) else ceiling(x) end",""));
+    loadFn(Object(memMan, "abs","when numberx<0 then numberx*-1 else numberx end",""));
+    loadFn(Object(memMan, "ln","when argument>0 then e@argument else null end",""));
+    loadFn(Object(memMan, "log","when argument>0 then 10@argument else null end",""));
+    loadFn(Object(memMan, "logbx","base@argument",""));
+    loadFn(Object(memMan, "sqrt","radicand^0.5",""));
+    loadFn(Object(memMan, "fact","when numberzxa<171 then numberzxaPnumberzxa when not(numberzxa<171) then 0 end",""));
+    loadFn(Object(memMan, "dist","sqrt((dx)^2+(dy)^2)",""));
+    loadFn(Object(memMan, "dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
+    loadFn(Object(memMan, "toDeg","rad*180/pi",""));
+    loadFn(Object(memMan, "toRad","deg*pi/180",""));
+    loadFn(Object(memMan, "println","(x){loc counter = 0;while counter<x{set counter = counter +1;print \"endl\";};null",""));
+    loadFn(Object(memMan, "clear","println(150)",""));
+    loadFn(Object(memMan, "floor","x-x%1",""));
+    loadFn(Object(memMan, "ceiling","when x%1=0 then x else x+1-x%1 end",""));
+    loadFn(Object(memMan, "round","when x%1<0.5 then floor(x) else ceiling(x) end",""));
 
     //Stats Functions
-    Object binProbDist("binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
+    Object binProbDist(memMan, "binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
     loadFn(binProbDist);
 
     //Dietitian Functions
-    Object eKCal("ekcal","(0*male*kg*cm*age*activity+ true(male)*5+not(male)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
+    Object eKCal(memMan, "ekcal","(0*male*kg*cm*age*activity+ true(male)*5+not(male)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
     loadFn(eKCal);
+;
+loadFn(Object(memMan, "println","(x){loc counter = 0;while counter<x{set counter = counter +1;print \"endl\";};null",""));
+loadFn(Object(memMan, "clear","println(150)",""));
+    Object isneg(memMan, "isNeg","{ "
+"if x<0{ "
+"print \"The number is negative (-1*x)endl\";"
+"};"
+//"else if(x>0)"
+//"{"
+//"print \"The number is positive (x)endl\";"
+//"};"
+"else {"
+            "print \"hehheh0endl\";"
+"};"
+"}}","");
+    isneg.compileInstructions();
+    loadFn(isneg);
 
     //Constants Definition
-    loadFn(Object("pi","3.141592653589793238462643383279",""));
-    loadFn(Object("e","2.718281828459045",""));
-    loadFn(Object("null",MAX,""));
-    loadFn(Object("printf","print \"(x)endl\"",""));
+    Object pi(memMan, "pi","         ","");
+    //std::cout<<"Pi and e are broked fix them when you get a chance i ascalexecutor\n";
+    pi.setDouble(3.141592653589793238462643383279L);
+    loadFn(pi);
+    Object e(memMan, "e","           ","");
+    e.setDouble(2.718281828459045L);
+    loadFn(e);
+    loadFn(Object(memMan, "null",MAX,""));
+    loadFn(Object(memMan, "printf","print \"(x)endl\"",""));
+
+}
+AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
+{
+
+    ascal_cin.rdbuf(streambuf);
+    loadInitialFunctions();
+    
+    commandLineParams.argc = argc;
+    commandLineParams.argv = argv;
+    commandLineParams.index = 1;
+    {
+    setting<bool> set(
+            /*name*/
+                "Show Operations that the interpreter uses while executing code",
+            /*command line command*/
+                "o",
+            /*variable*/
+                false);
+
+        boolsettings.insert(set.getCommand(), set);
+
+        set = setting<bool> (
+                /*name*/
+                    "Auto print results of calculations",
+                /*command line command*/
+                    "p",
+                /*variable*/
+                    true);
+
+        boolsettings.insert(set.getCommand(), set);
+
+        set = setting<bool> (
+                /*name*/
+                    "Use scientific notation for output of numbers larger than 999,999",
+                /*command line command*/
+                    "sci",
+                /*variable*/
+                    true);
+
+        boolsettings[set.getCommand()] = set;
+        set = setting<bool>(
+            /*name*/
+                "Auto Memoize all function calls to improve multiple recursive function performance,\nwill cause erroneous calculations if not using pure mathematical functions.",
+            /*command line command*/
+                "memoize",
+            /*variable*/
+                false);
+        boolsettings.insert(set.getCommand(), set);
+        set = setting<bool>(
+            /*name*/
+                "Print time taken to run calculation",
+            /*command line command*/
+                "t",
+            /*variable*/
+                false);
+        boolsettings.insert(set.getCommand(), set);
+        }//bracket to remove set variable from program memory
+          /*
+           * End of initialization values in settings hashmap
+           * */
 }
 
-double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame,const std::string &&subExp)
+double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame, const string_view subExp)
 {
-	return callOnFrame(callingFrame, subExp);
-}
-double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame,const std::string &subExp)
-{
-    ParamFrame<double> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
+    ParamFrame<double> executionFrame(*this, callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.returnPointer = callingFrame->returnPointer;
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
     executionFrame.setContext(callingFrame->getContext());
-    double data;
-    try{
-    	data = this->calculateExpression(&executionFrame);
-    }catch(std::string &error)
-    {
-        throw error;
+    const double data = this->calculateExpression(&executionFrame);
+    return data;
+}
+double AscalExecutor::callOnFrame(AscalFrame<double>* callingFrame, const std::string &subExp)
+{
+    ParamFrame<double> executionFrame(*this, callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
+    executionFrame.returnPointer = callingFrame->returnPointer;
+    executionFrame.exp = subExp;
+    executionFrame.setIsDynamicAllocation(false);
+    executionFrame.setContext(callingFrame->getContext());
+
+    const uint32_t paramSize = callingFrame->getParams()->size();
+    const double data = this->calculateExpression(&executionFrame);
+    while(callingFrame->getParams()->size() > paramSize){
+        callingFrame->getParams()->pop_back();
+        std::cout<<"poppin params\n";
     }
     return data;
 }
 double AscalExecutor::callOnFrameFormatted(AscalFrame<double>* callingFrame,std::string subExp)
 {
-    ParamFrame<double> executionFrame(callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
+    ParamFrame<double> executionFrame(*this, callingFrame->getParams(),callingFrame->getParamMemory(),callingFrame->getLocalMemory());
     executionFrame.exp = subExp;
     executionFrame.setIsDynamicAllocation(false);
     double data = calcWithOptions(&executionFrame);
     return data;
 }
-void AscalExecutor::createFrame(linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, int i,uint64_t hash)
+void AscalExecutor::createFrame(StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, ParsedStatementList &params, int i,uint64_t hash)
 {
     //save index
     currentFrame->index = i;
-    if(ParsingUtil::isDouble(obj->getInstructions()))
+    if(obj->isList() | obj->isObjList()) {}
+    else if(obj->isDouble())
     {
-        int ib = 0;
-        currentFrame->initialOperands.push(ParsingUtil::getNextDouble(obj->getInstructions(), ib));
+        currentFrame->initialOperands.push(obj->getDouble());
         varCount++;
         if(*boolsettings["o"])
-        	std::cout<<"Reading variable: "<<obj->id<<" = "<<obj->getInstructions()<<'\n';
+            std::cout<<"QReading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
+    }
+    else if(ParsingUtil::isDouble(obj->getInstructions()))
+    {
+        int ib = 0;
+        double value = ParsingUtil::getNextDouble(obj->getInstructions(), ib);
+        currentFrame->initialOperands.push(value);
+        obj->setDouble(value);
+        varCount++;
+        if(*boolsettings["o"])
+            std::cout<<"Reading variable: "<<obj->getId()<<" = "<<obj->getDouble()<<'\n';
     }
     else
     {
         frameCount++;
         if(*boolsettings["o"])
         {
-        	std::stringstream data;
-        	for(SubStr &s:obj->params)
-        	{
-        		data << s.data << ",";
-        	}
-        	std::cout<<"Parsing params then executing: "<<obj->id<<'('<<data.str()<<')'<<'\n';
+            std::stringstream data;
+            for(SubStrSV s:params.statements)
+            {
+                data << s.data << ",";
+            }
+            std::cout<<"Parsing params then executing: "<<obj->getId()<<'('<<data.str()<<')'<<'\n';
         }
         //create and set new frame expression
-        FunctionFrame<double> *newFrame = new FunctionFrame<double>(nullptr,nullptr,nullptr);
+        FunctionFrame<double> *newFrame = fFramePool.construct(*this, this->memMan);//new FunctionFrame<double>(*this, this->memMan);
         newFrame->exp = obj->getInstructions();
-        if(memory.count(obj->id) == 0)
-        	(*newFrame->getParamMemory())[obj->id] = obj;
+        if(memory.find(obj->id) == memory.end())
+            this->loadUserDefinedFn(*obj, *newFrame->getParamMemory());
         newFrame->memoPointer = hash;
         //Create new frame, and set return pointer
         newFrame->returnPointer = currentFrame;
@@ -251,16 +337,15 @@ void AscalExecutor::createFrame(linkedStack<AscalFrame<double>* > &executionStac
         newFrame->setContext(obj);
         //push new frame
         executionStack.push(newFrame);
-        for(int i = 0; i < obj->params.size(); i++)
+        for(int i = 0; i < params.statements.size(); i++)
         {
-        	uint8_t startingIndex = 0;
-        	while(obj->params[i].data[startingIndex++] == ' '){};
-            allocated += sizeofFrame;
-            if(obj->params[i].data[--startingIndex] != '&')
+            uint8_t startingIndex = 0;
+            while(params.statements[i].data[startingIndex++] == ' '){};
+            if(params.statements[i].data[--startingIndex] != '&')
             {
                 //create and set new frame expression
-                ParamFrame<double>* pFrame = new ParamFrame<double>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
-                pFrame->exp = obj->params[i].data;
+                ParamFrame<double>* pFrame = pFramePool.construct(*this, currentFrame);
+                pFrame->exp = params.statements[i].data;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
                 //Context object ptr for this keyword resolution
@@ -270,11 +355,13 @@ void AscalExecutor::createFrame(linkedStack<AscalFrame<double>* > &executionStac
             }
             else
             {
-                ParamFrameFunctionPointer<double>* pFrame = new ParamFrameFunctionPointer<double>(currentFrame->getParams(),currentFrame->getParamMemory(),currentFrame->getLocalMemory());
+                ParamFrameFunctionPointer<double>* pFrame = fpFramePool.construct(*this, currentFrame);
                 uint32_t frameIndexBackup = currentFrame->index;
-                SubStr startOfParam = ParsingUtil::getVarName(obj->params[i].data.substr(startingIndex), startingIndex);
-                startOfParam.end = obj->params[i].start+startOfParam.data.size();
-                pFrame->obj = resolveNextObjectExpression(currentFrame, startOfParam);
+                SubStr startOfParam = ParsingUtil::getVarName(params.statements[i].data.substr(startingIndex), startingIndex);
+                
+                SubStrSV sopView(startOfParam);
+                startOfParam.end = params.statements[i].start+startOfParam.data.size();
+                pFrame->obj = resolveNextObjectExpression(currentFrame, sopView).data;
                 currentFrame->index = frameIndexBackup;
                 //Create new frame, and set return pointer
                 pFrame->returnPointer = newFrame;
@@ -284,46 +371,69 @@ void AscalExecutor::createFrame(linkedStack<AscalFrame<double>* > &executionStac
         }
     }
 }
-void AscalExecutor::clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame)
+void AscalExecutor::deleteFrame(AscalFrame<double> *frame)
 {
-	frame->returnPointer = cachedRtnObject;
-	        if(printStack)
-	        {
-	        	std::stringstream data;
-	            size_t errorStartMarker = error.find("\1\1\2\3");
-	            if(errorStartMarker<0 || errorStartMarker > error.length())
-	            	errorStartMarker = 0;
-	            data<<error.substr(0, errorStartMarker);
-	            while(!executionStack.isEmpty())
-	            {
-	                executionStack.top(currentFrame);
-	                	data << currentFrame->getType() << "   ~:"<<currentFrame->exp<<'\n';
-	                if(currentFrame->isDynamicAllocation()){
-	                    delete currentFrame;
-	                }
-	                executionStack.pop();
-	            }
-	            data << "\1\1\2\3";
-	            data << error.substr(errorStartMarker);
-	            error = data.str();
-	        }
-	        else
-	        {
-	            while(!executionStack.isEmpty())
-	            {
-	                executionStack.top(currentFrame);
-	                if(currentFrame->isDynamicAllocation()){
-	                    delete currentFrame;
-	                }
-	                executionStack.pop();
-	            }
-	        }
-	        this->cachedRtnObject = nullptr;
+    switch (frame->getType()) {
+        case 'f':
+            this->fFramePool.destroy((FunctionFrame<double>*) frame);
+            break;
+        case 'p':
+            this->pFramePool.destroy((ParamFrame<double>*) frame);
+            break;
+        case 'z':
+            this->fpFramePool.destroy((ParamFrameFunctionPointer<double>*) frame);
+            break;
+        case 'c':
+            this->cFramePool.destroy((ConditionalFrame<double>*) frame);
+            break;
+        case 's':
+            this->sFramePool.destroy((FunctionSubFrame<double>*) frame);
+            break;
+        default:
+            throw std::string("Error, no deallocation strategy for frame, this is a system bug, contact developer on github @ github.com/andrewrubinstein");
+            break;
+    }
 }
 
+void AscalExecutor::clearStackOnError(bool printStack, std::string &error, StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame)
+{
+     frame->returnPointer = cachedRtnObject;
+            if(printStack)
+            {
+                std::stringstream data;
+                size_t errorStartMarker = error.find("\1\1\2\2\3\3\4\4\1\1");
+                if(errorStartMarker<0 || errorStartMarker > error.length())
+                    errorStartMarker = 0;
+                data<<error.substr(0, errorStartMarker);
+                while(!executionStack.isEmpty())
+                {
+                    executionStack.top(currentFrame);
+                        data << currentFrame->getType() << "   ~:"<<currentFrame->exp<<'\n';
+                    if(currentFrame->isDynamicAllocation()){
+                        deleteFrame(currentFrame);
+                    }
+                    executionStack.pop();
+                }
+                data << "\1\1\2\2\3\3\4\4\1\1";
+                data << error.substr(errorStartMarker);
+                error = data.str();
+            }
+            else
+            {
+                while(!executionStack.isEmpty())
+                {
+                    executionStack.top(currentFrame);
+                    if(currentFrame->isDynamicAllocation()){
+                        deleteFrame(currentFrame);
+                    }
+                    executionStack.pop();
+                }
+            }
+            this->cachedRtnObject = nullptr;
+}
+stack<AscalFrame<double>*> frameStack;
 double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 {
-    int statementCount = 1;
     //variable that is always a copy
     char peeker;
     //variables to hold the operands
@@ -337,76 +447,83 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
     frame->returnPointer = nullptr;
     //This loop handles parsing the numbers, and adding the data from the expression
     //to the stacks
-    linkedStack<AscalFrame<double>* > executionStack;
+    StackSegment<AscalFrame<double>* > executionStack(frameStack);
     currentStack = &executionStack;
     AscalFrame<double>* currentFrame = frame;
     executionStack.push(currentFrame);
     try{
+        check_stack:
     while(!executionStack.isEmpty())
     {
         new_frame_execution:
         executionStack.top(currentFrame);
+
         if(currentFrame->isFunction() && currentFrame->isFirstRun())
         {
             currentFrame->setIsFirstRun(false);
-        	if(*boolsettings["memoize"])
-        	{
-        		currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
-        		if(memoPad.count(currentFrame->memoPointer))
-        		{
-        			data = memoPad[currentFrame->memoPointer];
-        			currentFrame->returnResult(data, memory);
-        			currentFrame->returnPointer = nullptr;
-        			currentFrame->index = currentFrame->exp.length();
-        			++rememberedFromMemoTableCount;
+            if(*boolsettings["memoize"])
+            {
+                currentFrame->memoPointer = hashFunctionCall(currentFrame->memoPointer,*(currentFrame->getParams()));
+                const auto &memoRec = memoPad.find(currentFrame->memoPointer);
+                if(memoRec != memoPad.end())
+                {
+                    data = memoRec->second;
+                    executionStack.pop();//must happen before return for conditional frames
+                    currentFrame->returnResult(data, memory, executionStack, *this);
+                    ++rememberedFromMemoTableCount;
 
-        			if(*boolsettings["o"])
-        			{
-        				if(std::to_string(data).length() != MAX.length())
-        				{
-        					std::cout<<"retrieving return value from memo tables\n";
-        					std::cout<<"Returning value: "<<data<<'\n';
-        				}
-        			}
-        		}
-        	}
+                    if(*boolsettings["o"])
+                    {
+                        if(std::to_string(data).length() != MAX.length())
+                        {
+                            std::cout<<"retrieving return value from memo tables\n";
+                            std::cout<<"Returning value: "<<data<<'\n';
+                        }
+                    }
+                    if(currentFrame->isDynamicAllocation())
+                        deleteFrame(currentFrame);
+                    goto check_stack;
+                }
+            }
 
         }
         else if(currentFrame->isReturnFlagSet())
         {
-    		if(currentFrame->isReturnObjectFlagSet())
-        	{
-        		Object *returnedObj = currentFrame->getReturnObject();
-        		//accessing field in returned object
-        		if(currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index] == '[')
-        		{
-        			SubStr ptr("",0,currentFrame->index-1);
-        			bool adjust = currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index+1] == '&';
-        			Object *objectResolved = resolveNextObjectExpression(currentFrame, ptr, returnedObj);
-        			if(!returnedObj)
-        				throw std::string("could not resolve field in returned object: "+returnedObj->id);
-        			else
-        				returnedObj = objectResolved;
-        			currentFrame->index -= adjust;
-        		}
+            if(currentFrame->isReturnObjectFlagSet())
+            {
+                Object *returnedObj = currentFrame->getReturnObject();
+                //accessing field in returned object
+                if(currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index] == '[')
+                {
+                    SubStr ptr("",0,currentFrame->index-1);
+                    SubStrSV svPtr(ptr);
+                    bool adjust = currentFrame->exp[currentFrame->index] == '.' || currentFrame->exp[currentFrame->index+1] == '&';
+                    Object *objectResolved = resolveNextObjectExpression(currentFrame, svPtr, returnedObj).data;
+                    if(!returnedObj)
+                        throw std::string("could not resolve field in returned object: "+returnedObj->getId().str());
+                    else
+                        returnedObj = objectResolved;
+                    currentFrame->index -= adjust;
+                }
 
-        		uint32_t startOfparams = currentFrame->exp[currentFrame->index] =='('?
-        			currentFrame->index:currentFrame->exp.size();
-        		uint32_t endOfParams = returnedObj->setParams(currentFrame->exp, startOfparams);
-                uint32_t startOfEnd = returnedObj->params.size()==0?currentFrame->index:currentFrame->index+endOfParams-1;
+                uint32_t startOfparams = currentFrame->exp[currentFrame->index] =='('?
+                    currentFrame->index:currentFrame->exp.size();
+                ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer);
+                uint32_t startOfEnd = this->paramsBuffer.statements.size()==0?currentFrame->index:currentFrame->index+this->paramsBuffer.end-1;
                 //creates a new set of stack frames, one for the returned function/var and one for resolution,
                 //and calculation of each of it's parameters
                 //also returns function/var's value to this function's initialOperands stack
                 createFrame(executionStack, currentFrame,
-                    		returnedObj,startOfEnd,hashFunctionCall(returnedObj->id));
-               	goto new_frame_execution;
+                            returnedObj,this->paramsBuffer,startOfEnd,hashFunctionCall(returnedObj->id));
+                   goto new_frame_execution;
 
-        	}
-        	else
-        	{
-        		currentFrame->setReturnFlag(false);
-        	}
+            }
+            else
+            {
+                currentFrame->setReturnFlag(false);
+            }
         }
+
         //If complex object return register is set on frame
         //we should internally have a pointer to an object that exists on the heap
         //so at the end of the process this needs to be cleaned
@@ -422,14 +539,14 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
         //object.functioncall[lookup]().fieldThatIsAnFnFromObjectReturnedByFnCall()
         //remainder after initial will be
         //.fieldFromObjectReturnedByFnCall or .fieldThatIsAnFnFromObjectReturnedByFnCall()
-        for(int i = currentFrame->index;i <= currentFrame->exp.length();i++)
+        for(int i = currentFrame->index;i < currentFrame->exp.length();i++)
         {
          currentFrame->index = i;
          currentChar = currentFrame->exp[i];
          currentFrame->initialOperators.top(peeker);
          //anything used outside of the first { gets dropped from program stack, for param definition
          currentFrame->level += (currentChar == '{') - (currentChar == '}');
-
+         //std::cout<<currentChar<<"\n";
 
          if(currentChar == '{' && currentFrame->level == 1)
          {
@@ -438,48 +555,52 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             while(!currentFrame->initialOperators.isEmpty())
                 currentFrame->initialOperators.pop();
          }
-         else if(isalpha(currentChar) && (isalpha(frame->exp[i+1]) || !Calculator<double>::isOperator(currentChar)))
+         else if(ParsingUtil::isalpha(currentChar))
          {
-        	 //This needs to be updated, and simplified it makes conditional jumps very expensive
-             SubStr varName(ParsingUtil::getVarName(currentFrame->exp,i));
-
-             //Keyword handling only one keyword at the beginning of each statement allowed,
-             //including statements defined in variables
-
-             if(inputMapper.count(varName.data) != 0)
+             //This needs to be updated, and simplified it makes conditional jumps very expensive
+             uint32_t ind = i;
+             SubStrSV varName = ParsingUtil::getVarNameSV(currentFrame->exp,ind);
+             const auto keywordRec = inputMapper.find(varName.data);
+             if(keywordRec != inputMapper.end())
              {
-
-                 currentFrame->setAugmented(true);
+                 Keyword* executingKeyword;
+                 this->currentStack = &executionStack;
+                 const int currentFrameCount = executionStack.length();
                  bool isDynamicBackup = currentFrame->isDynamicAllocation();
-                 std::string result;
                  if(!currentFrame->returnPointer)
-                	 cachedRtnObject = rtnptr;
+                     cachedRtnObject = rtnptr;
                  try{
-
-                 result = inputMapper.find(varName.data)->second->action(currentFrame);
-                 currentFrame->setIsDynamicAllocation(isDynamicBackup);
+                     executingKeyword = (*keywordRec).getValue();
+                     executingKeyword->action(currentFrame);
+                     currentFrame->setIsDynamicAllocation(isDynamicBackup);
                  }catch(std::string& s){
                      currentFrame->setIsDynamicAllocation(isDynamicBackup);
                      throw s;
                  }
+                 cachedRtnObject = nullptr;
 
-         	    cachedRtnObject = nullptr;
-
-                 uint8_t subLevel = 0;
-                 while((subLevel != 0 && currentFrame->exp[i]) || (currentFrame->exp[i] && currentFrame->exp[i] != ';' && currentFrame->exp[i] != '\n'))
+                 if(executingKeyword->getType() == 0)
                  {
-                     i++;
-                     subLevel += (currentFrame->exp[i]=='{') - (currentFrame->exp[i] == '}');
+                     uint8_t subLevel = 0;
+                     while((subLevel != 0 && currentFrame->exp.size() < i) || (currentFrame->exp[i] && currentFrame->exp[i] != ';' && currentFrame->exp[i] != '\n'))
+                     {
+                         i++;
+                         subLevel += (currentFrame->exp[i]=='{') - (currentFrame->exp[i] == '}');
 
+                     }
+
+                     if((i == currentFrame->exp.size() || 1+i == currentFrame->exp.size()))
+                     {
+                         if(currentFrame->initialOperands.size() != 0)
+                         {
+                             throw std::string("\nError called keyword: '"+varName.data.str()+"'\nwithout statement separator ';' before previous expression.");
+                         }
+                         i = currentFrame->exp.size();
+                         currentFrame->initialOperands.push(std::stod(MAX));
+                     }
+                     continue;
                  }
-                 statementCount++;
-                 if((currentFrame->exp[i] == 0 || currentFrame->exp[i+1] == 0) && result.length() == MAX.length())
-                 {
-                     currentFrame->exp = MAX;
-                     if(currentFrame->initialOperands.size() != 0)
-                         throw std::string("\nError called keyword: '"+varName.data+"'\nwithout statement separator ';' before previous expression.");
-                 }
-                 else if(isalpha(result[0]))
+                 else if(executingKeyword->getType() == 1 || executingKeyword->getType() == 3)
                  {
                      //for returning altered versions of the expression up till a statement separator like ;
                      //use cases: getting user input outside functions and variables
@@ -487,11 +608,13 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                      //while loops?
                      //just make sure first character in returned string is a throwaway alphabetical character
                      //it will not be parsed so ensure it is not meaningful code
-                     currentFrame->exp = result.substr(1,currentFrame->exp.length());
+                         i = currentFrame->index<currentFrame->exp.size()?currentFrame->index - 1:currentFrame->exp.size();
+                     if(executionStack.length() != currentFrameCount)
+                     {
+                         goto new_frame_execution;
+                     }
+                          continue;
 
-                     i = -1;
-                     currentFrame->index = 0;
-                     continue;
                  }
                  else
                  {
@@ -499,69 +622,82 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
                  }
                  i = -1;
                  currentFrame->index = i;
+                 continue;
              }
              else
              {
-            	 uint32_t startOfparams = currentFrame->exp[varName.end+1] =='('?
+                 uint32_t startOfparams = currentFrame->exp[varName.end+1] =='('?
                  varName.end+1:currentFrame->exp.size();
                  //Variable handling section
-            	 currentFrame->index = varName.start;
-            	 if(Object *data = resolveNextObjectExpression(currentFrame, varName))
+                 currentFrame->index = varName.start;
+                 expressionResolution resolution = resolveNextObjectExpression(currentFrame, varName);
+                 if(resolution.data)
                  {
-
-                	 startOfparams = currentFrame->exp[varName.end+1] =='('?
+                     varName.start = varName.end - varName.data.length() + 1;
+                     startOfparams = currentFrame->exp[varName.end+1] =='('?
                      varName.end+1:currentFrame->exp.size();
-                     uint32_t endOfParams = data->setParams(currentFrame->exp, startOfparams);
+                     uint32_t endOfParams =
+                     ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer).end;
                      uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
+                     //std::cout<<"soe: "<<startOfEnd<<" vnsize: "<<varName.data.size()<<"start: "<<varName.start<<" eop: "<<endOfParams<<"\nvarName: "<<varName.data<<"\n";
                  //creates a new set of stack frames, one for the function/var and one for resolution,
                  //and calculation of each of it's parameters
                  //also returns function/var's value to this function's initialOperands stack
-                	 createFrame(executionStack, currentFrame,
-                                data,startOfEnd,hashFunctionCall(data->id));
-                	 goto new_frame_execution;
+                     createFrame(executionStack, currentFrame,
+                                resolution.data, this->paramsBuffer,startOfEnd,hashFunctionCall(resolution.data->id));
+                     goto new_frame_execution;
                  }
                  else if(currentFrame->getParams()->getUseCount() < currentFrame->getParams()->size())
                  {
+                     
+                         varName.start = varName.end - varName.data.length() + 1;
+                     if(currentFrame->exp[varName.end+1] == '.' || currentFrame->exp[varName.end+1] == '[')
+                     {
+                         std::stringstream error;
+                         error<<"Error while attempting to resolve parameter "<<varName.data<<" at position "<<ParsingUtil::to_string(varName.start)<<
+                                 "\nfunction parameters must be defined when passing a reference to an object as parameter.\nTry wrapping the function in (";
 
-                	 if(currentFrame->exp[varName.end+1] == '.' || currentFrame->exp[varName.end+1] == '[')
-                	 {
-                		 std::stringstream error;
-                		 error<<"Error while attempting to resolve parameter "<<varName.data<<" at position "<<ParsingUtil::to_string(varName.start)<<
-                				 "\nfunction parameters must be defined when passing a reference to an object as parameter.\nTry wrapping the function in (";
+                         for(int i = 0;  i < currentFrame->getParams()->size();i++)
+                             error<<"<param"<<i+currentFrame->getParams()->getUseCount()+0<<">,";
 
-                		 for(int i = 0;  i < currentFrame->getParams()->size();i++)
-                			 error<<"<param"<<i+currentFrame->getParams()->getUseCount()+0<<">,";
-
-                		 if(currentFrame->getParams()->size())
-                			 error.seekp(-1,error.cur);
-                		 error<<"){<original function body>}";
-                		 error<<" to declare the function parameters";
-                		 throw error.str();
-                	 }
+                         if(currentFrame->getParams()->size())
+                             error.seekp(-1,error.cur);
+                         error<<"){<original function body>}";
+                         error<<" to declare the function parameters";
+                         throw error.str();
+                     }
                      Object *paramVar = (*currentFrame->getParams())[currentFrame->getParams()->size() - 1 - currentFrame->getParams()->getUseCount()];
                      ++(*currentFrame->getParams());
-
-                     Object *obj = ((*currentFrame->getParamMemory())[varName.data] = paramVar);
-                     if(obj->id.size() == 0)
+                     if(paramVar->id[0] == 2)
                      {
-                    	 obj->id = varName.data;
+                         paramVar->copyToId(varName.data.str());
                      }
-                     uint32_t endOfParams = paramVar->setParams(currentFrame->exp, startOfparams);
-                     uint32_t startOfEnd = varName.start+varName.data.length()-1+endOfParams;
+                     (*currentFrame->getParamMemory())[varName.data] = (paramVar);
+                     uint32_t endOfParams =
+                     ParsingUtil::ParseStatementList(currentFrame->exp, startOfparams, this->paramsBuffer).end;
+                     uint32_t startOfEnd = varName.start+varName.data.size()-1+endOfParams;
                      createFrame(executionStack, currentFrame,
-                    		 obj,startOfEnd,hashFunctionCall(paramVar->id));
+                             paramVar, this->paramsBuffer,startOfEnd,hashFunctionCall(paramVar->id));
                      goto new_frame_execution;
                  }
                  else
                  {
                     #if THROWERRORS == 1
-                     if(ParsingUtil::cmpstr(varName.data,std::string("inf")))
-                         throw std::string("Arithmetic Overflow in column: "+ParsingUtil::to_string(i));
-                     else if(ParsingUtil::cmpstr(varName.data,std::string("nan")))
-                         throw std::string("Error Undefined result calculated");
+                     if(resolution.error)
+                     {
+                         if(ParsingUtil::cmpstr(varName.data.str(),std::string("inf")))
+                             throw std::string("Arithmetic Overflow in column: "+ParsingUtil::to_string(i));
+                         else if(ParsingUtil::cmpstr(varName.data.str(),std::string("nan")))
+                             throw std::string("Error Undefined result calculated");
+                         else
+                             throw std::string("Invalid reference: "+varName.data.str()+" in column: "+ParsingUtil::to_string(i));
+                     }
                      else
-                         throw std::string("Invalid reference: "+varName.data+" in column: "+ParsingUtil::to_string(i));
                     #endif
+                     {
+                         i = currentFrame->index;
+                     }
+                     
                  }
              }
 
@@ -581,17 +717,18 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
               }
               if(peeker != '(')
                   throw std::string("Error no opening parenthesis for closing ) at position: "+
-                		  ParsingUtil::to_string(i+1));
+                          ParsingUtil::to_string(i+1));
               currentFrame->initialOperands.top(and2);
               currentFrame->initialOperands.pop();
               processOperands.push(and2);
-              currentFrame->initialOperators.pop();
+              if(!currentFrame->initialOperators.isEmpty())
+                    currentFrame->initialOperators.pop();
               //Send expression in parentheses to processStack for evaluation
               try{
                   and2 = processStack(processOperands,processOperators);
               }catch(std::string &error)
               {
-                  throw std::string("In Expression: "+currentFrame->exp+" "+error);
+                  throw std::string("In Expression: "+currentFrame->exp.str()+" "+error);
               }
 
               currentFrame->initialOperands.push(and2);
@@ -600,13 +737,12 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             //initialOperands stack
             else if(ParsingUtil::isNumeric(currentChar) ||
             (currentChar == '-' && ParsingUtil::isNumeric(currentFrame->exp[i+1]) &&
-            		((i == 0 && !currentFrame->isAugmented()) ||
-            				(i > 0 && (Calculator<double>::isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='('))
-            				))
-				|| currentChar == '.')
+                    ((currentFrame->initialOperands.isEmpty()) ||
+                            (i > 0 && (Calculator<double>::isNonParentheticalOperator(currentFrame->exp[i-1]) || currentFrame->exp[i-1] =='('))
+                            ))
+                || currentChar == '.')
             {
-                double nextDouble = ParsingUtil::getNextDouble(currentFrame->exp,i);
-                currentFrame->initialOperands.push(nextDouble);
+                currentFrame->initialOperands.push(ParsingUtil::getNextDouble(currentFrame->exp,i));
             }
             else if(Calculator<double>::isOperator(currentChar))
             {
@@ -641,34 +777,37 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             {
                 if(*boolsettings["memoize"])
                 {
-                    memoPad[currentFrame->memoPointer] = data;
+                    memoPad.emplace(std::make_pair(currentFrame->memoPointer,data));
                 }
-                if(currentFrame != frame && *boolsettings["o"] && std::to_string(data).length() != MAX.length()){
-                    std::cout<<"Returning value: "<<data<<'\n';
+                if(currentFrame->getContext() && *boolsettings["o"] && std::to_string(data).length() != MAX.length()){
+                    std::cout<<"Returning value: "<<data<<" from function: "<<currentFrame->getContext()->getId()<<'\n';
                 }
             }
-            currentFrame->returnResult(data, memory);
+            executionStack.pop();//must happen before return for conditional frames
+            currentFrame->returnResult(data, memory, executionStack, *this);
         }
-        executionStack.pop();
-        frame->returnPointer = rtnptr;
-        cachedRtnObject = nullptr;
+        else
+            executionStack.pop();//must happen before return for conditional frames
         if(currentFrame->isDynamicAllocation())
         {
-            delete currentFrame;
+            deleteFrame(currentFrame);
         }
+        cachedRtnObject = nullptr;
         currentFrame = nullptr;
     }
 
     }catch(std::string &error)
     {
-    	clearStackOnError(true, error, executionStack, currentFrame, frame);
+        clearStackOnError(true, error, executionStack, currentFrame, frame);
         throw error;
     }
     catch(int exitCode)
     {
-    	clearStackOnError(false, frame->exp, executionStack, currentFrame, frame);
-    	throw exitCode;
+        std::string s = frame->exp.str();
+        clearStackOnError(false, s, executionStack, currentFrame, frame);
+        throw exitCode;
     }
+    frame->returnPointer = rtnptr;
     currentStack = nullptr;
     return data;
 }
@@ -676,29 +815,29 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
 template <typename t>
 void AscalExecutor::cleanOnError(bool timeInstruction, t start, t end)
 {
-	if(timeInstruction)
-	    	        {
-	    	            end = std::chrono::system_clock::now();
+    if(timeInstruction)
+                    {
+                        end = std::chrono::system_clock::now();
 
-	    	            std::chrono::duration<double> elapsed_seconds = end-start;
-	    	            std::time_t end_time = std::chrono::system_clock::to_time_t(end);
+                        std::chrono::duration<double> elapsed_seconds = end-start;
+                        std::time_t end_time = std::chrono::system_clock::to_time_t(end);
 
-	    	            std::cout <<
-	    	                      "Stack frames used: "<<frameCount<<'\n'
-	    	                        <<"Variables accessed: "<<varCount<<'\n'
-	    							<<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
-	    				<< "finished computation at " << std::ctime(&end_time)
-	    				                      << "elapsed time: " << elapsed_seconds.count() << "s\n";
-	    	        }
+                        std::cout <<
+                                  "Stack frames used: "<<frameCount<<'\n'
+                                    <<"Variables accessed: "<<varCount<<'\n'
+                                    <<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
+                        << "finished computation at " << std::ctime(&end_time)
+                                              << "elapsed time: " << elapsed_seconds.count() << "s\n";
+                    }
 
-	    	    frameCount = 1;
-	    	    varCount = 0;
-	    	    rememberedFromMemoTableCount = 0;
-	    	    savedOperands.clear();
-	    	    savedOperands.clear();
-	    	    processOperands.clear();
-	    	    processOperators.clear();
-	    	    memoPad.clear();
+                frameCount = 1;
+                varCount = 0;
+                rememberedFromMemoTableCount = 0;
+                savedOperands.clear();
+                savedOperands.clear();
+                processOperands.clear();
+                processOperators.clear();
+                memoPad.clear();
 }
 
 double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
@@ -707,21 +846,21 @@ double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
 
     std::chrono::system_clock::time_point start,end;
     if(timeInstruction){
-    start = std::chrono::system_clock::now();
+        start = std::chrono::system_clock::now();
     }
 
     //alternate beginning of calculation for doubles
     //-------------------------
     double result;
     try{
-    	result = calculateExpression(frame);
+        result = calculateExpression(frame);
     }catch(std::string &error)
     {
-    	cleanOnError(timeInstruction, start, end);
-    	throw error;
+        cleanOnError(timeInstruction, start, end);
+        throw error;
     }catch(int exitCode){
-    	cleanOnError(timeInstruction, start, end);
-    	throw exitCode;
+        cleanOnError(timeInstruction, start, end);
+        throw exitCode;
     }
     memoPad.clear();
     //------------------------
@@ -736,17 +875,17 @@ double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
             std::cout <<
                       "Stack frames used: "<<frameCount<<'\n'
                         <<"Variables accessed: "<<varCount<<'\n'
-						<<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
-			<< "finished computation at " << std::ctime(&end_time)
-			                      << "elapsed time: " << elapsed_seconds.count() << "s\n";
+                        <<"Values used from memo tables: "<<rememberedFromMemoTableCount<<'\n'
+            << "finished computation at " << std::ctime(&end_time)
+                                  << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
         }
         if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
         {
-        	if(*boolsettings["sci"])
-        		std::cout<<result<<std::endl;
-        	else
-        		std::cout<<ParsingUtil::to_string(result)<<std::endl;
+            if(*boolsettings["sci"])
+                std::cout<<result<<std::endl;
+            else
+                std::cout<<ParsingUtil::to_string(result)<<std::endl;
         }
     }
     frameCount = 1;
@@ -759,6 +898,7 @@ double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
     return result;
 
 }
+
 double AscalExecutor::processStack(stack<double> &operands,stack<char> &operators)
 {
 
@@ -804,7 +944,7 @@ double AscalExecutor::processStack(stack<double> &operands,stack<char> &operator
           operators.pop();
 
           operators.top(nextOperator);
-          if(Calculator<double>::getPriority(nextOperator)>Calculator<double>::getPriority(firstOperator))
+          if(Calculator<double>::getPriority(nextOperator) > Calculator<double>::getPriority(firstOperator))
           {
               savedOperators.push(firstOperator);
               savedOperands.push(and1);
@@ -836,195 +976,244 @@ double AscalExecutor::processStack(stack<double> &operands,stack<char> &operator
 
     //get result from processing expression
     operands.top(result);
-    operands.pop();
+    if(!operands.isEmpty())
+        operands.pop();
       return result;
 }
 
-Object& AscalExecutor::getObject(AscalFrame<double>* frame, std::string &functionName)
+Object& AscalExecutor::getObject(AscalFrame<double>* frame, string_view functionName)
 {
-
-	if(frame->getLocalMemory()->count(functionName))
-	            {
-	                return (*frame->getLocalMemory())[functionName];
-	            }
-	            else if(frame->getParamMemory()->count(functionName))
-	            {
-	                return *(*frame->getParamMemory())[functionName];
-	            }
-	            else if(memory.count(functionName))
-	            {
-	                return (memory)[functionName];
-	            }
-	            else
-	            {
-	                throw std::string("Error locating object "+functionName+"\n");
-	            }
+    if(const auto rec = frame->getLocalMemory()->search(functionName))
+    {
+        return *rec->data.second;
+    }
+    else if(const auto rec = frame->getParamMemory()->find(functionName))
+    {
+        return *rec->data.second;
+    }
+    else
+    {
+        const auto rec1 = memory.find(functionName);
+        if(rec1 != memory.end())
+        {
+            return *(*rec1).getValue();
+        }
+        else
+            throw std::string("Error locating object "+functionName.str()+"\n");
+    }
 }
-Object* AscalExecutor::getObjectNoError(AscalFrame<double>* frame, std::string &functionName)
+Object* AscalExecutor::getObjectNoError(AscalFrame<double>* frame, string_view functionName)
 {
-
-	if(frame->getLocalMemory()->count(functionName))
-	            {
-	                return &(*frame->getLocalMemory())[functionName];
-	            }
-	            else if(frame->getParamMemory()->count(functionName))
-	            {
-	                return (*frame->getParamMemory())[functionName];
-	            }
-	            else if(memory.count(functionName))
-	            {
-	                return &(memory)[functionName];
-	            }
-	            else
-	            {
-	                return nullptr;
-	            }
+    if(const auto rec = frame->getLocalMemory()->search(functionName))
+    {
+        return rec->data.second;
+    }
+    else if(const auto rec = frame->getParamMemory()->find(functionName))
+    {
+        return rec->data.second;
+    }
+    else
+    {
+        const auto rec1 = memory.find(functionName);
+        if(rec1 != memory.end())
+        {
+            return (*rec1).getValue();
+        }
+        else
+           return nullptr;
+    }
 }
 
-Object* AscalExecutor::resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName)
+Object* AscalExecutor::resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName)
 {
-	Object* obj = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr);
-	if(!obj)
-	{
-		throw std::string("Error Resolving object expression near index: "+ParsingUtil::to_string(varName.start)+" last parsed var name: "+varName.data);
-	}
-	return obj;
+    Object* obj = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr).data;
+    if(!obj)
+    {
+        throw std::string("Error Resolving object expression near index: "+ParsingUtil::to_string(varName.start)+" last parsed var name: "+varName.data.str());
+    }
+    return obj;
 }
-Object* AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, Object *obj)
-{
-	//getvarname
-	frame->index = varName.end+1;
-	if(!obj)
-	{
-		obj = getObjectNoError(frame, varName.data);
-	}
-	if(frame->getContext() && !obj &&
-			varName.data.size() == 4 &&
-					varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's')
-	{
-		obj = frame->getContext()->getThis();
-	}
-	bool parsing;
-	do {
-		parsing = frame->exp[frame->index] == '.';
-		while (obj && frame->exp.size() > frame->index && parsing)
-		{
-			varName = ParsingUtil::getVarName(frame->exp, frame->index);
-			parsing = frame->exp[varName.end+1] == '.';
-			frame->index = varName.end+1 + parsing;
-			obj = &(*obj)[varName.data];
-		}
-		if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
-		{
-			//if index in array lookup
-			if((ParsingUtil::isNumeric(frame->exp[++frame->index]) || isalpha(frame->exp[frame->index])) && frame->exp[frame->index])
-			{
-				int index = frame->index-1;
-				SubStr lStr = ParsingUtil::getExprInString(frame->exp, index, '[',']',';');
-				varName.data = lStr.data;
-				double lookup = this->callOnFrame(frame, lStr.data);
-				obj = &(*obj)[lookup];
-				frame->index = index+1;
-				varName.end = index+lStr.data.size()-4;
-			}
-			//else dictionary based lookup by string
-			else if(frame->exp.size() > frame->index)
-			{
-				//By variable name representing string to lookup
-				if(frame->exp[frame->index] == '&')
-				{
-					varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
-					frame->index = varName.start;
-					obj = &(*obj)[AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr)->listToString(memory)];
-					varName.end++;
-				}
-				//By string literal
-				else if(frame->exp[frame->index] == '\"')
-				{
-					varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
-					frame->index = varName.end+1;
-					while(frame->index < frame->exp.size() && frame->exp[frame->index++] == ']'){}
-					varName.end = frame->index ;
-					obj = &(*obj)[varName.data];
-				}
-				else
-				{
-					throw std::string("Error invalid lookup parameters supplied to map: "+obj->id);
-				}
-			}
-		}
-		parsing = frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[';
-	} while(obj && parsing);
-	varName.start = varName.end - varName.data.size() + 1;
-	return obj;
-}
-Object* AscalExecutor::resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &varName, Object *obj)
-{
-	//getvarname
-	frame->index = varName.end+1;
-	if(!obj)
-		obj = getObjectNoError(frame, varName.data);
-	if((!obj && frame->getContext()) || (varName.data.size() == 4 && varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's'))
-		obj = frame->getContext()->getThis();
-	bool parsing = frame->exp[frame->index] == '.';
-	Object *possible = nullptr;
-	do {
-		parsing = frame->exp[frame->index] == '.';
-		while (obj && frame->exp.size() > frame->index && parsing)
-			{
-				varName = ParsingUtil::getVarName(frame->exp, frame->index);
-				parsing = frame->exp[varName.end+1] == '.';
-				frame->index = varName.end+1 + parsing;
-				if(parsing || frame->exp[varName.end+1] == '[')
-					obj = &(*obj)[varName.data];
-			}
-			if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
-			{
-				//if index in array lookup
-				if((ParsingUtil::isNumeric(frame->exp[++frame->index]) || isalpha(frame->exp[frame->index])) && frame->exp[frame->index])
-				{
-					int index = frame->index-1;
-					varName = ParsingUtil::getExprInString(frame->exp, index, '[',']',';');
-					varName.data = ParsingUtil::to_string(this->callOnFrame(frame, varName.data));
-					frame->index = index+1;
-				}
-				//else dictionary based lookup by string
-				else if(frame->exp.size() > frame->index)
-				{
-					//By variable name representing string to lookup
-					if(frame->exp[frame->index] == '&')
-					{
-						varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
-						frame->index = varName.start;
-						varName.data = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr)->listToString(memory);
-						frame->index = varName.end+1;
-						while(frame->index < frame->exp.size() && frame->exp[frame->index++]){}
-						possible = &obj->getMapUnsafe(varName.data);
-					}
-					//By string literal
-					else if(frame->exp[frame->index] == '\"')
-					{
-						varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
-						frame->index = varName.end+1;
-						while(frame->index < frame->exp.size() && frame->exp[frame->index++] == ']'){}
-						varName.end = frame->index - 1;
-						possible = &obj->getMapUnsafe(varName.data);
-					}
-					else
-					{
-						throw std::string("Error invalid lookup parameters supplied to map: "+obj->id);
-					}
-				}
-			}
-			if(frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[')
-			{
-				parsing = true;
-				obj = possible;
-				possible = nullptr;
-			}
-	} while(obj && parsing);
+//Desc of resolveNextObjectExpression algorithm
+//if proceeding char is . then get object associated with varname before .
+//increment index, and getVarName again one place after the period, and use lookup next varname
+//in the previously gotten object's objectMap
 
-	return obj;
+//if next char is [ parse param between []
+    //if numberic access object gotten above and retrieve value at the numeric index supplied else lookup in hashmap
+    //if first char is & then try to lookup object using the operand's object map converted to a string
+    //if first char is " act like it was connected with a .
+
+//if following char is not . or [ then return currently pointed to object otherwise loop
+
+expressionResolution AscalExecutor::resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV &varName, Object *obj)
+{
+    frame->index = varName.end+1;
+    expressionResolution result;
+    if(!obj)
+    {
+        obj = getObjectNoError(frame, varName.data);
+    }
+    if(frame->getContext() && !obj &&
+            varName.data.size() == 4 &&
+                    varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's')
+    {
+        obj = frame->getContext()->getThis();
+    }
+    bool parsing;
+    do {
+        parsing = frame->exp[frame->index] == '.';
+        while (obj && frame->exp.size() > frame->index && parsing)
+        {
+            varName = ParsingUtil::getVarNameSV(frame->exp, frame->index);
+            parsing = frame->exp[varName.end+1] == '.';
+            frame->index = varName.end+1 + parsing;
+            result.parent = obj;
+            obj = &(*obj)[varName.data];
+        }
+        if(result.parent)
+            obj->setParent(result.parent);
+        if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
+        {
+            //if index in array lookup
+            if(ParsingUtil::isalpha(frame->exp[frame->index+1]) || (ParsingUtil::isNumeric(frame->exp[1+frame->index])))
+            {
+                int index = frame->index;
+                SubStrSV lStr = ParsingUtil::getExprInStringSV(frame->exp, index, '[',']',';');
+                varName.data = lStr.data;
+                double lookup = this->callOnFrame(frame, lStr.data);
+                if(obj->isObjList())
+                {
+                    result.parent = obj;
+                    result.listIndex = lookup;
+                    obj = &(*obj)[lookup];
+                    frame->index = index+1;
+                    varName.end = index+lStr.data.size();
+                }
+                else
+                {
+                    frame->initialOperands.push(obj->getDoubleAtIndex(lookup));
+                    result.error = false;
+                    result.parent = obj;
+                    result.listIndex = lookup;
+                    obj = nullptr;
+                    frame->index = index;
+                    varName.end = index+lStr.data.size() - 1;
+                    varName.data.resize(0);
+                }
+            }
+            //else dictionary based lookup by string
+            else if(frame->exp.size() > frame->index)
+            {
+                //By variable name representing string to lookup
+                if(frame->exp[frame->index+1] == '&')
+                {
+                    varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
+                    //get object data
+                    frame->index = varName.start;
+                    result.parent = obj;
+                    const auto list = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr);
+                    if(list.data)
+                        obj = &(*obj)[list.data->listToString(memory)];
+                    varName.end++;
+                }
+                //By string literal
+                else if(frame->exp[frame->index+1] == '\"')
+                {
+                    varName = ParsingUtil::getVarName(frame->exp, ++frame->index);
+                    frame->index = varName.end+1;
+                    while(frame->index < frame->exp.size() && frame->exp[frame->index++] == ']'){}
+                    varName.end = frame->index;
+                    result.parent = obj;
+                    obj = &(*obj)[varName.data];
+                }
+                else
+                {
+                    throw std::string("Error invalid lookup parameters supplied to map: "+obj->getId().str());
+                }
+            }
+        }
+        parsing = (frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[');
+    } while(obj && parsing);
+    varName.start = varName.end;
+    frame->index = varName.end;
+    result.data = obj;
+    return result;
+}
+Object* AscalExecutor::resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV &varName, Object *obj)
+{
+    //getvarname
+    frame->index = varName.end+1;
+
+    if(!obj && (frame->exp[varName.end+1] == '.' || frame->exp[varName.end+1] == '['))
+        obj = getObjectNoError(frame, varName.data);
+    if((!obj && frame->getContext() && (frame->exp[varName.end+1] == '.' || frame->exp[varName.end+1] == '[')) || (varName.data.size() == 4 && varName.data[0] == 't' && varName.data[1] == 'h' && varName.data[2] == 'i' && varName.data[3] == 's'))
+        obj = frame->getContext()->getThis();
+    bool parsing = frame->exp[frame->index] == '.';
+    Object *possible = nullptr;
+    do {
+        parsing = frame->exp[frame->index] == '.';
+        while (obj && frame->exp.size() > frame->index && parsing)
+            {
+                varName = ParsingUtil::getVarNameSV(frame->exp, frame->index);
+                parsing = frame->exp[varName.end+1] == '.';
+                frame->index = varName.end+1 + parsing;
+                if(parsing || frame->exp[varName.end+1] == '[')
+                    obj = &(*obj)[varName.data];
+            }
+            if(obj && frame->exp.size() > frame->index && frame->exp[frame->index] == '[')
+            {
+                //if index in array lookup
+                if((ParsingUtil::isNumeric(frame->exp[++frame->index]) || isalpha(frame->exp[frame->index])) && frame->exp[frame->index])
+                {
+                    int index = frame->index-1;
+                    varName = ParsingUtil::getExprInStringSV(frame->exp, index, '[',']',';');
+                    varName.data = ParsingUtil::to_string(this->callOnFrame(frame, varName.data.str()));
+                    frame->index = index+1;
+                }
+                //else dictionary based lookup by string
+                else if(frame->exp.size() > frame->index)
+                {
+                    //By variable name representing string to lookup
+                    if(frame->exp[frame->index] == '&')
+                    {
+                        varName = ParsingUtil::getVarNameSV(frame->exp, ++frame->index);
+                        frame->index = varName.start;
+
+                        const auto list = AscalExecutor::resolveNextObjectExpression(frame, varName, nullptr);
+                        if(list.data)
+                        {
+                            obj = &(*obj)[list.data->listToString(memory)];
+                            varName.data = list.data->listToString(memory).data();
+                            possible = &obj->getMapUnsafe(varName.data);
+                        }
+                        frame->index = varName.end+1;
+                        while(frame->index < frame->exp.size() && frame->exp[frame->index++]){}
+                    }
+                    //By string literal
+                    else if(frame->exp[frame->index] == '\"')
+                    {
+                        varName = ParsingUtil::getVarNameSV(frame->exp, ++frame->index);
+                        frame->index = varName.end+1;
+                        while(frame->index < frame->exp.size() && frame->exp[frame->index++] == ']'){}
+                        varName.end = frame->index - 1;
+                        possible = &obj->getMapUnsafe(varName.data);
+                    }
+                    else
+                    {
+                        throw std::string("Error invalid lookup parameters supplied to map: "+obj->getId().str());
+                    }
+                }
+            }
+            if(frame->exp[++frame->index] == '.' || frame->exp[frame->index] == '[')
+            {
+                parsing = true;
+                obj = possible;
+                possible = nullptr;
+            }
+    } while(obj && parsing);
+
+    frame->index = varName.end - varName.data.size() + 1;
+    return obj;
 }
 
 

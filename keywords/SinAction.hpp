@@ -9,23 +9,23 @@
 #define KEYWORDS_SINACTION_HPP_
 
 #include "../Keyword.hpp"
-class SinAction: public Keyword {
+class SinAction: public OpKeyword {
 public:
-	SinAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	SinAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "sin";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime->callOnFrame(frame,exp.data);
+	    SubStr exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord, '(', ')');
+	    double input = runtime.callOnFrame(frame,exp.data);
 	    frame->initialOperands.push(sin(input));
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"sin("<<input<<") = "<<sin(input)<<'\n';
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+	    frame->index = exp.end;
 	}
 };
 

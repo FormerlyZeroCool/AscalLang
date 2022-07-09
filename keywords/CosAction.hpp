@@ -9,23 +9,23 @@
 #define KEYWORDS_COSACTION_HPP_
 
 #include "../Keyword.hpp"
-class CosAction: public Keyword {
+class CosAction: public OpKeyword {
 public:
-	CosAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	CosAction(AscalExecutor &runtime):
+		OpKeyword(runtime)
 	{
 		this->keyWord = "cos";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime->callOnFrame(frame,exp.data);
+	    double input = runtime.callOnFrame(frame,exp.data);
 	    frame->initialOperands.push(cos(input));
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"cos("<<input<<") = "<<cos(input)<<'\n';
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+	    frame->index = exp.end;
 	}
 };
 

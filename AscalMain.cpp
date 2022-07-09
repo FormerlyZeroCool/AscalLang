@@ -14,7 +14,10 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <string>
+#include <memory>
 #include "Ascal.hpp"
+#include "CrossPlatform.hpp"
+
 
 #define DEBUG 1
 #define THROWERRORS 1
@@ -63,25 +66,32 @@ int main(int argc,char* argv[])
   //beginning of main program loop, if parameters are given in the
   //command line by the user loop will not run
   //by default the loop runs
-
+  std::string lastLine = "";
   while(std::cin && running)
   {
-      //Interpreter prompt to let user know program is expecting a command/expression
-      std::cout<<std::endl<<">>";
-      getline(std::cin, arg);
+    //this can be replaced with std::cout<<">>"; getline(std::cin, arg);
+    //if you then remove header files for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
+      
+      std::string line;
+      if(!CrossPlatform::readLine(line, ">>"))
+        break;
       //get expression from line parsed from std in,
       //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
-      arg = ParsingUtil::getExpr(arg, 0, std::cin).data;
+      	if(ParsingUtil::firstChar(line, '{'))
+        {
+          line = ParsingUtil::getExpr(line, 0, std::cin).data;
+        }
         try{
-        	ascalRuntime.execExpression(arg);
+        	ascalRuntime.execExpression(line);
         }
         catch(std::string &exception)
         {
             std::cerr<<"Function call stack trace.\n";
             std::cerr<<exception<<std::endl;
-            std::cerr<<"Failed to exec: "<<arg<<std::endl;
+            std::cerr<<"Failed to exec: "<<line<<std::endl;
         }
-  }
+
+    }
   }
   catch(int exitCode){
       return exitCode;

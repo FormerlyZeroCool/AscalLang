@@ -28,14 +28,35 @@
 #include <iostream>
 #include <fstream>
 #include <thread>
-#include "AscalFrame.hpp"
 #include "Object.hpp"
 #include "setting.hpp"
 #include "stack.hpp"
 #include "Calculator.hpp"
 #include "SubStr.hpp"
 #include "ParsingUtil.hpp"
+#include "string_view.hpp"
+#include "HashMap.hpp"
+#include "MemoryMap.hpp"
+
+template <typename t>
+class FunctionSubFrame;
+template <typename t>
+class AscalFrame;
+template <typename t>
+class FunctionFrame;
+template <typename t>
+class ParamFrame;
+template <typename t>
+class ConditionalFrame;
+template <typename t>
+class ParamFrameFunctionPointer;
 class Keyword;
+struct expressionResolution {
+    Object *data = nullptr;
+    Object *parent = nullptr;
+    uint_fast32_t listIndex = -1;
+    bool error = true;
+};
 struct CommandLineParams{
 	char ** argv;
 	int argc;
@@ -43,56 +64,58 @@ struct CommandLineParams{
 };
 class AscalExecutor {
 private:
-const size_t sizeofFrame = sizeof(AscalFrame<double>);
-size_t allocated = 0, deallocated = 0;;
+const size_t sizeofFrame = 0;
 const std::string VERSION = "2.01";
 
 uint32_t frameCount = 1;
 uint32_t varCount = 0;
 
-linkedStack<AscalFrame<double> *> *currentStack = nullptr;
 //Interpreter hash map for system keywords
-std::unordered_map
-<std::string,
-Keyword*> inputMapper;
-std::map
-<ObjectKey,
-std::string (*)(AscalFrame<double>*,Object&)> objectActionMapper;
+FlatMap<string_view, Keyword*> inputMapper;
+
 
 /////////////////////////////
+size_t rememberedFromMemoTableCount;
 //stacks!
 //these stacks handle respecting priority, the can handle as many priority levels as you like
 stack<double> savedOperands;
 stack<char> savedOperators;
 stack<double> processOperands;
 stack<char> processOperators;
-AscalFrame<double>* cachedRtnObject = nullptr;
-public:
-size_t rememberedFromMemoTableCount;
-struct ColorRGBA {
-	uint8_t r,g,b,a = 0;
-	ColorRGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
-	ColorRGBA(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b), a(0) {}
-};
-//TODO
-//std::vector<std::string, ColorRGBA> colorMap;
-std::vector<ColorRGBA> colorMap;
-std::map<std::string, ColorRGBA> colorMap;
+//private stack frame shred memory
+stack<char> instructionStack;
+//end stack frame shred memory
 std::unordered_map<uint64_t,double> memoPad;
+AscalFrame<double>* cachedRtnObject = nullptr;
+
+    ParsedStatementList paramsBuffer;
+public:
+    StackSegment<AscalFrame<double> *> *currentStack = nullptr;
+    ObjectPool<ParamFrame<double> > pFramePool;
+    ObjectPool<ConditionalFrame<double> > cFramePool;
+    ObjectPool<FunctionSubFrame<double> > sFramePool;
+    ObjectPool<ParamFrameFunctionPointer<double> > fpFramePool;
+    ObjectPool<FunctionFrame<double> > fFramePool;
 /////////////////////////////
 //Program Global Memory Declaration
-std::unordered_map<std::string,Object > memory;
+stack<double> operands;
+stack<char> operators;
+stack<char> instructionsStack;
+stack<Object* > paramsStack;
+MemoryManager memMan;
+FlatMap<string_view, Object*> memory;
 CommandLineParams commandLineParams;
 std::streambuf* stream_buffer_cin;
 std::istream ascal_cin;
-//Interpreter Settings HashMap for toggle flags, like show time, or operations
-std::map<std::string,setting<bool> > boolsettings;
+//Interpreter Settings FlatMap for toggle flags, like show time, or operations
+FlatMap<std::string,setting<bool> > boolsettings;
 //list of previous expressions for u command in interpretParam fn
 stack<std::string> lastExp;
 //list of previous undone expressions for r command in interpretParam fn
 stack<std::string> undoneExp;
 std::vector<Object> userDefinedFunctions;
 std::vector<Object> systemDefinedFunctions;
+void deleteFrame(AscalFrame<double> *frame);
 AscalFrame<double>* getCachedRtnObject()
 {
 	return this->cachedRtnObject;
@@ -107,18 +130,18 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	void addKeyWord(Keyword *key);
 
 	double callOnFrame(AscalFrame<double>* callingFrame,const std::string &subExp);
-	double callOnFrame(AscalFrame<double>* callingFrame,const std::string &&subExp);
+	double callOnFrame(AscalFrame<double>* callingFrame,const string_view subExp);
 	double callOnFrameFormatted(AscalFrame<double>* callingFrame,std::string subExp);
 	double calculateExpression(AscalFrame<double>* frame);
 	double processStack(stack<double> &operands,stack<char> &operators);
-	void createFrame(linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, int i,uint64_t hash);
-	void clearStackOnError(bool printStack, std::string &error, linkedStack<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
+    void createFrame(StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, Object *obj, ParsedStatementList &params, int i,uint64_t hash);
+	void clearStackOnError(bool printStack, std::string &error, StackSegment<AscalFrame<double>* > &executionStack, AscalFrame<double>* currentFrame, AscalFrame<double>* frame);
 
-	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStr &varName);
-	Object* resolveNextObjectExpression(AscalFrame<double>* frame, SubStr &varName, Object *obj = nullptr);
-	Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStr &varName, Object *obj = nullptr);
-	Object& getObject(AscalFrame<double>* frame, std::string &functionName);
-	Object* getObjectNoError(AscalFrame<double>* frame, std::string &functionName);
+	Object* resolveNextExprSafe(AscalFrame<double>* frame, SubStrSV varName);
+    expressionResolution resolveNextObjectExpression(AscalFrame<double>* frame, SubStrSV &varName, Object *obj = nullptr);
+	Object* resolveNextObjectExpressionPartial(AscalFrame<double>* frame, SubStrSV &varName, Object *obj = nullptr);
+	Object& getObject(AscalFrame<double>* frame, string_view functionName);
+	Object* getObjectNoError(AscalFrame<double>* frame, string_view functionName);
 
 	template <typename t>
 	void cleanOnError(bool timeInstruction, t start, t end);
@@ -132,101 +155,55 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	/////////////////////////////
 	//helper functions
 	/////////////////////////////
+	void makeArray(Object &obj)
+	{
+        Object pushMethod(this->memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
+        pushMethod.compileInstructions();
+        Object lengthMethod(this->memMan, string_view("length"), string_view("arrLen(this)"));
+        pushMethod.compileInstructions();
+        Object popMethod(this->memMan, string_view("pop"), string_view("arrErase(this,arrLen(this)-1)"));
+        popMethod.compileInstructions();
+        Object eraseMethod(this->memMan, string_view("erase"), string_view("arrErase(this,index)"));
+        popMethod.compileInstructions();
+        obj.loadChild(pushMethod, *this);
+        obj.loadChild(lengthMethod, *this);
+        obj.loadChild(popMethod, *this);
+        obj.loadChild(eraseMethod, *this);
+	}
+	void makeString(Object &obj)
+	{
+		this->makeArray(obj);
+		//substr
+        //Object pushMethod(this->memMan, string_view("push"), string_view("arrPush(this,numberzxa)"));
+        //pushMethod.compileInstructions();
+        //obj.loadChild(pushMethod, *this);
+	}
 	void loadFn(Object function);
-	template <typename t>
-	void loadUserDefinedFn(Object &function, t &mem);
+	Object& loadUserDefinedFn(Object &function, FlatMap<string_view, Object*> &mem);
+	Object& loadUserDefinedFn(Object &function, MemoryMap &mem);
+	Object& loadUserDefinedFn(Object &function, Map<string_view, Object*> &mem);
 	void updateBoolSetting(AscalFrame<double>* frame);
 	CommandLineParams& getCLParams()
 	{
 		return commandLineParams;
 	}
-	AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
-	{
-		ascal_cin.rdbuf(streambuf);
-		loadInitialFunctions();
-		commandLineParams.argc = argc;
-		commandLineParams.argv = argv;
-		commandLineParams.index = 1;
-		{
-		setting<bool> set(
-	            /*name*/
-	                "Show Operations that the interpreter uses while executing code",
-	            /*command line command*/
-	                "o",
-	            /*variable*/
-	                false);
-
-	        boolsettings[set.getCommand()] = set;
-
-	        set = setting<bool> (
-	                /*name*/
-	                    "Auto print results of calculations",
-	                /*command line command*/
-	                    "p",
-	                /*variable*/
-	                    true);
-
-	        boolsettings[set.getCommand()] = set;
-
-	        set = setting<bool> (
-	                /*name*/
-	                    "Use scientific notation for output of numbers larger than 999,999",
-	                /*command line command*/
-	                    "sci",
-	                /*variable*/
-	                    true);
-
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Debug Ascal Mode",
-	            /*command line command*/
-	                "d",
-	            /*variable*/
-	                false);
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Keep Interpreter listening for input to stdin",
-	            /*command line command*/
-	                "l",
-	            /*variable*/
-	                true);
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Auto Memoize all function calls to improve multiple recursive function performance,\nwill cause erroneous calculations if not using pure mathematical functions.",
-	            /*command line command*/
-	                "memoize",
-	            /*variable*/
-	                false);
-	        boolsettings[set.getCommand()] = set;
-	        set = setting<bool>(
-	            /*name*/
-	                "Print time taken to run calculation",
-	            /*command line command*/
-	                "t",
-	            /*variable*/
-	                false);
-	        boolsettings[set.getCommand()] = set;
-	        }//bracket to remove set variable from program memory
-	          /*
-	           * End of initialization values in settings hashmap
-	           * */
-	}
-	static std::string printMemory(std::map<std::string,Object*> &memory,std::string delimiter,bool justKey = true,
+    AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf);
+	template <typename string1, typename string2>
+	static std::string printMemory(Map<string1,Object*> &memory,string2 delimiter,bool justKey = true,
 	        std::string secondDelimiter = "\n")
 	{
 	    std::string s;
+		/*
 	    if(justKey)
 	        for(auto &[key,value]:memory)
 	            s+=key+delimiter;
 	    else
 	        for(auto &[key,value]:memory)
-	            s+=key+delimiter+value->instructionsToString()+secondDelimiter;
+	            s+=key+delimiter+value->instructionsToFormattedString()+secondDelimiter;*/
 	    return s.substr(0,s.size()-secondDelimiter.size());
 	}
-	static std::string printMemory(std::unordered_map<std::string,Object> &memory,std::string delimiter,bool justKey = true,
+	template <typename string1, typename string2>
+	static std::string printMemory(FlatMap<string1,Object> &memory,string2 delimiter,bool justKey = true,
 	        std::string secondDelimiter = "\n")
 	{
 	    std::string s;
@@ -235,7 +212,7 @@ void setCachedRtnObject(AscalFrame<double> *frame)
 	            s+=key+delimiter;
 	    else
 	        for(auto &[key,value]:memory){
-	            std::string instr = value.instructionsToString();
+	            std::string instr = value.instructionsToFormattedString();
 	            s+=key+delimiter+instr+secondDelimiter;
 	        }
 	    return s.substr(0,s.size()-secondDelimiter.size());

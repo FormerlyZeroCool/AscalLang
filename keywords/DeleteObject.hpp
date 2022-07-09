@@ -9,49 +9,50 @@
 #define KEYWORDS_DELETEOBJECT_HPP_
 
 #include "../Keyword.hpp"
-class DeleteObject: public Keyword {
+class DeleteObject: public OpKeyword {
 public:
-	DeleteObject(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	DeleteObject(AscalExecutor &runtime):
+		OpKeyword(runtime)
 	{
 		this->keyWord = "delete";
 	}
-	std::string deleteObject(AscalFrame<double>* frame,bool saveLast)
+	void action(AscalFrame<double>* frame) override
 	{
 
 	    if(ParsingUtil::cmpstr(frame->exp.substr(7,3),std::string("all")))
 	    {
-	        memory->clear();
+	        runtime.memory.clear();
 	        frame->getLocalMemory()->clear();
-	        runtime->userDefinedFunctions.clear();
-	        if(*(*boolsettings)["o"])
+	        runtime.userDefinedFunctions.clear();
+		    if(*runtime.boolsettings["o"])
 	        	std::cout<<"All Memory cleared."<<std::endl;
 	    }
 	    else
 	    {
-	        std::string name = ParsingUtil::getVarName(frame->exp,7).data;
-
-	        if(memory->count(name) > 0)
+	        SubStr name = ParsingUtil::getVarName(frame->exp,this->keyWord.length() + 1);
+			frame->index = name.end + 1;
+			const auto rec = runtime.memory.find(name.data);
+	        if(rec != runtime.memory.end())
 	        {
 
-	            std::vector<Object>::iterator position = std::find(runtime->userDefinedFunctions.begin(), runtime->userDefinedFunctions.end(), (*memory)[name]);
-	            if(position != runtime->userDefinedFunctions.end())
-	                runtime->userDefinedFunctions.erase(position);
+	            std::vector<Object>::iterator position = std::find(runtime.userDefinedFunctions.begin(), runtime.userDefinedFunctions.end(), *(*rec).getValue());
+	            if(position != runtime.userDefinedFunctions.end())
+	                runtime.userDefinedFunctions.erase(position);
 
-	            memory->erase(name);
-	            if(*(*boolsettings)["o"])
-	            	std::cout<<"Erased "<<name<<" from memory."<<std::endl;
+	            runtime.memory.erase(name.data);
+				runtime.memMan.obj_free((*rec).getValue());
+	    	    if(*runtime.boolsettings["o"])
+	            	std::cout<<"Erased "<<name.data<<" from memory."<<std::endl;
 	        }
-	        else if(frame->getLocalMemory()->count(name) != 0)
+	        else if(frame->getLocalMemory()->count(name.data) != 0)
 	        {
-	            frame->getLocalMemory()->erase(name);
+	            frame->getLocalMemory()->erase(name.data);
 	        }
 	        else
 	        {
-	            throw std::string("Error could not find "+name+" in memory to delete.\n");
+	            throw std::string("Error could not find "+name.data+" in memory to delete.\n");
 	        }
 	    }
-	    return MAX;
 	}
 };
 

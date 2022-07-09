@@ -1,4 +1,5 @@
-
+let f = []
+for x in range(10){arrPush(f,abs(rand%10))};
 let prl = (list){
 for x in range(&list){
     printf(x)
@@ -14,7 +15,7 @@ let cloneArr = (a,b){
     }
 }
 let heap.heapify = (pdat){
-	set this.data = pdat;
+	let this.data = pdat;
 	for i in range(floor(arrLen(pdat)/2),-1,-1){
 		this.down(i,arrLen(this.data)-1);
 	}

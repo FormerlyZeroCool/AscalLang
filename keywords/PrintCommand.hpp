@@ -11,25 +11,25 @@
 #include "../Keyword.hpp"
 #include "PrintVarAction.hpp"
 #include "PrintCalculation.hpp"
-class PrintCommand: public Keyword {
+class PrintCommand: public StKeyword {
 private:
 	PrintVarAction pvar;
 	PrintCalculation pcvar;
 	void printAllFunctions()
 	{
 	    std::cout<<"All Functions in Memory:"<<std::endl;
-	    for(auto &[key,value] : *memory)
+	    for(auto &value : runtime.memory)
 	    {
-	        std::cout<<std::endl<<"Function Name: "<<key<<"\nFunction Expression: "<<value.toString()<<std::endl;
+	        std::cout<<std::endl<<"Function Name: "<<value.getValue()->getId()<<"\nFunction Expression: "<<value.getKey()<<std::endl;
 	    }
 	    std::cout<<std::endl<<"End of All Functions in Memory."<<std::endl;
 	}
 	void printAllUDF(AscalFrame<double> *frame)
 	{
 	    std::cout<<"User Defined Functions:"<<std::endl;
-	    for(Object & data:runtime->userDefinedFunctions)
+	    for(Object & data:runtime.userDefinedFunctions)
 	    {
-	        std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<runtime->getObject(frame, data.id).toString()<<std::endl;
+	        std::cout<<std::endl<<"Function Name: "<<data.getId()<<std::endl<<"Function Expression: "<<runtime.getObject(frame, data.getId()).toString()<<std::endl;
 
 	    }
 	    std::cout<<std::endl<<"End of User Defined Functions."<<std::endl;
@@ -37,22 +37,21 @@ private:
 	void printAllSDF()
 	{
 	    std::cout<<"System Defined Functions:"<<std::endl;
-	    for(Object & data:runtime->systemDefinedFunctions)
+	    for(Object & data:runtime.systemDefinedFunctions)
 	    {
-	        std::cout<<std::endl<<"Function Name: "<<data.id<<std::endl<<"Function Expression: "<<data.instructionsToFormattedString()<<std::endl;
+	        std::cout<<std::endl<<"Function Name: "<<data.getId()<<std::endl<<"Function Expression: "<<data.instructionsToFormattedString()<<std::endl;
 	    }
 	    std::cout<<std::endl<<"End of System Defined Functions."<<std::endl;
 	}
 public:
-	PrintCommand(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings), pvar(runtime, memory, boolsettings), pcvar(runtime, memory, boolsettings)
+	PrintCommand(AscalExecutor &runtime):
+	StKeyword(runtime), pvar(runtime), pcvar(runtime)
 	{
 		this->keyWord = "printc";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    std::cout<<"\n";
-	    std::string value  = MAX;
 	    int start = frame->exp.find("print",frame->index)+6;
 	            if(ParsingUtil::cmpstr(frame->exp.substr(start,3),std::string("all")))
 	            {
@@ -76,7 +75,6 @@ public:
 	            	//Print result of calculating expression following print statement
 	                pcvar.action(frame);
 	            }
-	            return value;
 	}
 };
 

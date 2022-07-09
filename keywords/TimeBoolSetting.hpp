@@ -9,17 +9,16 @@
 #define KEYWORDS_TIMEBOOLSETTING_HPP_
 
 #include "../Keyword.hpp"
-class TimeBoolSetting: public Keyword {
+class TimeBoolSetting: public StKeyword {
 public:
-	TimeBoolSetting(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	TimeBoolSetting(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "t";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    runtime->updateBoolSetting(frame);
-	    return MAX;
+	    runtime.updateBoolSetting(frame);
 	}
 };
 

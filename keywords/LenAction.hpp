@@ -9,26 +9,27 @@
 #define KEYWORDS_LENACTION_HPP_
 
 #include "../Keyword.hpp"
-class LenAction: public Keyword {
+class LenAction: public OpKeyword {
 public:
-	LenAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	LenAction(AscalExecutor &runtime):
+	OpKeyword(runtime)
 	{
 		this->keyWord = "arrLen";
 	}
 
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    SubStr objname = ParsingUtil::getVarName(exp.data, 0);
+	    SubStr exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord);
+        uint32_t index = frame->index+this->keyWord.size();
+	    SubStr objname = ParsingUtil::getVarNameSV(exp.data, index);
 	    SubStr vns = ParsingUtil::getVarName(frame->exp, frame->index+keyWord.size());
-	    Object *obj = runtime->resolveNextExprSafe(frame, vns);
+	    Object *obj = runtime.resolveNextExprSafe(frame, vns);
 	    frame->initialOperands.push(obj->getListSize());
-	    if(*(*boolsettings)["o"])
+	    if(*runtime.boolsettings["o"])
 	    {
-	    	std::cout<<"arrLen(&"<<obj->id<<") = "<<obj->getListSize()<<'\n';
+	    	std::cout<<"arrLen(&"<<obj->getId()<<") = "<<obj->getListSize()<<'\n';
 	    }
-	    return 'a'+frame->exp.substr(exp.end,frame->exp.size());
+	    frame->index = exp.end;
 	}
 };
 

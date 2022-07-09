@@ -9,17 +9,16 @@
 #define KEYWORDS_PRINTBOOLSETTING_HPP_
 
 #include "../Keyword.hpp"
-class PrintBoolSetting: public Keyword {
+class PrintBoolSetting: public StKeyword {
 public:
-	PrintBoolSetting(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	PrintBoolSetting(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "p";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
-	    runtime->updateBoolSetting(frame);
-	    return MAX;
+	    runtime.updateBoolSetting(frame);
 	}
 };
 

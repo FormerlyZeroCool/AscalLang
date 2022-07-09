@@ -9,27 +9,26 @@
 #define KEYWORDS_REDOACTION_HPP_
 
 #include "../Keyword.hpp"
-class RedoAction: public Keyword {
+class RedoAction: public StKeyword {
 public:
-	RedoAction(AscalExecutor *runtime, std::unordered_map<std::string,Object> *memory, std::map<std::string,setting<bool> > *boolsettings):
-	Keyword(runtime, memory, boolsettings)
+	RedoAction(AscalExecutor &runtime):
+	StKeyword(runtime)
 	{
 		this->keyWord = "r";
 	}
-	std::string action(AscalFrame<double>* frame) override
+	void action(AscalFrame<double>* frame) override
 	{
 	    std::string value = "0";
-	    if(!runtime->undoneExp.isEmpty()){
+	    if(!runtime.undoneExp.isEmpty()){
 	        std::string last = "";
-	        runtime->undoneExp.top(last);
-	        runtime->undoneExp.pop();
-	        runtime->lastExp.push(last);
+	        runtime.undoneExp.top(last);
+	        runtime.undoneExp.pop();
+	        runtime.lastExp.push(last);
 	        std::cout<<last<<std::endl;
-	        value = runtime->callOnFrame(frame,"print "+last);
+	        value = runtime.callOnFrame(frame,"print "+last);
 	    }
 	    else
 	        std::cout<<"No statements can be redone"<<std::endl;
-	    return MAX;
 	}
 };
 
