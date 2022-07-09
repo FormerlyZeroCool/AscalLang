@@ -18,7 +18,7 @@ public:
 	}
 	void action(AscalFrame<double>* frame) override
 	{
-
+/*
 	    if(ParsingUtil::cmpstr(frame->exp.substr(7,3),std::string("all")))
 	    {
 	        runtime.memory.clear();
@@ -53,6 +53,7 @@ public:
 	            throw std::string("Error could not find "+name.data+" in memory to delete.\n");
 	        }
 	    }
+		*/
 	}
 };
 

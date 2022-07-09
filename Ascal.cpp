@@ -8,16 +8,17 @@
 #include "Ascal.hpp"
 	double Ascal::execExpression(string_view exp)
 	{
-		FunctionFrame<double> *current = nullptr;
+		AscalFrame<double> *current = nullptr;
 		double value = execExpression(exp, current);
-		runtime.fFramePool.destroy(current);
+		runtime.framePool.destroy(current);
 		return value;
 	}
-	double Ascal::execExpression(string_view exp, FunctionFrame<double>* &current)
+	double Ascal::execExpression(string_view exp, AscalFrame<double>*& current)
 	{
-		current = runtime.fFramePool.construct(runtime, runtime.memMan);
-        current->setIsDynamicAllocation(false);
-		current->exp = exp;
+		Object compiledCode(runtime.memMan, string_view("", 0), exp);
+		compiledCode.compileInstructions(runtime);
+		current = runtime.framePool.construct(runtime);
+		current->exp = compiledCode.getInstructions();
 	try{
 		return runtime.calcWithOptions(current);
 	}

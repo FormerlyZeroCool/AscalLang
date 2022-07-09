@@ -1,54 +1,46 @@
+
 #
-# Makefile for Ascal/SDL2
+# Makefile for lab 6, part 1
 #
 
 CC  = g++
 CXX = g++
-
-INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp Ascal.hpp AscalExecutor.hpp CrossPlatform.hpp ParsingUtil.hpp PRNG.hpp Keyword.hpp
-ASINCLUDE = -IC:/cygwin64/usr/include/
+#for linux
+INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp ObjectKey.hpp -I/usr/include/readline 
+#for mac os if linux version doesn't work
+#INCLUDES = Calculator.hpp setting.hpp Object.hpp AscalFrame.hpp AscalParameters.hpp -I/usr/local/Cellar/boost/1.76.0/include -I/usr/local/opt/readline/include 
 UTILINCLUDES = queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp
-CFLAGS   = -O3 
-CXXFLAGS = -O3 -std=c++17 $(ASINCLUDE)
+CFLAGS   = -O3 -Wall
+CXXFLAGS = -O3 -std=c++17 -Wall -Dlibreadline 
+#for most distros
+LDFLAGS = -lreadline 
+LDLIBS = -lreadline 
+#for debian if previous fails
+#LDFLAGS = -lreadline -L/usr/lib/x86_64-linux-gnu 
+#LDLIBS = -lreadline -L/usr/lib/x86_64-linux-gnu 
+.PHONY: default
+default: 
+	make clean; make -j 7 ascal
+ascal: AscalMain
+	mv AscalMain ascal
+AscalMain:  AscalMain.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o
 
-LDFLAGS = -LC:/Users/RUMMY/source/repos/Ascal-VS19 -lSDL2 -lIMAGESDL2
-
-default: AscalMain 
-AscalMain:  AscalMain.o Object.o AscalParameters.o ObjectKey.o string_view.o Ascal.o AscalExecutor.o CrossPlatform.o ParsingUtil.o PRNG.o Keyword.o Graphics.o keywords/PlotGUIAction.o plot_gui/Input.o plot_gui/Camera.o
-	g++ -o ascal -O3 AscalMain.o Object.o AscalParameters.o ObjectKey.o string_view.o Ascal.o AscalExecutor.o CrossPlatform.o ParsingUtil.o PRNG.o Keyword.o Graphics.o keywords/PlotGUIAction.o plot_gui/Input.o plot_gui/Camera.o $(LDFLAGS) $(ASINCLUDE)
-	
 # header dependency
-Graphics.o: plot_gui/Graphics.h Keyword.hpp AscalExecutor.hpp plot_gui/Camera.h
+AscalMain.o: AscalMain.cpp 
 
-keywords/PlotGUIAction.o: keywords/PlotGUIAction.hpp Keyword.hpp CrossPlatform.hpp plot_gui/Input.h plot_gui/Camera.h
+Object.o:
 
-plot_gui/Input.o: plot_gui/Input.h
+AscalParameters.o:
 
-plot_gui/Camera.o: plot_gui/Camera.h
-
-AscalMain.o: AscalMain.cpp $(INCLUDES)  $(UTILINCLUDES)
-
-Ascal.o: Ascal.cpp Ascal.hpp AscalExecutor.hpp Keyword.hpp keywords/PlotGUIAction.hpp
-
-Object.o: Object.cpp Object.hpp
-
-AscalExecutor.o: $(INCLUDES)  $(UTILINCLUDES)
-
-AscalParameters.o: $(INCLUDES)  $(UTILINCLUDES)
-
-ObjectKey.o: $(INCLUDES)  $(UTILINCLUDES)
-
-string_view.o: $(INCLUDES)  $(UTILINCLUDES)
-
-PRNG.o: $(INCLUDES)  $(UTILINCLUDES)
-
-CrossPlatform.o: $(INCLUDES)  $(UTILINCLUDES)
-
-Keyword.o: $(INCLUDES)  $(UTILINCLUDES)
-
-ParsingUtil.o: $(INCLUDES) $(UTILINCLUDES)
-
-
+string_view.o:
+Ascal.o: 
+AscalExecutor.o:
+ParsingUtil.o:
+PRNG.o:
+Keyword.o:
+MemoryMap.o:
+MemoryManager.o:
+SubStr.o:
 .PHONY: clean
 clean:
 	rm -f *.o *~  ascal
@@ -57,3 +49,4 @@ run:
 	./run.sh
 .PHONY: all
 all: clean default
+

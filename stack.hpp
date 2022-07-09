@@ -120,66 +120,64 @@ template <typename t>
   }
 
 template <typename t>
-class stack : public std::deque<t>{
+class stack : public std::vector<t>{
 
 public:
-	stack(){}
-	inline void push(const t &data);
-	inline void push(const t &&data);
-  inline void pop();
-	inline void top(t&data);
-	inline void top(t*&data);
-    inline t& get()
-    {
-        return (*this)[this->size()-1];
-    }
-	inline bool isEmpty();
-	inline size_t length();
+	stack(){ this->reserve(1280000); }
+	inline void push(const t &data) noexcept;
+	inline void push(const t &&data) noexcept;
+  inline void pop() noexcept;
+	inline void top(t&data) const noexcept;
+	inline void top(t*&data) const noexcept;
+  inline t& get() noexcept
+  {
+      return (*this)[this->size() - 1];
+  }
+	inline bool isEmpty() const noexcept;
+	inline size_t length() const noexcept;
 };
 template <typename t>
-void stack<t>::push(const t &data)
+void stack<t>::push(const t &data) noexcept
 {
 	this->push_back(data);
 }
 template <typename t>
-void stack<t>::push(const t &&data)
+void stack<t>::push(const t &&data) noexcept
 {
 	this->push_back(data);
 }
 template <typename t>
-void stack<t>::pop()
+void stack<t>::pop() noexcept
 {
-	if(this->size() > 0)
+	//if(this->size() > 0)
 	{
 		this->pop_back();
 	}
-    else throw std::string("You popped an empty list!");
+    //else throw std::string("You popped an empty list!");
 }
 template <typename t>
-bool stack<t>::isEmpty()
+bool stack<t>::isEmpty() const noexcept
 {
 	return this->size() == 0;
 }
 template <typename t>
-size_t stack<t>::length()
+size_t stack<t>::length() const noexcept
 {
 	return this->size();
 }
 template <typename t>
-void stack<t>::top(t&data)
+void stack<t>::top(t&data) const noexcept
 {
-	if(this->size() > 0)
+	//if(this->size() > 0)
 	{
-		data = (*this)[this->size()-1];
+		data = (*this)[this->size() - 1];
 	}
 }
 
 template <typename t>
-void stack<t>::top(t*&data)
+void stack<t>::top(t*&data) const noexcept
 {
-	if(this->size() > 0)
-	{
-		data = &(*this)[this->size()-1];
-	}
+	data = const_cast<t*>(&(*this)[this->size() - 1]);
+	
 }
 #endif

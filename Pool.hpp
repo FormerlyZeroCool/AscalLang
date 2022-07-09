@@ -74,7 +74,7 @@ public:
 template <typename t>
 class Pool_t {
     struct Chunk {
-        char data[sizeof(t)];
+        t data;
         Chunk *next = nullptr;
         Chunk(Chunk *next): next(next) {}
         Chunk() {}
@@ -85,7 +85,7 @@ class Pool_t {
     int_fast64_t index = 0;
 public:
     Pool_t() {
-        this->poolSize = 1024;
+        this->poolSize = 4096;
         this->init();
     }
     Pool_t(int64_t blocks) {
@@ -95,11 +95,11 @@ public:
     ~Pool_t()
     {
         for(auto block : this->blocks)
-            delete[] block;
+            free(block);
     }
     void init()
     {   
-        auto ptr = new Chunk[this->poolSize];
+        auto ptr = reinterpret_cast<Chunk *>(std::malloc(this->poolSize * sizeof(Chunk)));
         blocks.push_back(ptr);
         this->initBlock(ptr, poolSize);
         last = ptr;
@@ -113,12 +113,12 @@ public:
             last = last->next;
         }
     }
-    void* malloc()
+    constexpr void* malloc()
     {
         Chunk *ptr = this->last->next;
         if(!ptr)
         {
-            ptr = new Chunk[this->poolSize];
+            ptr = reinterpret_cast<Chunk *>(std::malloc(this->poolSize * sizeof(Chunk)));
             this->last->next = ptr;
             this->blocks.push_back(ptr);
             this->initBlock(ptr, this->poolSize);
@@ -127,7 +127,7 @@ public:
         this->last = ptr;
         return reinterpret_cast<void*>(&ptr->data);
     }
-    void free(void* ptr)
+    constexpr void free(void* ptr)
     {
         Chunk *p = reinterpret_cast<Chunk *>(ptr);
         p->next = this->last->next;

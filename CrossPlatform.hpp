@@ -60,10 +60,11 @@ static std::string convertFilePath(std::string fp)
     return fp;
 }
 #if libreadline == 0
-static void readLine(std::string &line, std::string prompt)
+static bool readLine(std::string &line, std::string prompt)
 {
     std::cout<<prompt;
     getLine(std::cin, line);
+    return true;
 }
 static void getLine(std::istream &ascal_cin, std::string &line)
 {

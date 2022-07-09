@@ -3,14 +3,14 @@ let printBinHex = (num){
     loc len = 0;
     loc rbin = [];
     #print "In decimal: (num)endl";
-    while(num>0);
+    while(num>0)
     {
       rbin.push(floor(num%2));
       set num = floor(num/2);
       set len = len+1;
       
     };
-    while not(len%4=0);
+    while(not(len%4=0))
     {
       rbin.push(0);
       set len = len+1;

@@ -2,16 +2,18 @@
 let y = []
 loadStr(y,"whateveralicious")
 let s = []
+let s.arr = []
+print var s
 let s["may"] = 6
 let s["may"]["day"] = 2
 let s["may"][&y] = 2
 let s["may"]["day"]= 23
 let s["may"]["day"]["w"] = x*2+this.day
 printf(s["may"][&y])
-arrPush(s.may,7)
-arrPush(s.may,8)
-arrPush(s.may,9)
-printf(s.may[0])
+arrPush(s.arr,7)
+arrPush(s.arr,8)
+arrPush(s.arr,9)
+printf(s.arr[0])
 print var s
 
 let cloneArr = (a,b){
@@ -19,21 +21,18 @@ let cloneArr = (a,b){
         arrPush(a,x);
     }
 }
-cloneArr(&s,&s.may);
-for x in range(&s.may){
+cloneArr(&s,&s.arr);
+for x in range(&s.arr){
     printf(x)
 }
 
 
-if(0)
-{
+if(0){
 
 }
-else if (0)
-{
+else if (0){
 
 }
-else
-{
+else{
     print "Else if workingendl"
 }

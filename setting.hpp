@@ -22,7 +22,7 @@ public:
 
 	setting(std::string name,std::string command,std::string message,t dat):
 		dat(dat),name(name),command(command),message(message){};
-
+    
 	bool operator==(const t &dat)
 	{
 		return this->dat == dat;

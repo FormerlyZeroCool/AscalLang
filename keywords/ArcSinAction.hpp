@@ -9,23 +9,27 @@
 #define KEYWORDS_ARCSIN_HPP_
 
 #include "../Keyword.hpp"
+static inline void arcSinAction(KeywordExecutionContext ctx) 
+{
+	double input = 0;
+	ctx.frame().initialOperands.top(input);
+	ctx.frame().initialOperands.pop();
+    ctx.frame().initialOperands.push(asin(input));
+	#ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+    {
+    	std::cout<<"arcSin("<<input<<") = "<<asin(input)<<'\n';
+    }
+	#endif
+    ctx.frame().index += Keyword::opcodeSize();
+}
 class ArcSinAction: public OpKeyword {
 public:
 	ArcSinAction(AscalExecutor &runtime):
 		OpKeyword(runtime)
 	{
 		this->keyWord = "arcsin";
-	}
-	void action(AscalFrame<double>* frame) override
-	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime.callOnFrame(frame,exp.data);
-	    frame->initialOperands.push(asin(input));
-	    if(*runtime.boolsettings["o"])
-	    {
-	    	std::cout<<"arcsin("<<input<<") = "<<asin(input)<<'\n';
-	    }
-	    frame->index = exp.end;
+		this->operation = arcSinAction;
 	}
 };
 

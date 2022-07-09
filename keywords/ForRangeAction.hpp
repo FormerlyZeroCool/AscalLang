@@ -19,15 +19,14 @@ public:
         this->keyWord = "for";
     }
 
-    void action(AscalFrame<double>* frame) override
+    void compile(CompilationContext &ctx) override
     {
-        uint32_t index = frame->index+4;
-        while(frame->exp[index] == ' ')
+        uint32_t index = ctx.src_index+this->opcodeSize();
+        while(ctx.source.size() > index && ParsingUtil::isalpha(ctx.source[index]))
             index++;
-
-        SubStrSV itVar = ParsingUtil::getVarNameSV(frame->exp, index);
-        const int postRangeIndex = frame->exp.find("in range", index)+8;
-        SubStrSV limitExpr = ParsingUtil::getExprInStringSV(frame->exp, postRangeIndex, '(', ')', '{');
+        const int postRangeIndex = ctx.source.find("range", index)+5;
+        SubStrSV limitExpr = ParsingUtil::getExprInStringSV(ctx.source, postRangeIndex, '(', ')', '{');
+        //std::cout<<"ivar: "<<itVar.data<< " ivar len: "<< itVar.data.length()<<" limit: "<<limitExpr.data<<"\nexpr: "<<ctx.source<<"\n";
         params.statements.clear();
         ParsingUtil::ParseStatementList(limitExpr.data, 0, params);
         if(params.statements.empty())
@@ -35,27 +34,27 @@ public:
         
         SubStr limitStr = params.statements.size()>1?params.statements[1]:params.statements[0];
         int startOfCodeBlock = limitExpr.start;
-        SubStr codeBlock("",0,0);
 
-        while(frame->exp[startOfCodeBlock] && frame->exp[startOfCodeBlock] != '{')
+        while(ctx.source.size() > startOfCodeBlock && ctx.source[startOfCodeBlock] != '{')
         {
             startOfCodeBlock++;
         }
         index = startOfCodeBlock;
-        codeBlock = ParsingUtil::getCodeBlock(frame->exp, index, runtime.ascal_cin);
-        FunctionSubFrame<double> executionFrame(runtime, frame->getParams(), frame->getParamMemory(), frame->getLocalMemory());
-        executionFrame.exp = codeBlock.data;
-        executionFrame.setIsDynamicAllocation(false);
-        executionFrame.setContext(frame->getContext());
-        double i = params.statements.size()>1?runtime.callOnFrame(frame,params.statements[0].data):0;
+        
+        
+    }
+};
+
+/*old code for action
+double i = params.statements.size()>1?runtime.callOnFrame(frame,params.statements[0].data):0;
         Object itObjRef(runtime.memMan, itVar.data);
-        frame->getParamMemory()->insert(string_view(itObjRef.id), &itObjRef);
+        ctx.frame.getParamMemory()->insert(string_view(itObjRef.id), &itObjRef);
         Object *itObj = &itObjRef;
         if(ParsingUtil::firstChar(limitStr.data,'&'))
         {
             uint32_t index = postRangeIndex+limitStr.start;
-            SubStrSV limitPartial = ParsingUtil::getVarNameSV(frame->exp, index);
-            limitStr.start = limitStr.data.find("&", frame->index)+1;
+            SubStrSV limitPartial = ParsingUtil::getVarNameSV(ctx.source, index);
+            limitStr.start = limitStr.data.find("&", ctx.src_index)+1;
 
 
             Object *list = runtime.resolveNextExprSafe(frame, limitPartial);
@@ -70,7 +69,7 @@ public:
                             std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
                         }
                         try{
-                            //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
+                            //(*ctx.frame.getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
                             if(list->isDoubleList())
                             {
                                 itObj->setDouble(list->getDoubleAtIndex(i));
@@ -78,7 +77,6 @@ public:
                             else
                                 itObj = (list->getListElement(i, runtime.memory));
                             executionFrame.index = 0;
-                            executionFrame.level = 0;
                             executionFrame.setIsFirstRun(true);
                             executionFrame.setZeroFlag(false);
                             runtime.calculateExpression(&executionFrame);
@@ -109,7 +107,7 @@ public:
                             std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
                         }
                         try{
-                            //(*frame->getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
+                            //(*ctx.frame.getLocalMemory())[itVar.data] = list->getListElement(i, *memory);
                             if(list->isDoubleList())
                             {
                                 itObj->setDouble(list->getDoubleAtIndex(i));
@@ -117,7 +115,6 @@ public:
                             else
                                 itObj = (list->getListElement(i, runtime.memory));
                             executionFrame.index = 0;
-                            executionFrame.level = 0;
                             executionFrame.setIsFirstRun(true);
                             executionFrame.setZeroFlag(false);
                             runtime.calculateExpression(&executionFrame);
@@ -153,13 +150,13 @@ public:
                             std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
                         }
                         try{
-                            //(*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
+                            //(*ctx.frame.getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
                             itObj->setDouble(i);
-                            /*executionFrame.index = 0;
+                            executionFrame.index = 0;
                             executionFrame.level = 0;
                             executionFrame.setIsFirstRun(true);
                             executionFrame.setZeroFlag(false);
-                            runtime.calculateExpression(&executionFrame);*/
+                            runtime.calculateExpression(&executionFrame);
                             runtime.callOnFrame(frame, codeBlock.data);
                         }
                         catch(std::string &exception)
@@ -181,10 +178,9 @@ public:
                             std::cout<<"Executing for loop code block:\n"<<codeBlock.data<<'\n';
                         }
                         try{
-                            //(*frame->getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
+                            //(*ctx.frame.getLocalMemory())[itVar.data] = Object(itVar.data,ParsingUtil::to_string(i),"");
                             itObj->setDouble(i);
                             executionFrame.index = 0;
-                            executionFrame.level = 0;
                             executionFrame.setIsFirstRun(true);
                             executionFrame.setZeroFlag(false);
                             runtime.calculateExpression(&executionFrame);
@@ -201,13 +197,11 @@ public:
                     }
 
         }
-        frame->getParamMemory()->erase(itObj->id);
+        ctx.frame.getParamMemory()->erase(itObj->id);
         index = codeBlock.end + startOfCodeBlock;
-        while(frame->exp[index] == ';' || frame->exp[index] == ' ' || frame->exp[index] == '}')
+        while(ctx.source[index] == ';' || ctx.source[index] == ' ' || ctx.source[index] == '}')
             index++;
-        frame->index = codeBlock.start+codeBlock.end;//(index-2<frame->exp.size()?index-2:frame->exp.size());
+        ctx.src_index = codeBlock.end;//(index-2<ctx.source.size()?index-2:ctx.source.size());
 
-    }
-};
-
+*/
 #endif /* KEYWORDS_FORRANGEACTION_HPP_ */

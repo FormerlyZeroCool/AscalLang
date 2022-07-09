@@ -96,7 +96,7 @@ public:
     {
         return ObjectPool<node<t, u> >();
     }
-	Map(ObjectPool<node<t, u> > &pool): pool(pool), root(nullptr), elements(0)
+	Map(ObjectPool<node<t, u> > &pool): pool(pool), elements(0), root(nullptr)
     {}
 	Map(Map<t, u> &o);
 	void operator=(Map<t, u> &o);
@@ -565,7 +565,9 @@ template <typename t, typename u>
 void Map<t, u>::emptyTree()
 {
     if(this->root)
+	{
         this->freeRecursive(this->root);
+	}
     
 	elements = 0;
 }

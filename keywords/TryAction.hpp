@@ -26,7 +26,6 @@ public:
 	    catch(std::string &s)
 	    {
 	    	frame->initialOperands.clear();
-	    	frame->initialOperators.clear();
 			frame->initialOperands.push_back(std::numeric_limits<double>::max());
 			Object log(runtime.memMan, string_view("errorMessageLog", 14), string_view("", 0));
 			log.loadString(s);

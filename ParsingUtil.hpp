@@ -421,16 +421,16 @@ SubStrSV ParsingUtil::getExprInStringSV(const string &line,uint32_t index,char o
 {
     uint32_t i = index;
     uint8_t subLevel = 0;
-    while(i < line.size() && line[i] == ' ' && line[i] != opening)
+    while(i < line.size() && line[i] == ' ') //&& line[i] != opening)
     {
         i++;
     }
-    subLevel += (line[i]==opening);
-    i += subLevel;
+    subLevel += (line[i]==opening) || line[i + 1] == opening;
+    i += subLevel + ((line[i + 1] == opening) && !(line[i]==opening));
     const bool isBlock = subLevel;
     while(i < line.size() && (subLevel != 0 || (!isBlock && line[i] != lineBreak && line[i] != '\n')))
     {
-        subLevel += (line[i]==opening) - (line[i] == closing);
+        subLevel += (line[i] == opening) - (line[i] == closing);
         ++i;
 
     }
@@ -454,7 +454,7 @@ bool ParsingUtil::isDouble(string &exp)
         //to avoid branching I'm doing boolean arithmetic to determine if a string is a double
         periodCount += (exp[i] == '.');
         isADouble = ((exp[i] >= '0' && exp[i] <= '9' ) || (periodCount == 1 && exp[i] == '.') ||
-                     (exp[i] == ';' && (exp[i+1] == 0 || exp[i+2] == 0|| exp[i+3] == 0) ));
+                     (exp[i] == ';' && (exp[i+1] == 0 || exp[i+2] == 0|| exp[i+3] == 0) ) || exp[i] == ' ');
     }
     return isADouble;
 }
@@ -497,6 +497,7 @@ SubStr ParsingUtil::getCodeBlock(string &exp, int index, std::istream &cin_ascal
         while(cin_ascal && codeBlock.data.size() == 0)
         {
         	getLine(cin_ascal,nextLine);
+            codeBlock = getExpr(nextLine, index, cin_ascal, '{', '}', ';');
         }
     }
     return codeBlock;
@@ -589,7 +590,7 @@ double ParsingUtil::getNextDouble(const string &data,int &index)
   }
   while(stillReading)
   {
-    if(data[index]>=48 && data[index]<58)
+    if(ParsingUtil::isNumeric(data[index]))
     {
         if(!afterDecimal){
             num *= 10;
@@ -620,7 +621,7 @@ double ParsingUtil::getNextDouble(const string &data,int &index)
     previous = data[index++];
 
   }
-  index -= 2;
+  index--;
   if(isNegative)
     num *= -1;
   return num;

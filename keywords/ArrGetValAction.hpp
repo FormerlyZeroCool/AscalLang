@@ -18,7 +18,7 @@ public:
 	{
 		this->keyWord = "arrGet";
 	}
-	void action(AscalFrame<double>* frame) override
+	/*void action(AscalFrame<double>* frame) override
 	{
 	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
 	    ParsingUtil::ParseStatementList(exp.data,0,params);
@@ -46,7 +46,7 @@ public:
 	    	std::cout<<"got element at index: "<<params.statements[1].data<<" from list "<<params.statements[0].data<<" value: "<<(t)<<"\n";
 	    }
 	    frame->index = paramsForListElementFn.end;
-	}
+	}*/
 };
 
 #endif /* KEYWORDS_ARRGETVALACTION_HPP_ */

@@ -7,169 +7,764 @@
 
 #include "Object.hpp"
 #include "AscalExecutor.hpp"
+#include "CompilationContext.hpp"
+#include "Keyword.hpp"
 
 const uint8_t Object::initialOffset = sizeof(double);
-//sizeID codes
-const uint32_t Object::SMALL_EXP = 32, Object::MEDIUM_EXP = 256, Object::LARGE_EXP = 4096, Object::VERYLARGE_EXP = 4096*16, //Object::MALLOC_EXP = -1,
-Object::SMALL_ID = 16, Object::LARGE_ID = 64;//, Object::MALLOC_ID = -1;
-
-    void Object::compileInstructions()
+    void Object::compileInstructions(AscalExecutor &runtime)
+    {
+        Object target(runtime.memMan);
+        CompilationContext ctx(this->instructions, target, runtime);
+        
+        this->LexCodeAndCompile(runtime, ctx);
+        
+        uint8_t buffer[256];
+        memset(buffer, 0, sizeof(buffer));
+        memcpy(&buffer[0], &ctx.target.getInstructions()[0], 256<ctx.target.getInstructions().size()?256:ctx.target.getInstructions().size());
+        int counter = 0;
+        for(int j = 0; j < 16; j++){
+            for(int i = 0; i < 16; i++)
+            {
+                printf("%02X ", buffer[counter]);
+                counter++;
+            }
+            std::cout<<"\n";
+        }
+        this->deallocateInstructions(this->inp, this->instructionBufferSizeId);
+        this->inp = ctx.target.inp;
+        this->instructions = ctx.target.instructions;
+        ctx.target.inp = nullptr;
+    }
+    void Object::compileInstructions(string_view source, AscalExecutor &runtime)
     {
         //this->instructions = this->compileInstructions(this->instructions, 0);
+        
+        CompilationContext ctx(source, *this, runtime);
+        
+        this->LexCodeAndCompile(runtime, ctx);
+        
+        //std::cout<< ctx.target.getInstructions() << "\n";
     }
-    template <typename string>
-    std::string Object::compileInstructions(string &s, uint32_t start)
-    {/*
-        uint32_t index = start;
-        std::stringstream compiled;
-        while(index < s.size())
+
+    void Object::compileParams(string_view s, AscalExecutor &runtime, CompilationContext &ctx)
+    {
+        //std::cout<<"instruction length before param compilation: "<<ctx.target.getInstructions().size()<<"\n";
+        uint32_t start = 0, end = ctx.currentToken;
+        std::uintptr_t endptr = reinterpret_cast<std::uintptr_t>(&s.back());
+        std::uintptr_t startptr = reinterpret_cast<std::uintptr_t>(&s[0]);
+        while(ctx.lastTokens.size() > start && reinterpret_cast<std::uintptr_t>(&ctx.lastTokens[start].source.back()) < startptr)
+            start++;
+        end = start + 1;
+        ctx.currentToken = start;
+        while(ctx.lastTokens.size() > end && reinterpret_cast<std::uintptr_t>(&ctx.lastTokens[end].source.back()) <= endptr)
+            end++;
+        //std::cout<<"sub start: "<<ctx.currentToken<<" end: "<<(end)<<"\n";
+        this->compileTokens(ctx, end);
+        //std::cout<<"instruction length after param compilation: "<<ctx.target.getInstructions().size()<<"\n";
+    }
+
+    void Object::LexCodeAndCompile(AscalExecutor &runtime, CompilationContext &ctx)
+    {
+        //ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::CTXDELIMITER));
+        const uint32_t tokenStart = ctx.lastTokens.size() - 1;
+        //lexing
+        while(ctx.src_index < ctx.source.length())
         {
-            if(isalpha(s[index]))
+            if(ParsingUtil::isalpha(ctx.source[ctx.src_index]))
             {
-                string_view token = ParsingUtil::getVarNameSV(s, index);
-                if(token.find("if") != (uint32_t) -1)
+                SubStrSV varName = ParsingUtil::getVarNameSV(ctx.source, ctx.src_index);
+                const auto keyword = runtime.inputMapper.find(varName.data);
+                if(keyword != runtime.inputMapper.end())
                 {
-                    compileIf(s, compiled, index);
+                //std::cout<<"parsed keyword: \""<<varName.data<<"\"\n";
+                    ctx.lastTokens.push_back(CompilationContext::Token(varName.data, varName.start, CompilationContext::Token::KEYWORD));
+                    ctx.src_index += varName.data.length();
+                    //ctx.lastTokens.push_back(CompilationContext::Token(varName.data, varName.start, CompilationContext::Token::KEYWORD_END));
                 }
-                //else if(token.find("when") !=  (uint32_t) -1)
-                //{
-                //    compileWhen(compiled, index);
-                //}
                 else
                 {
-                    compiled<<token;
+                    ctx.lastTokens.push_back(CompilationContext::Token(varName.data, varName.start, CompilationContext::Token::VARIABLE));
+                    ctx.src_index = varName.end + 1;
+                    /*for(int_fast32_t i = 0; i < varName.data.length(); i++)
+                    {
+                        ctx.target.append(varName.data[i]);
+                        //ctx.src_index++;
+                    }*/
                 }
+            }
+            else if(ParsingUtil::isNumeric(ctx.source[ctx.src_index]) || ctx.source[ctx.src_index] == '.' ||
+                (!ctx.lastTokens.size() &&  ctx.source[ctx.src_index] == '-') ||
+                (ctx.lastTokens.size() && ctx.lastTokens.back().type == CompilationContext::Token::OPERATOR && ctx.lastTokens.back().source != string_view(")", 1) &&  ctx.source[ctx.src_index] == '-')
+                )
+            {
+                int index = ctx.src_index;
+                const auto number = ParsingUtil::getNextDouble(ctx.source, index);
+                ctx.lastTokens.push_back(CompilationContext::Token(ctx.source.substr(ctx.src_index, index - ctx.src_index), ctx.src_index, CompilationContext::Token::NUMBER));
+                //std::cout<<"source Parsed num: "<<number<<" Len: "<<(index - ctx.src_index)<<"\n";
+                ctx.src_index = index;
+                ctx.lastTokens.back().constantValue = number;
+                //ctx.target.append(AscalExecutor::DOUBLE);
+                //ctx.target.append(number);
+            }
+            else if(Calculator<double>::isOperator(ctx.source[ctx.src_index]))
+            {
+                if(ctx.source[ctx.src_index + 1] == '=' && (ctx.source[ctx.src_index] == '<' || ctx.source[ctx.src_index] == '>'))
+                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
+                else if(ctx.source[ctx.src_index + 1] == '=' && ctx.source[ctx.src_index] == '!')
+                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
+                else
+                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::OPERATOR));
+                //ctx.target.append(AscalExecutor::OPERATOR);
+                //ctx.target.append(ctx.source[ctx.src_index]);
+                ctx.src_index++;
+            }
+            else if(ctx.source[ctx.src_index] == ';' || ctx.source[ctx.src_index] == '\n')
+            {
+                //ctx.lastTokens.clear();
+                ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::DELIMITER));
+                //ctx.target.append(AscalExecutor::DELIMITER);
+                //ctx.target.append(ctx.source[ctx.src_index]);
+                ctx.src_index++;
+            }
+            else if(ctx.source[ctx.src_index] == '#')
+            {
+                while(ctx.src_index < ctx.source.length() && ctx.source[ctx.src_index++] != '\n') {}
+            }
+            else if(ctx.source[ctx.src_index] == '&' ||ctx.source[ctx.src_index] == '[' || ctx.source[ctx.src_index] == ']' || ctx.source[ctx.src_index] == '"' || ctx.source[ctx.src_index] == '.')
+            {
+                ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::VARIABLE_PART));
+                
+                //std::cout<<"source Parsed char: "<<ctx.source[ctx.src_index]<<" ind: "<<(ctx.src_index)<<"\n"<<"isnum: "<<ParsingUtil::isNumeric(ctx.source[ctx.src_index])<<"\n";
+                //ctx.target.append(ctx.source[ctx.src_index++]);
+                ctx.src_index++;
             }
             else
             {
-                compiled<<this->instructions[index++];
+                ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::null));
+                
+                //std::cout<<"source Parsed char: "<<ctx.source[ctx.src_index]<<" ind: "<<(ctx.src_index)<<"\n"<<"isnum: "<<ParsingUtil::isNumeric(ctx.source[ctx.src_index])<<"\n";
+                //ctx.target.append(ctx.source[ctx.src_index++]);
+                ctx.src_index++;
             }
         }
-        //std::cout<<"Compiled str: "<<compiled.str()<<"\n";
-        return compiled.str();
-        **/
-        return std::string(this->instructions.str());
+        ctx.currentToken = tokenStart + 1;
+        //code generation
+        this->compileTokens(ctx, std::numeric_limits<uint32_t>::max());
+    }
+    void globalVariableDoubleArrayAccess(KeywordExecutionContext ctx)
+    {
+        ctx.frame().index += Keyword::opcodeSize();
+        Object *obj = nullptr;
+        double index = 0; 
+        memcpy(&obj, &ctx.frame().exp[ctx.frame().index], sizeof(Object*));
+        ctx.frame().index += sizeof(Object*);
+        memcpy(&index, &ctx.frame().exp[ctx.frame().index], sizeof(double));
+        ctx.frame().index += sizeof(double);
+        ctx.frame().initialOperands.push(obj->getDoubleAtIndex(index));
+    }
+    void globalVariableDoubleAccess(KeywordExecutionContext ctx)
+    {
+        ctx.frame().index += Keyword::opcodeSize();
+        Object *obj = nullptr;
+        memcpy(&obj, &ctx.frame().exp[ctx.frame().index], sizeof(Object*));
+        ctx.frame().index += sizeof(Object*);
+        ctx.frame().initialOperands.push(obj->getDouble());
+    }
+    void functionCallSetup(KeywordExecutionContext ctx)
+    {
+        Object *obj = nullptr;
+        uint64_t paramsCount = 0;
+        ctx.getData(obj, ctx.frame().index + sizeof(Object*));
+        ctx.getData(paramsCount, ctx.frame().index + sizeof(Object*) * 2);
+        ctx.frame().index += sizeof(size_t) + sizeof(Object*) * 2;
+        auto newFrame = ctx.runtime().framePool.construct(ctx.runtime());
+        double var;
+        for(int i = 0; i < paramsCount; i++)
+        {
+            ctx.frame().initialOperands.top(var);
+            ctx.frame().initialOperands.pop();
+            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, var));
+        }
+        newFrame->initialOperands.resetStart();
+        newFrame->exp = obj->getInstructions();
+        newFrame->index = 0;
+        ctx.runtime().frameStack.push(newFrame);
+        ctx.frame_ptr = newFrame;
+        #ifdef debug
+        std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";
+        #endif
+    }
+    
+    
+    inline void plusOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b+a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"+"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void minusOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b-a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"-"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void multiplyOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b*a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"*"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void divisionOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b/a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"/"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void modOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(doubleModulus(b,a));
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"%"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void exponentOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(std::pow(b,a));
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"^"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void permuteOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(permute(b,a));
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"P"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void combinationsOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(combinations(b,a));
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"C"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void logOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(log(b,a));
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<"log"<<b<<"("<<a<<")"<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void rootOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(rootOp(b,a));
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"$"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void equalsOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b == a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"="<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void lessThanOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b < a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"<"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void greaterThanOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b > a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<">"<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void lessThanOrEqualToOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b <= a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<"<="<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void greaterThanOrEqualToOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b >= a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<">="<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    inline void notEqualToOp(KeywordExecutionContext ctx)
+    {
+        double a = -1, b = -1;
+        ctx.frame().initialOperands.top(a);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.top(b);
+        ctx.frame().initialOperands.pop();
+        ctx.frame().initialOperands.push(b >= a);
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<b<<">="<<a<<"\n";
+        #endif
+        ctx.frame().index += Keyword::opcodeSize();
+    }
+    void compileOperator(CompilationContext &ctx, StackSegment<CompilationContext::Token> &stack)
+    {
+        operationType op = noop;
+        
+        CompilationContext::Token thisOp;
+        stack.top(thisOp);
+        if(thisOp.source == string_view("+", 1))
+        {
+            op = plusOp;
+        }
+        else if(thisOp.source == string_view("-", 1))
+        {
+            op = minusOp;
+        }
+        else if(thisOp.source == string_view("*", 1))
+        {
+            op = multiplyOp;
+        }
+        else if(thisOp.source == string_view("/", 1))
+        {
+            op = divisionOp;
+        }
+        else if(thisOp.source == string_view("%", 1))
+        {
+            op = modOp;
+        }
+        else if(thisOp.source == string_view("^", 1))
+        {
+            op = exponentOp;
+        }
+        else if(thisOp.source == string_view("P", 1))
+        {
+            op = permuteOp;
+        }
+        else if(thisOp.source == string_view("C", 1))
+        {
+            op = combinationsOp;
+        }
+        else if(thisOp.source == string_view("@", 1))
+        {
+            op = logOp;
+        }
+        else if(thisOp.source == string_view("$", 1))
+        {
+            op = rootOp;
+        }
+        else if(thisOp.source == string_view("=", 1))
+        {
+            op = equalsOp;
+        }
+        else if(thisOp.source == string_view("<=", 2))
+        {
+            op = lessThanOrEqualToOp;
+        }
+        else if(thisOp.source == string_view(">=", 2))
+        {
+            op = greaterThanOrEqualToOp;
+        }
+        else if(thisOp.source == string_view("!=", 2))
+        {
+            op = notEqualToOp;
+        }
+        else if(thisOp.source == string_view("<", 1))
+        {
+            op = lessThanOp;
+        }
+        else if(thisOp.source == string_view(">", 1))
+        {
+            op = greaterThanOp;
+        }
+        
+        ctx.target.append(op);
+    }
+    void localFunctionCall(KeywordExecutionContext ctx)
+    {
+        uint64_t value = -1;
+        ctx.getData(value, ctx.frame().index + sizeof(uint64_t));
+
+        //std::cout<<"Loading frame for fun: "<<value;
+        uint64_t paramsCount;
+        ctx.getData(paramsCount, ctx.frame().index + sizeof(uint64_t) * 2);
+        //std::cout<<"stack index value: "<<value<<" paramsCount: "<<paramsCount<<"\n";
+        ctx.frame().index += sizeof(uint64_t) * 3;
+        Object *obj = (ctx.frame().localMemory)[value].data.obj;
+
+        auto newFrame = ctx.runtime().framePool.construct(ctx.runtime());
+        newFrame->exp = obj->getInstructions();
+        newFrame->index = 0;
+        newFrame->localMemory.push(StackDataRecord(StackDataRecord::REFERENCED, obj));
+        for(int i = 0; i < paramsCount; i++)
+        {
+            double data;
+            ctx.frame().initialOperands.top(data);
+            ctx.frame().initialOperands.pop();
+            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, data));
+        }
+
+        //std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";
+        ctx.runtime().frameStack.push(newFrame);
+        ctx.frame_ptr = newFrame;
+    }
+    void Object::compileTokens(CompilationContext &ctx, uint32_t end)
+    {
+        end = end < ctx.lastTokens.size() ? end : ctx.lastTokens.size();
+        StackSegment<CompilationContext::Token> stack = ctx.tokenStack;
+        stack.push(CompilationContext::Token(string_view("(", 1), ctx.src_index, CompilationContext::Token::OPERATOR));
+        const auto &tokens = ctx.lastTokens;
+        for(uint32_t &i = ctx.currentToken; i < end; i++)
+        {
+            const auto token = tokens[i];
+            //std::cout<<"current token id: "<<ctx.currentToken<<"\n"<<"type: "<<token.type<<"\n";
+            if(token.type == CompilationContext::Token::NUMBER)
+            {
+                //std::cout<<"loading num: "<<token.source<<"\n";
+                operationType op = readAndPushDouble;
+                ctx.target.append(op);
+                ctx.target.append(token.constantValue);
+            }
+            else if(token.type == CompilationContext::Token::VARIABLE)
+            {
+                auto endIt = tokens.begin() + i;
+                while(endIt != tokens.end() && (endIt->type == CompilationContext::Token::VARIABLE || endIt->type == CompilationContext::Token::VARIABLE_PART 
+                    || endIt->type == CompilationContext::Token::NUMBER))
+                    endIt++;
+                Object *parent = nullptr;
+                const auto it = ctx.runtime.memory.find(token.source);
+                const auto localIt = ctx.localMemory.find(token.source);
+                //std::cout<<"parsing varname: "<<token.source<<"\n";
+                if(it != ctx.runtime.memory.end() && localIt == ctx.localMemory.end())
+                {
+                    Object *current = (*it).getValue();
+                    if(current->isDouble())
+                    {
+                        
+                        operationType GlobalVariableDoubleAccess = globalVariableDoubleAccess;
+                        ctx.target.append(GlobalVariableDoubleAccess);
+                        ctx.target.append(current);
+                        endIt = tokens.begin() + i + 1;
+                    }
+                    else if(!current->isList() && current->getInstructions().length() > 1)//is function
+                    {
+                        endIt = tokens.begin() + i + 1;
+                        if(endIt != tokens.end() && endIt->source[0] == '(')
+                        {
+                            uint32_t paramsStartSource = ctx.getSrcIndex(*endIt);
+
+	                        SubStrSV exp = ParsingUtil::getFollowingExprSV(ctx.source, paramsStartSource, string_view("", 0));
+                                //std::cout<<"param op: "<<exp.data<<"\n";
+	                        ParsingUtil::ParseStatementList(exp.data,0,ctx.runtime.paramsBuffer);
+                            
+                            for(uint32_t j = 0; j < ctx.runtime.paramsBuffer.statements.size(); j++)
+                            {
+                                ctx.target.compileParams(ctx.runtime.paramsBuffer.statements[j].data, ctx.runtime, ctx);
+                            }
+                        }
+                        
+                        operationType FunctionCallSetup = functionCallSetup;
+                        ctx.target.append(FunctionCallSetup);
+                        ctx.target.append(current);
+                        ctx.target.append((size_t) ctx.runtime.paramsBuffer.statements.size());
+                    }
+                    else
+                    for(auto it = tokens.begin() + i + 1; it < endIt; it++)
+                    {
+                        const auto &varToken = *it;
+                        if(varToken.type == CompilationContext::Token::VARIABLE)
+                        {
+                            /*for(int_fast32_t j = 0; j < varToken.source.length(); j++)
+                            {
+                                ctx.target.append(varToken.source[j]);
+                            }*/
+                            const auto node = current->objectMap.search(varToken.source);
+                            if(node)
+                            {
+                                parent = current;
+                                current = node->data.second;
+                            }
+                        }
+                        else if(token.type == CompilationContext::Token::NUMBER)
+                        {
+                            
+                            operationType op = readAndPushDouble;
+                            ctx.target.append(op);
+                            ctx.target.append(varToken.constantValue);
+                            if(current->isDoubleList())
+                            {
+                                
+                                operationType GlobalVariableDoubleArrayAccess = globalVariableDoubleArrayAccess;
+                                ctx.target.append(GlobalVariableDoubleArrayAccess);
+                                ctx.target.append(current);
+                                ctx.target.append(token.constantValue);
+                                break;
+                            }
+                            else if(current-isObjList())
+                            {
+
+                            }
+                        }
+                        else
+                        {
+                            //ctx.target.append(varToken.source[0]);
+                        }
+                }
+                
+                }
+                else if(localIt != ctx.localMemory.end())
+                {
+                    const auto current = (*localIt).getValue();
+
+                        //std::cout<<"local variable compiliation\n";
+                    if(current.isObject())
+                    {
+                        //make sure to have params executed and pushed to results stack beforehand
+                        //create frame push paramsCount params to data stack from parent function
+                        endIt = tokens.begin() + i + 1;
+                        //std::cout<<"next token after local: "<<endIt->source<<"\n";
+                        if(endIt != tokens.end() && endIt->source[0] == '(')
+                        {
+                            ctx.src_index = endIt->start;
+                            SubStrSV exp = ParsingUtil::getFollowingExprSV(ctx.source, ctx.src_index, string_view("", 0));
+                                //std::cout<<"param op: "<<exp.data<<"\n";
+                            ParsingUtil::ParseStatementList(exp.data,0,ctx.runtime.paramsBuffer);
+                            int32_t j = ctx.runtime.paramsBuffer.statements.size() - 1;
+                            auto ctBackup = i;
+                            if(j >= 0)
+                            {
+                                ctx.target.compileParams(ctx.runtime.paramsBuffer.statements[j].data, ctx.runtime, ctx);
+                                j--;
+                                ctBackup = i+1;
+                            }
+                            for(; j >= 0; j--)
+                            {
+                                ctx.target.compileParams(ctx.runtime.paramsBuffer.statements[j].data, ctx.runtime, ctx);
+                            }
+                            ctx.currentToken = ctBackup;
+                        }
+                        operationType opLocalFunctionCall = localFunctionCall;
+                        ctx.target.append(opLocalFunctionCall);
+                        ctx.target.append((uint64_t) current.stack_index);
+                        ctx.target.append((uint64_t) ctx.runtime.paramsBuffer.statements.size());
+                        //std::cout<<"loading local function call\n";
+                    }
+                    else if(current.isDouble())
+                    {
+                        //std::cout<<"loading local variable load double\nstack index: "<<current.stack_index<<"\n";
+                        operationType opLocalDoubleVarRead = localDoubleVarRead;
+                        ctx.target.append(opLocalDoubleVarRead);
+                        ctx.target.append((uint64_t) current.stack_index);
+                        
+                        i += endIt - (tokens.begin() + i) - 1;
+                    }
+                }
+            }
+            else if(token.type == CompilationContext::Token::OPERATOR && token.source[0] == ')')
+            {
+                //std::cout<<"handling op: "<<token.source<<"\n";
+                CompilationContext::Token nextOp;
+                stack.top(nextOp);
+                while(!stack.isEmpty() && nextOp.source[0] != '(')
+                {
+                    //std::cout<<"should not be (: "<<nextOp.source<<"\n";
+                    //to do
+                    compileOperator(ctx, stack);
+                    stack.pop();
+                    stack.top(nextOp);
+                }
+                if(!stack.isEmpty()) {
+                    stack.top(nextOp);
+                    //std::cout<<"should be (: "<<nextOp.source<<"\n";
+                    stack.pop();
+                }
+                //stack.push(token);
+            }
+            else if(token.type == CompilationContext::Token::OPERATOR)
+            {
+                //std::cout<<"loading op: "<<token.source<<"\n";
+                CompilationContext::Token nextOp;
+                stack.top(nextOp);
+                if(token.source[0] != '(')
+                while(!stack.isEmpty() && Calculator<double>::getPriority(nextOp.source[0]) >= Calculator<double>::getPriority(token.source[0]) && nextOp.source[0] != '(')
+                {   
+                    //to do
+                    compileOperator(ctx, stack);
+                    stack.pop();
+                    stack.top(nextOp);
+                }
+                stack.push(token);
+            }
+            else if(token.type == CompilationContext::Token::KEYWORD)
+            {
+                //std::cout<<"loading keyword: "<<token.source<<"\n";
+                //string_view source = token.source;
+                //source.resize(strlen(source.c_str()));
+                const auto keyword = ctx.runtime.inputMapper.find(token.source);
+                ctx.src_index = token.start;
+                (*keyword).getValue()->compile(ctx);
+                //std::cout<<"keyword: "<<token.source<<" compiled.\n";
+                ctx.syncTokenIndexToSrcIndex();
+                //if(tokens.size() > i)
+                  //  std::cout<<"nextToken: "<<tokens[i].source<<"\n";
+            }
+            else if(token.type == CompilationContext::Token::DELIMITER)
+            {
+		        CompilationContext::Token nextOp;
+                stack.top(nextOp);
+                if(token.source[0] != '(')
+                while(!stack.isEmpty() && Calculator<double>::getPriority(nextOp.source[0]) >= Calculator<double>::getPriority(token.source[0]) && nextOp.source[0] != '(')
+                {   
+                    //to do
+                    compileOperator(ctx, stack);
+                    stack.pop();
+                    stack.top(nextOp);
+                }
+		        operationType cs = clearStackExcept1;
+		        ctx.target.append(cs);
+            }
+            else
+            {
+                //std::cout<<"loading junk: "<<token.source<<"\n";
+
+                //ctx.target.append(token.source[0]);
+            }
+        }
+                //std::cout<<"finishing exp: "<<ctx.source<<"\n";
+                CompilationContext::Token nextOp;
+                stack.top(nextOp);
+                while(!stack.isEmpty() && nextOp.source[0] != '(')
+                {
+                    //std::cout<<"should not be (: "<<nextOp.source<<"\n";
+                    compileOperator(ctx, stack);
+                    stack.pop();
+                    stack.top(nextOp);
+                }
+                //not needed because of stack's destructor
+                if(!stack.isEmpty()) {
+                    stack.top(nextOp);
+                    //std::cout<<"should be (: "<<nextOp.source<<"\n";
+                    stack.pop();
+                }
+        
     }
     struct codeRec {
         string_view boolExp;
         std::string codeBlock;
     };
-    template <typename string>
-    std::stringstream& Object::compileIf(string &s, std::stringstream &instStream, uint32_t &index)
-    {
-         std::vector<codeRec> records;
-         bool elseIfFound = false, elseFound = false;
-         do{
-         elseIfFound = false;
-         elseFound = false;
-             while(s[index] == ' ')
-             {
-                index++;
-             }
-
-            uint32_t startOfBoolExp = index;
-            uint32_t startOfCodeBlock = index;
-
-            while(s[startOfCodeBlock] && s[startOfCodeBlock] != '{')
-            {
-                startOfCodeBlock++;
-            }
-            index = startOfCodeBlock;
-            string_view booleanExpression((char*) &this->instructions[0], startOfBoolExp, index);
-            if(booleanExpression.size() == 0)
-            {
-                throw std::string("Error no boolean expression provided in if.\n");
-            }
-            string_view pcodeBlock = ParsingUtil::getExprInStringSV(s, startOfCodeBlock, '{', '}', ';');
-            std::string codeBlock = pcodeBlock.str();
-            index = startOfCodeBlock + codeBlock.size() - 1;
-            if(index > this->instructions.size())
-                index = this->instructions.size();
-
-               index -=1;
-            string_view nToken = ParsingUtil::getVarNameSV(s, index);
-            if(nToken.find("else") != (uint32_t)  -1)
-            {
-                elseFound = true;
-                while(this->instructions[++index] == '{') {std::cout<<instructions[index]<<"\n";}
-                index--;
-                uint32_t indexbkp = index;
-                nToken = ParsingUtil::getVarNameSV(s, index);
-                if(nToken.find("if") != (uint32_t) -1)
-                {
-                    elseIfFound = true;
-                    //load code for else if
-                    //instStream<<" ("<<booleanExpression<<") evalSetZF jumpZF("<<(codeBlock.size()+1)<<") "<<codeBlock<<" ";
-                    codeRec rec;
-                    rec.boolExp = booleanExpression;
-                    rec.codeBlock = codeBlock;
-                    records.push_back(rec);
-                }
-                else
-                {
-                    //just else no proceeding if
-                    string_view pelseCodeBlock = ParsingUtil::getExprInStringSV(s, indexbkp, '{', '}', ';');
-                    std::string elseCodeBlock = compileInstructions(pelseCodeBlock, 0);
-
-                    //instStream<<" ("<<booleanExpression<<") evalSetZF jumpZF("<<(codeBlock.size()+1)<<") "<<codeBlock<<
-                    //        " jumpNZF("<<(elseCodeBlock.size()+1)<<") "<<elseCodeBlock<<" ";
-                    codeRec rec;
-                    rec.boolExp = booleanExpression;
-                    rec.codeBlock = codeBlock;
-                    records.push_back(rec);
-                    codeRec elseRec;
-                    elseRec.codeBlock = elseCodeBlock;
-                    records.push_back(elseRec);
-                }
-            }
-            else
-            {
-                codeRec rec;
-                rec.boolExp = booleanExpression;
-                rec.codeBlock = codeBlock;
-                records.push_back(rec);
-            }
-
-         }    while (elseIfFound);
-         uint32_t cbcount = 0, becount = 0, sumOfLogsOfJumps = 0, sumOfcbs = 0, sumOfbes = 0;
-         for(codeRec &rec : records)
-         {
-             becount += rec.boolExp.length()>0;
-             cbcount += rec.codeBlock.length()>0;
-             sumOfLogsOfJumps += std::floor(std::log(rec.codeBlock.length()+1)/std::log(10));
-             sumOfcbs += rec.codeBlock.length();
-             sumOfbes += rec.boolExp.length()>0;
-         }
-         uint32_t endIndex = sumOfcbs + sumOfbes + sumOfLogsOfJumps + becount*(31) + 13*(elseFound);
-         uint32_t logEndIndex = std::log(endIndex)/std::log(10);
-         //for jumpNZ params to skip else case
-         endIndex += logEndIndex * (cbcount+elseFound);
-         for(codeRec &rec : records)
-         {
-             if(rec.boolExp.size())
-             {
-                 instStream<<"("<<rec.boolExp<<") evalSetZF jumpZF("
-                         <<(rec.codeBlock.size()+10+logEndIndex+(logEndIndex-std::floor(std::log(rec.codeBlock.size())/std::log(10))))<<") "
-                         <<rec.codeBlock
-                         <<" jumpNZ("<<((endIndex-instStream.tellp())>=0?(endIndex-instStream.tellp()):0)
-                         <<") ";
-
-             }
-             else
-             {
-                 instStream<<" jumpNZ("<<(endIndex-instStream.tellp())<<") "<<rec.codeBlock<<" ";
-             }
-         }
-         index = this->instructions.size();
-        return instStream;
-    }
-    template <typename string>
-    std::stringstream& Object::compileWhen(string &s, std::stringstream &instStream, uint32_t &index)
-    {
-
-        return instStream;
-    }
-
 void newLine(std::stringstream &data,int indentationLevel)
 {
     data<<('\n');
@@ -319,7 +914,7 @@ bool Object::isList()
 
 bool Object::isObjList()
 {
-    return this->instructions[0] == 5;
+    return (this->flagRegisters & 2) == 2;
 }
 size_t Object::getListSize() const
 {
@@ -540,7 +1135,7 @@ void Object::eraseList(long index)
             if(this->isObjList())
             {
                 this->objectMap.getMemMan().obj_free(reinterpret_cast<Object*>(element));
-                memcpy(element, reinterpret_cast<Object*>(element) + 1, elementsToMove * sizeof(uint64_t));
+                memcpy(element, reinterpret_cast<Object**>(element) + 1, elementsToMove * sizeof(uint64_t));
             }
             else
                 memcpy(element, reinterpret_cast<double*>(element) + 1, elementsToMove * sizeof(uint64_t));
@@ -558,35 +1153,39 @@ std::string Object::toString()
 {
     return toString(0);
 }
-void Object::deallocateId(void *ptr, const size_t bufSize)
+void Object::deallocateId(void *ptr, size_t bufSize)
 {
-    ptr = static_cast<void*>(static_cast<char*>(ptr));
+    bufSize &= 0U - (ptr != nullptr);
     switch (bufSize){
-        case (Object::SMALL_ID):
+        case (SMALL_ID):
             this->objectMap.getMemMan().small_id_free(ptr);
             break;
-        case (Object::LARGE_ID):
+        case (LARGE_ID):
             this->objectMap.getMemMan().large_id_free(ptr);
+            break;
+        case (0):
             break;
         default:
             free(ptr);
     }
 }
-void Object::deallocateInstructions(void *ptr, const size_t bufSize)
+void Object::deallocateInstructions(void *ptr, size_t bufSize)
 {
-    ptr = static_cast<void*>(static_cast<char*>(ptr));
+    bufSize &= 0U - (ptr != nullptr);
     switch (bufSize) {
-        case (Object::SMALL_EXP):
+        case (SMALL_EXP):
             this->objectMap.getMemMan().small_free(ptr);
             break;
-        case (Object::MEDIUM_EXP):
+        case (MEDIUM_EXP):
             this->objectMap.getMemMan().medium_free(ptr);
             break;
-        case (Object::LARGE_EXP):
+        case (LARGE_EXP):
             this->objectMap.getMemMan().large_free(ptr);
             break;
-        case (Object::VERYLARGE_EXP):
+        case (VERYLARGE_EXP):
             this->objectMap.getMemMan().vlarge_free(ptr);
+            break;
+        case (0):
             break;
         default:
             free(static_cast<void*>(ptr));
@@ -603,23 +1202,19 @@ bool Object::isDoubleList()
 {
     return this->instructions[0] == 6;
 }
+
 void Object::pushList(double data)
 {
     static const uint16_t objSize = sizeof(double);
     if(initialOffset+this->listSize*(objSize) < this->instructionBufferSizeId)
     {
-        this->instructions[0] = 6;
+        this->flagRegisters = 1;
         memcpy(&this->instructions[initialOffset+this->listSize*(objSize)], &data, objSize);
         listSize++;
     }
     else
     {
-        void *ptr = this->inp;
-        const uint32_t bufSize = this->instructionBufferSizeId;
-        //sets the id pointer to be the same as the front of the newly allocated block
-        this->resizeInstructions(this->instructionBufferSizeId*2);
-        memcpy(&this->instructions[0], ptr, bufSize);
-        this->deallocateInstructions(ptr, bufSize);
+        this->resizeInstructionsCopyDealloc();
         pushList(data);
     }/*
     else
@@ -634,7 +1229,7 @@ void Object::pushList(Object &data)
     static const uint16_t objSize = sizeof(Object*);
     if(initialOffset+this->listSize*(objSize) < this->instructionBufferSizeId)
     {
-        this->instructions[0] = 5;
+        this->flagRegisters = 2;
         data.id = std::to_string(listSize)+this->id.str();
         data.parent = this;
         Object *obj = this->objectMap.getMemMan().constructObj(data);
@@ -649,40 +1244,35 @@ void Object::pushList(Object &data)
         }
         else
         {
-            void *ptr = this->inp;
-            const uint32_t bufSize = this->instructionBufferSizeId;
-            //sets the id pointer to be the same as the front of the newly allocated block
-            this->resizeInstructions(this->instructions.size() + data.instructions.size());
-            memcpy(&this->instructions[0], ptr, bufSize);
-            this->deallocateInstructions(ptr, bufSize);
+            this->resizeInstructionsCopyDealloc();
         }
         pushList(data);
     }
 }
 void Object::resizeInstructions(uint32_t newSize)
 {
-    if(newSize <= Object::MEDIUM_EXP)
+    if(newSize <= MEDIUM_EXP)
     {
-        this->instructionBufferSizeId = Object::MEDIUM_EXP;
+        this->instructionBufferSizeId = MEDIUM_EXP;
         this->inp = this->objectMap.getMemMan().medium_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
-    else if(newSize <= Object::LARGE_EXP)
+    else if(newSize <= LARGE_EXP)
     {
-        this->instructionBufferSizeId = Object::LARGE_EXP;
+        this->instructionBufferSizeId = LARGE_EXP;
         this->inp = this->objectMap.getMemMan().large_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
-    else if(newSize <= Object::VERYLARGE_EXP)
+    else if(newSize <= VERYLARGE_EXP)
     {
-        this->instructionBufferSizeId = Object::VERYLARGE_EXP;
+        this->instructionBufferSizeId = VERYLARGE_EXP;
         this->inp = this->objectMap.getMemMan().vlarge_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
     else
     {
-        this->instructionBufferSizeId = newSize;
-        this->inp = malloc(newSize);
+        this->instructionBufferSizeId = newSize * 2;
+        this->inp = malloc(newSize * 2);
         this->instructions = string_view(static_cast<const char*>(this->inp), newSize);
     }
 }
@@ -799,27 +1389,27 @@ Object::~Object() {
 //only allocates appropriate sized buffer, then copies data supplied in params to new buffer
 void Object::loadInstructions(string_view exp)
 {
-    if(exp.size() < Object::SMALL_EXP)
+    if(exp.size() < SMALL_EXP)
     {
-        this->instructionBufferSizeId = Object::SMALL_EXP;
+        this->instructionBufferSizeId = SMALL_EXP;
         this->inp = this->objectMap.getMemMan().small_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
-    else if(exp.size() < Object::MEDIUM_EXP)
+    else if(exp.size() < MEDIUM_EXP)
     {
-        this->instructionBufferSizeId = Object::MEDIUM_EXP;
+        this->instructionBufferSizeId = MEDIUM_EXP;
         this->inp = this->objectMap.getMemMan().medium_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
-    else if(exp.size() < Object::LARGE_EXP)
+    else if(exp.size() < LARGE_EXP)
     {
-        this->instructionBufferSizeId = Object::LARGE_EXP;
+        this->instructionBufferSizeId = LARGE_EXP;
         this->inp = this->objectMap.getMemMan().large_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
-    else if(exp.size() < Object::VERYLARGE_EXP)
+    else if(exp.size() < VERYLARGE_EXP)
     {
-        this->instructionBufferSizeId = Object::VERYLARGE_EXP;
+        this->instructionBufferSizeId = VERYLARGE_EXP;
         this->inp = this->objectMap.getMemMan().vlarge_alloc();
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
@@ -834,15 +1424,15 @@ void Object::loadInstructions(string_view exp)
 }
 void Object::loadId(string_view id)
 {
-    if(id.size() <= Object::SMALL_ID-1)
+    if(id.size() <= SMALL_ID-1)
     {
-        this->IdBufferSizeId = Object::SMALL_ID;
+        this->IdBufferSizeId = SMALL_ID;
         this->idp =this->objectMap.getMemMan().small_id_alloc();
         this->id = string_view(static_cast<const char*>(this->idp), id.size());
     }
-    else if(id.size() <= Object::LARGE_ID-1)
+    else if(id.size() <= LARGE_ID-1)
     {
-        this->IdBufferSizeId = Object::LARGE_ID;
+        this->IdBufferSizeId = LARGE_ID;
         this->idp = this->objectMap.getMemMan().large_id_alloc();
         this->id = string_view(static_cast<const char*>(this->idp), id.size());
     }

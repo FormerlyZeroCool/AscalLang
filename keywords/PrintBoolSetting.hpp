@@ -9,16 +9,18 @@
 #define KEYWORDS_PRINTBOOLSETTING_HPP_
 
 #include "../Keyword.hpp"
+	static inline void printBoolSetting(KeywordExecutionContext ctx) 
+	{
+	    ctx.runtime().updateBoolSetting("p");
+		ctx.frame().index += Keyword::opcodeSize();
+	}
 class PrintBoolSetting: public StKeyword {
 public:
 	PrintBoolSetting(AscalExecutor &runtime):
 	StKeyword(runtime)
 	{
 		this->keyWord = "p";
-	}
-	void action(AscalFrame<double>* frame) override
-	{
-	    runtime.updateBoolSetting(frame);
+		this->operation = printBoolSetting;
 	}
 };
 

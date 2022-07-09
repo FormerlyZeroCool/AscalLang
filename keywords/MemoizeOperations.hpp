@@ -9,16 +9,18 @@
 #define KEYWORDS_MEMOIZEOPERATIONS_HPP_
 
 #include "../Keyword.hpp"
+	static inline void memoizeOperations(KeywordExecutionContext ctx) 
+	{
+	    ctx.runtime().updateBoolSetting("memoize");
+		ctx.frame().index += Keyword::opcodeSize();
+	}
 class MemoizeOperations: public StKeyword {
 public:
 	MemoizeOperations(AscalExecutor &runtime):
 	StKeyword(runtime)
 	{
 		this->keyWord = "memoize";
-	}
-	void action(AscalFrame<double>* frame) override
-	{
-	    runtime.updateBoolSetting(frame);
+		this->operation = memoizeOperations;
 	}
 };
 

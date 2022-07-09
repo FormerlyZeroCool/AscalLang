@@ -9,23 +9,27 @@
 #define KEYWORDS_ARCCOSACTION_HPP_
 
 #include "../Keyword.hpp"
+static inline void arcCosAction(KeywordExecutionContext ctx) 
+{
+	double input = 0;
+	ctx.frame().initialOperands.top(input);
+	ctx.frame().initialOperands.pop();
+    ctx.frame().initialOperands.push(acos(input));
+	#ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+    {
+    	std::cout<<"arccos("<<input<<") = "<<acos(input)<<'\n';
+    }
+	#endif
+    ctx.frame().index += Keyword::opcodeSize();
+}
 class ArcCosAction: public OpKeyword {
 public:
 	ArcCosAction(AscalExecutor &runtime):
 		OpKeyword(runtime)
 	{
 		this->keyWord = "arccos";
-	}
-	void action(AscalFrame<double>* frame) override
-	{
-	    SubStr exp = ParsingUtil::getFollowingExpr(frame->exp, frame->index, keyWord);
-	    double input = runtime.callOnFrame(frame,exp.data);
-	    frame->initialOperands.push(acos(input));
-	    if(*runtime.boolsettings["o"])
-	    {
-	    	std::cout<<"arccos("<<input<<") = "<<acos(input)<<'\n';
-	    }
-	    frame->index = exp.end;
+		this->operation = arcCosAction;
 	}
 };
 

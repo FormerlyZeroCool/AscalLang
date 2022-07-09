@@ -24,12 +24,11 @@ public:
 	void action(AscalFrame<double>* frame) override
 	{
 	    int endOfStatement = frame->index;
-	    while(frame->exp[endOfStatement] && (frame->exp[endOfStatement] != ';' && frame->exp[endOfStatement] != '\n' &&
-	                                         frame->exp[endOfStatement] != '\0'))
+	    while(frame->exp.size() > endOfStatement && frame->exp[endOfStatement] != ';' && frame->exp[endOfStatement] != '\n')
 	    {
 	        endOfStatement++;
 	    }
-	    uint32_t quoteIndex = frame->exp.find("\"",frame->index);
+	    uint32_t quoteIndex = frame->exp.find("\"",frame->index + this->opcodeSize());
 	    if(quoteIndex != -1 && quoteIndex < endOfStatement)
 	    {
 	        ps.action(frame);
