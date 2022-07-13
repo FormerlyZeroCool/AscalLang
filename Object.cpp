@@ -17,18 +17,20 @@ const uint8_t Object::initialOffset = sizeof(double);
         CompilationContext ctx(this->instructions, target, runtime);
         
         this->LexCodeAndCompile(runtime, ctx);
-        
-        uint8_t buffer[256];
-        memset(buffer, 0, sizeof(buffer));
-        memcpy(&buffer[0], &ctx.target.getInstructions()[0], 256<ctx.target.getInstructions().size()?256:ctx.target.getInstructions().size());
-        int counter = 0;
-        for(int j = 0; j < 16; j++){
-            for(int i = 0; i < 16; i++)
-            {
-                printf("%02X ", buffer[counter]);
-                counter++;
+        if(*runtime.boolsettings["o"])
+        {
+            uint8_t buffer[256];
+            memset(buffer, 0, sizeof(buffer));
+            memcpy(&buffer[0], &ctx.target.getInstructions()[0], 256<ctx.target.getInstructions().size()?256:ctx.target.getInstructions().size());
+            int counter = 0;
+            for(int j = 0; j < 16; j++){
+                for(int i = 0; i < 16; i++)
+                {
+                    printf("%02X ", buffer[counter]);
+                    counter++;
+                }
+                std::cout<<"\n";
             }
-            std::cout<<"\n";
         }
         this->deallocateInstructions(this->inp, this->instructionBufferSizeId);
         this->inp = ctx.target.inp;
@@ -49,7 +51,7 @@ const uint8_t Object::initialOffset = sizeof(double);
     void Object::compileParams(string_view s, AscalExecutor &runtime, CompilationContext &ctx)
     {
         //std::cout<<"instruction length before param compilation: "<<ctx.target.getInstructions().size()<<"\n";
-        uint32_t start = 0, end = ctx.currentToken;
+        uint32_t start = 0, end = 0;
         std::uintptr_t endptr = reinterpret_cast<std::uintptr_t>(&s.back());
         std::uintptr_t startptr = reinterpret_cast<std::uintptr_t>(&s[0]);
         while(ctx.lastTokens.size() > start && reinterpret_cast<std::uintptr_t>(&ctx.lastTokens[start].source.back()) < startptr)
@@ -527,6 +529,7 @@ const uint8_t Object::initialOffset = sizeof(double);
         StackSegment<CompilationContext::Token> stack = ctx.tokenStack;
         stack.push(CompilationContext::Token(string_view("(", 1), ctx.src_index, CompilationContext::Token::OPERATOR));
         const auto &tokens = ctx.lastTokens;
+        std::cout<<tokens[ctx.currentToken].source<<" end: "<<(tokens.size()>end?tokens[end].source:string_view(""))<<"\n";
         for(uint32_t &i = ctx.currentToken; i < end; i++)
         {
             const auto token = tokens[i];

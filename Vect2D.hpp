@@ -15,6 +15,10 @@ private:
 	int width,height;
 public:
 	Vect2D(int width,int height):width(width),height(height){}
+	void set(int width, int height){
+		this->width = width;
+		this->height = height;
+	}
 	int getWidth()
 	{
 		return width;
@@ -29,7 +33,7 @@ public:
 	}
 	void insertAt(int x,int y,t value)
 	{
-		if(this->size() > x + y * width && x|y)
+		if(this->size() > x + y * width && (x|y))
 			(*this)[x + y*width] = value;
 		else
 		{

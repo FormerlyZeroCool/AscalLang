@@ -164,7 +164,7 @@ public:
     void setParent(Object *parent);
     std::string instructionsToFormattedString() const ;
     std::string instructionsToFormattedString(uint16_t depth) const;
-    inline const string_view& getInstructions() { return  instructions; }
+    inline const string_view& getInstructions() const { return  instructions; }
     std::string listToString(FlatMap<string_view, Object*> &memory);
     Object& getMapUnsafe(string_view id);
     Object& operator[](string_view id);

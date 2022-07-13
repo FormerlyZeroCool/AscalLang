@@ -32,7 +32,7 @@ std::string ParsingUtil::to_string(double input)
     offsetFromEnd += brek;
     offsetFromEnd += (data[data.length()-offsetFromEnd-1] == '.');
 
-    return data.substr(0,data.length()-offsetFromEnd);
+    return data.erase(data.length()-offsetFromEnd, offsetFromEnd);
 }
 SubStrSV ParsingUtil::getVarNameSV(const std::string &s,uint32_t &index)
 {
