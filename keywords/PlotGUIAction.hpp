@@ -61,16 +61,6 @@ public:
 			}
 		}
 
-	    //int pid = fork();
-	    //if(!pid)
-	    {
-	    	//Essentially a 1d vector but you can address it with x, and y coordinates, y addresses different functions
-	    	//x addresses the x point xMin+dx*x, using xMin, and dx defined above
-	    	//Vect2D<std::pair<double, double> > points = calcTable(functions, xMin, xMax, dx, dy);
-	    	//Your GUI code
-	    	//throw 0;
-	    }
-
 	    if(*runtime.boolsettings["o"])
 	    {
 	    	std::cout<<"plotGUI"<<exp.data.substr(0,exp.data.size()-2)<<"\n";
@@ -109,16 +99,16 @@ public:
 	}
 };
 struct GuiPlotParams {
-	static inline const uint64_t MAX_FUNCTIONS = 16;
+	static inline const uint64_t MAX_FUNCTIONS = 16, TABLE_WIDTH = 4096;
 	uint64_t functionCount;
 	double xMin = 0;
 	double xMax = 0;
 	std::array<Object*, MAX_FUNCTIONS> functions;
 	Vect2D<double> results;
-	GuiPlotParams(KeywordExecutionContext ctx): results(0,0)
+	GuiPlotParams(KeywordExecutionContext ctx): results(0,0) //loads data from vm into struct, and increments instruction pointer
 	{
 			ctx.frame().index += Keyword::opcodeSize();
-
+			//loading xMin, and xMax from stack because they were dynamically calculated from expressions
 			ctx.frame().initialOperands.top(xMax);
 			ctx.frame().initialOperands.pop();
 			ctx.frame().initialOperands.top(xMin);
@@ -162,13 +152,18 @@ struct GuiPlotParams {
 					ctx.frame().index += sizeof(function);
 				}
 			}
-			results.set(4096, functionCount);
+			results.reserve(TABLE_WIDTH)
+			results.set(TABLE_WIDTH, functionCount);
 			recalcResults(ctx);
+	}
+	double getdx()
+	{
+		return (xMax - xMin * 1.0) / TABLE_WIDTH;
 	}
 	Vect2D<double>& recalcResults(KeywordExecutionContext ctx)
 	{
-		const double dx = (xMax - xMin) / 4096.0;
-		for(int j = 0;j < results.getHeight();j++)
+		const double dx = getdx();
+		for(int j = 0; j < results.getHeight();j++)
 		{
 		    const Object* function = functions[j];
 		    for(int i = 0; i < results.getWidth();i++)
@@ -189,6 +184,9 @@ struct GuiPlotParams {
 inline void runGuiPlot(KeywordExecutionContext ctx)
 {
 	GuiPlotParams parameters(ctx);
-
+	//your gui code here, to recalculate for different range just change xMin, and xMax, and call recalcResults
+	//for the vec2d each y will be one functions values from the left to the right of the array the x values are 
+	//ascending by parameters.getdx()
+	//the leftmost x value will be xMin, and each successor will be xMin + parameters.getdx() * (i + 1)
 }
 #endif /* KEYWORDS_PLOTGUIACTION_HPP_ */
