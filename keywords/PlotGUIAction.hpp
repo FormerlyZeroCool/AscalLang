@@ -108,24 +108,6 @@ struct GuiPlotParams {
 					ctx.frame().index += sizeof(functions[i]);
 				}
 			}
-			for(; i < functionCount; i++)//skip over rest past max function size
-			{
-				uint64_t type = 0;
-				ctx.getData(type, ctx.frame().index);
-				ctx.frame().index += sizeof(type);
-				if(type == PlotGUIAction::LOCAL_FUNCTION)//skip local
-				{
-					uint64_t stackIndex = 0;
-					ctx.getData(stackIndex, ctx.frame().index);
-					ctx.frame().index += sizeof(stackIndex);
-				}
-				else//skip global
-				{
-					Object* function = nullptr;
-					ctx.getData(function, ctx.frame().index);
-					ctx.frame().index += sizeof(function);
-				}
-			}
 			results.reserve(PlotGUIAction::TABLE_WIDTH);
 			results.set(PlotGUIAction::TABLE_WIDTH, functionCount);
 			recalcResults(ctx);
