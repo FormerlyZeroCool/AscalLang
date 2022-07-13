@@ -13,12 +13,14 @@
 #include <utility>
 #include <array>
 
+struct GuiPlotParams;
 inline void runGuiPlot(KeywordExecutionContext ctx);
 class PlotGUIAction: public StKeyword {
 private:
     ParsedStatementList params;
 public:
 	static inline const uint64_t LOCAL_FUNCTION = 0, GLOBAL_FUNCTION = 1;
+	static inline const uint64_t MAX_FUNCTIONS = 32, TABLE_WIDTH = 4096;
 	PlotGUIAction(AscalExecutor &runtime):
 	StKeyword(runtime)
 	{
@@ -35,18 +37,22 @@ public:
         for(uint32_t j = 1; j < params.statements.size(); j++)
         {
             ctx.target.compileParams(params.statements[j].data, ctx.runtime, ctx);
-			std::cout<<"compiled: "<<params.statements[j].data<<" code len: "<<ctx.target.getInstructions().size()<<"\n";
+			//std::cout<<"compiled: "<<params.statements[j].data<<" code len: "<<ctx.target.getInstructions().size()<<"\n";
         }
 		this->operation = runGuiPlot;
 		ctx.target.append(this->operation);
 		ctx.target.append((uint64_t) functions.size());
+		if(functions.size() > MAX_FUNCTIONS)
+		{
+			throw std::string("Error too many functions, can only render: " + ParsingUtil::to_string(PlotGUIAction::MAX_FUNCTIONS) + (" functions at once."));
+		}
 		for(uint64_t i = 0; i < functions.size(); i++)
 		{
 			const auto localObjIt = ctx.localMemory.find(functions[i]);
 			if(localObjIt != ctx.localMemory.end())
 			{
 				const CompilationContext::LocalRecord localRec = (*localObjIt).getValue();
-				ctx.target.append(PlotGUIAction::LOCAL_FUNCTION);
+				ctx.target.append(LOCAL_FUNCTION);
 				ctx.target.append((uint64_t) localRec.stack_index);
 			}
 			else
@@ -55,7 +61,7 @@ public:
 				if(globalRec != ctx.runtime.memory.end())
 				{
 					const Object* function = (*globalRec).getValue();
-					ctx.target.append(PlotGUIAction::GLOBAL_FUNCTION);
+					ctx.target.append(GLOBAL_FUNCTION);
 					ctx.target.append(function);
 				}
 			}
@@ -99,11 +105,10 @@ public:
 	}
 };
 struct GuiPlotParams {
-	static inline const uint64_t MAX_FUNCTIONS = 16, TABLE_WIDTH = 4096;
 	uint64_t functionCount;
 	double xMin = 0;
 	double xMax = 0;
-	std::array<Object*, MAX_FUNCTIONS> functions;
+	std::array<Object*, PlotGUIAction::MAX_FUNCTIONS> functions;
 	Vect2D<double> results;
 	GuiPlotParams(KeywordExecutionContext ctx): results(0,0) //loads data from vm into struct, and increments instruction pointer
 	{
@@ -116,7 +121,7 @@ struct GuiPlotParams {
 			ctx.getData(functionCount, ctx.frame().index);
 			ctx.frame().index += sizeof(uint64_t);
 			uint64_t i = 0;
-			for(; i < functionCount && i < MAX_FUNCTIONS; i++)//load object pointers into memory
+			for(; i < functionCount; i++)//load object pointers into memory
 			{
 				uint64_t type = 0;
 				ctx.getData(type, ctx.frame().index);
@@ -152,13 +157,13 @@ struct GuiPlotParams {
 					ctx.frame().index += sizeof(function);
 				}
 			}
-			results.reserve(TABLE_WIDTH)
-			results.set(TABLE_WIDTH, functionCount);
+			results.reserve(PlotGUIAction::TABLE_WIDTH);
+			results.set(PlotGUIAction::TABLE_WIDTH, functionCount);
 			recalcResults(ctx);
 	}
 	double getdx()
 	{
-		return (xMax - xMin * 1.0) / TABLE_WIDTH;
+		return (xMax - xMin * 1.0) / PlotGUIAction::TABLE_WIDTH;
 	}
 	Vect2D<double>& recalcResults(KeywordExecutionContext ctx)
 	{
