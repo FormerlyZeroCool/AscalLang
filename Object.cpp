@@ -529,7 +529,7 @@ const uint8_t Object::initialOffset = sizeof(double);
         StackSegment<CompilationContext::Token> stack = ctx.tokenStack;
         stack.push(CompilationContext::Token(string_view("(", 1), ctx.src_index, CompilationContext::Token::OPERATOR));
         const auto &tokens = ctx.lastTokens;
-        std::cout<<tokens[ctx.currentToken].source<<" end: "<<(tokens.size()>end?tokens[end].source:string_view(""))<<"\n";
+        //std::cout<<tokens[ctx.currentToken].source<<" end: "<<(tokens.size()>end?tokens[end].source:string_view(""))<<"\n";
         for(uint32_t &i = ctx.currentToken; i < end; i++)
         {
             const auto token = tokens[i];
