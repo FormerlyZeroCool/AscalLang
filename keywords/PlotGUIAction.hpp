@@ -71,38 +71,7 @@ public:
 	    {
 	    	std::cout<<"plotGUI"<<exp.data.substr(0,exp.data.size()-2)<<"\n";
 	    }
-	}
-	//For plotGUI to use the y index of the Vect2D corresponds to the index of the function name in the functions vector
-	//the x index in cartesian space is x*dx+xMin
-	//the x is the first in the pair, the y is the second
-	Vect2D<std::pair<double, double> > calcTable(const std::vector<std::string> &functions, double xMin, double xMax, double xStepSize, double yStepSize)
-	{
-	    int tableWidth = (xMax-xMin)/(xStepSize>0?xStepSize:1);
-		double dx = (xMax-xMin)/tableWidth;
-		    double dy = yStepSize>0?yStepSize:1;
-		    double xi;
-		    Vect2D<std::pair<double, double> > outPuts(tableWidth,functions.size()-1);
-		    std::string exp;
-		    for(int j = 0;j<functions.size();j++)
-		    {
-		        const std::string &function = functions[j];
-		        for(int i = 0;i<tableWidth;i++)
-		        {
-		            xi = xMin+dx*(i);
-		            //FunctionFrame<double> calledFunction(runtime, runtime.memMan);
-		            exp += function;
-					exp += '(';
-					exp += ParsingUtil::to_string(xi);
-					exp += ')';
-		            //calledFunction->exp = exp;
-		            //outPuts.push_back(
-		              //      std::pair<double, double>(xi, runtime.calculateExpression(calledFunction))
-		            //);
-					exp.clear();
-		        }
-		    }
-		    return outPuts;
-	}
+	}	
 };
 struct GuiPlotParams {
 	uint64_t functionCount;
@@ -161,11 +130,11 @@ struct GuiPlotParams {
 			results.set(PlotGUIAction::TABLE_WIDTH, functionCount);
 			recalcResults(ctx);
 	}
-	double getdx()
+	double getdx() const noexcept
 	{
 		return (xMax - xMin * 1.0) / PlotGUIAction::TABLE_WIDTH;
 	}
-	Vect2D<double>& recalcResults(KeywordExecutionContext ctx)
+	Vect2D<double>& recalcResults(KeywordExecutionContext ctx) noexcept
 	{
 		const double dx = getdx();
 		for(int j = 0; j < results.getHeight();j++)
