@@ -13,14 +13,14 @@ UTILINCLUDES = queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp
 CFLAGS   = -O3 -Wall
 CXXFLAGS = -O3 -std=c++17 -Wall -Dlibreadline 
 #for most distros
-LDFLAGS = -lreadline 
-LDLIBS = -lreadline 
+LDFLAGS = -lreadline
 #for debian if previous fails
 #LDFLAGS = -lreadline -L/usr/lib/x86_64-linux-gnu 
-#LDLIBS = -lreadline -L/usr/lib/x86_64-linux-gnu 
-.PHONY: default
+.PHONY: default run
 default: 
 	make clean; make -j 7 ascal
+run:
+	./ascal
 ascal: AscalMain
 	mv AscalMain ascal
 AscalMain:  AscalMain.o Object.o AscalParameters.o string_view.o Ascal.o AscalExecutor.o ParsingUtil.o PRNG.o Keyword.o MemoryMap.o MemoryManager.o SubStr.o

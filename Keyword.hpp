@@ -195,4 +195,86 @@ inline void jumpBackInlineAction(KeywordExecutionContext ctx)
         #endif
     }
 
+namespace Global {
+static inline void makeArray(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+}
+static inline void makeDouble(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    uint64_t size = -1;
+    memcpy(&size, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+    ctx.frame().index += sizeof(uint64_t);
+    const auto nameIndex = ctx.frame().index;
+    ctx.frame().index += size;
+    Object *obj = ctx.runtime().memMan.constructObj(string_view(&ctx.frame().exp[nameIndex], size), 
+                        string_view("", 0));
+    double value = -1;
+    memcpy(&value, &ctx.frame().exp[ctx.frame().index], sizeof(double));
+    ctx.frame().index += sizeof(double);
+    obj->setDouble(value);
+    ctx.runtime().memory.insert(std::make_pair(obj->getId(), obj));
+	#ifdef debug
+	if(*ctx.runtime().boolsettings["o"])
+	{
+		std::cout<<"instantiating global: "<<obj->getId()<<" to: "<<value<<"\n";
+	}
+	#endif
+}
+static inline void makeDoubleParameter(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    double value = -1;
+    auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->initialOperands;
+    localMem.top(value);
+    localMem.pop();
+	#ifdef debug
+    std::cout<<"parameter created, double: "<<value<<"\n"<<"Var stack id: "<<ctx.frame().getLocalMemory().size();
+    #endif
+    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE,value));
+}
+static inline void makeObjectParameter(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    StackDataRecord value;
+    auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->localMemory;
+    localMem.top(value);
+    localMem.pop();
+    //std::cout<<"paramdouble: "<<value<<"\n";
+    ctx.frame().getLocalMemory().push(value);
+}
+static inline void makeFunction(KeywordExecutionContext ctx)
+{
+    ctx.frame().index += Keyword::opcodeSize();
+    uint64_t nameSize = -1;
+    memcpy(&nameSize, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+    ctx.frame().index += sizeof(uint64_t);
+    const auto nameIndex = ctx.frame().index;
+    ctx.frame().index += nameSize;
+    uint64_t bodySize = -1;
+    memcpy(&bodySize, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+    ctx.frame().index += sizeof(uint64_t);
+    Object obj(ctx.runtime().memMan, string_view(&ctx.frame().exp[nameIndex], nameSize), 
+                        string_view(&ctx.frame().exp[ctx.frame().index], bodySize));
+    
+    ctx.runtime().loadUserDefinedFn(obj, ctx.runtime().memory);
+    ctx.frame().index += bodySize;
+    #ifdef debug
+    std::cout<<"global obj: "<<obj.getId()<<" id: "<<ctx.frame().getLocalMemory().size()<<"\n";
+    #endif
+    //ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::OWNED, obj));
+}
+static inline void returnAndPop(KeywordExecutionContext ctx)
+{
+    auto &runtime = ctx.runtime();
+    ctx.runtime().frameStack.pop();
+    ctx.frame().initialOperands.resetStart();
+    ctx.runtime().framePool.destroy(&ctx.frame());
+    runtime.frameStack.top(ctx.frame_ptr);
+    //    std::cout<<data<<"\n";
+}
+};
+
+
 #endif /* KEYWORD_HPP_ */

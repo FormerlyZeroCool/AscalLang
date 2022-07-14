@@ -41,8 +41,8 @@
 #include "keywords/NewLocalVar.hpp"
 #include "keywords/NewLocalVarAction.hpp"
 #include "keywords/PauseAction.h"
-//include "keywords/PlotAction.hpp"
-//#include "keywords/PlotGUIAction.hpp"
+//#include "keywords/PlotAction.hpp"
+#include "keywords/PlotGUIAction.hpp"
 //#include "keywords/PrintCalculation.hpp"
 //#include "keywords/PrintCommand.hpp"
 //#include "keywords/PrintCharAction.hpp"
@@ -122,6 +122,7 @@ public:
 			addKeyWord<NewLocalVar>();
 			addKeyWord<NewGlobalFunction>();
 			addKeyWord<WhenAction>();
+			addKeyWord<PlotGUIAction>();
 /*
 			addKeyWord<DerivefnAction>();
 			addKeyWord<ArrGetValAction>();
@@ -137,7 +138,6 @@ public:
 			addKeyWord<LoadStrAction>();
 			addKeyWord<NewGlobalVarAction>();
 			addKeyWord<PlotAction>();
-			addKeyWord<PlotGUIAction>();
 			addKeyWord<PrintCalculation>();
 			addKeyWord<PrintCommand>();
 			addKeyWord<PrintCharAction>();

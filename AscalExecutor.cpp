@@ -125,48 +125,48 @@ void AscalExecutor::loadInitialFunctions()
     loadFn(Object(memMan, "fprime","x*0+(f(x+0.000001)-f(x))/0.000001",""));
 
     //Trig Functions
-    loadFn(Object(memMan, "sinDeg","sin(toRad(theta))",""));
-    loadFn(Object(memMan, "csc","1/sin(theta)",""));
-    loadFn(Object(memMan, "cosDeg","cos(toRad(theta))",""));
-    loadFn(Object(memMan, "sec","1/cos(theta)",""));
+    loadFn(Object(memMan, "sinDeg","sin(toRad(x))",""));
+    loadFn(Object(memMan, "csc","1/sin(x)",""));
+    loadFn(Object(memMan, "cosDeg","cos(toRad(x))",""));
+    loadFn(Object(memMan, "sec","1/cos(x)",""));
     //Helpful functions
     loadFn(Object(memMan, "fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
     loadFn(Object(memMan, "fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};loc z = 0;memoize 1;set z = fr(x);memoize 0;z}",""));
     loadFn(Object(memMan, "rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
-    loadFn(Object(memMan, "ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
-    loadFn(Object(memMan, "fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
-    loadFn(Object(memMan, "gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else b end}",""));
-    loadFn(Object(memMan, "sumBetween","(numberzxa,numberzxb){"
+    //loadFn(Object(memMan, "ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
+    //loadFn(Object(memMan, "fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
+    //loadFn(Object(memMan, "gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else b end}",""));
+    /*loadFn(Object(memMan, "sumBetween","(numberzxa,numberzxb){"
             "when (numberzxb<numberzxa)+(numberzxb=numberzxa) then sumOneTo(numberzxa)-sumOneTo(numberzxb-1)"
             "else sumOneTo(numberzxb)-sumOneTo(numberzxa-1) end}"
             ,""));
-    loadFn(Object(memMan, "sumOneTo","(numberzxa*(numberzxa+1))/2",""));
+            */
+    loadFn(Object(memMan, "sumOneTo","(x*(x+1))/2",""));
     //factorial of >= 171 overflows double datatype
     loadFn(Object(memMan, "rfact",
-            "when (i>1)*(i<171) then rfact(i-1)*i when not(i>1) then 1 else 0 end",""));
+            "when (x>1)*(x<171) then rfact(x-1)*x when not(x>1) then 1 else 0 end",""));
     loadFn(Object(memMan, "abs","when numberx<0 then numberx*-1 else numberx end",""));
     loadFn(Object(memMan, "ln","when argument>0 then e@argument else null end",""));
     loadFn(Object(memMan, "log","when argument>0 then 10@argument else null end",""));
-    loadFn(Object(memMan, "logbx","base@argument",""));
+    //loadFn(Object(memMan, "logbx","base@argument",""));
     loadFn(Object(memMan, "sqrt","radicand^0.5",""));
     loadFn(Object(memMan, "fact","when numberzxa<171 then numberzxaPnumberzxa when not(numberzxa<171) then 0 end",""));
-    loadFn(Object(memMan, "dist","sqrt((dx)^2+(dy)^2)",""));
-    loadFn(Object(memMan, "dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
+    //loadFn(Object(memMan, "dist","sqrt((dx)^2+(dy)^2)",""));
+    //loadFn(Object(memMan, "dist3d","sqrt((dx)^2+(dy)^2+(dz)^2)",""));
     loadFn(Object(memMan, "toDeg","rad*180/pi",""));
     loadFn(Object(memMan, "toRad","deg*pi/180",""));
     loadFn(Object(memMan, "println","(x){loc counter = 0;while counter<x{set counter = counter +1;print \"endl\";};null",""));
     loadFn(Object(memMan, "clear","println(150)",""));
-    loadFn(Object(memMan, "floor","x-x%1",""));
     loadFn(Object(memMan, "ceiling","when x%1=0 then x else x+1-x%1 end",""));
     loadFn(Object(memMan, "round","when x%1<0.5 then floor(x) else ceiling(x) end",""));
 
     //Stats Functions
-    Object binProbDist(memMan, "binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
-    loadFn(binProbDist);
+    //Object binProbDist(memMan, "binprob","(total C events) * probabilityOfSuccess^events * (1-probabilityOfSuccess)^(total-events)","");
+    //loadFn(binProbDist);
 
     //Dietitian Functions
-    Object eKCal(memMan, "ekcal","(0*male*kg*cm*age*activity+ true(male)*5+not(male)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
-    loadFn(eKCal);
+    //Object eKCal(memMan, "ekcal","(0*male*kg*cm*age*activity+ true(male)*5+not(male)*-161+(10*kg)+(6.25*cm)-(5*age))*activity","");
+    //loadFn(eKCal);
 ;
 loadFn(Object(memMan, "println","(x){loc counter = 0;while counter<x{set counter = counter +1;print \"endl\";};null",""));
 loadFn(Object(memMan, "clear","println(150)",""));
@@ -182,19 +182,26 @@ loadFn(Object(memMan, "clear","println(150)",""));
             "print \"hehheh0endl\";"
 "};"
 "}}","");
-    isneg.compileInstructions(*this);
     loadFn(isneg);
 
     //Constants Definition
     Object pi(memMan, "pi","","");
     //std::cout<<"Pi and e are broked fix them when you get a chance i ascalexecutor\n";
     
-    loadFn(pi).setDouble(3.141592653589793238462643383279);
     Object e(memMan, "e","","");
-    loadFn(e).setDouble(2.718281828459045);
     loadFn(Object(memMan, "null",MAX,""));
     loadFn(Object(memMan, "printf","print \"(x)endl\"",""));
 
+    loadFn(Object(memMan, "floor","x-x%1",""));
+    for(auto chunk:this->memory)
+    {
+        chunk.getValue()->compileInstructions(*this);
+        const auto op = Global::returnAndPop;
+        chunk.getValue()->append(op);
+        chunk.getValue()->setObject();
+    }
+    loadFn(e).setDouble(2.718281828459045);
+    loadFn(pi).setDouble(3.141592653589793238462643383279);
 }
 AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
 {
@@ -470,7 +477,7 @@ double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
         cleanOnError(timeInstruction, start, end);
         throw exitCode;
     }
-    memoPad.clear();
+    //memoPad.clear();
     //------------------------
     {
         if(timeInstruction)
