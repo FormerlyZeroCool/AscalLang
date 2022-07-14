@@ -120,7 +120,7 @@ struct GuiPlotParams {
 					ctx.frame().index += sizeof(functions[i]);
 				}
 			}
-			results.reserve(PlotGUIAction::TABLE_WIDTH);
+			results.reserve(PlotGUIAction::TABLE_WIDTH * functionCount);
 			results.set(PlotGUIAction::TABLE_WIDTH, functionCount);
 			recalcResults(ctx);
 	}
