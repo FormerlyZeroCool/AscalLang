@@ -22,6 +22,8 @@ cygSDL2-2-0-0.dll
 *.dll
 KeywordManuals/PlotGUI.txt
 keywords/c
-Makefile
-Makefile
-Makefile
+*.lib
+*.def
+*.a
+*.mak
+*.h
