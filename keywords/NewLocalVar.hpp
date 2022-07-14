@@ -70,6 +70,41 @@ static inline void returnAndPop(KeywordExecutionContext ctx)
     //ctx.frame_ptr->initialOperands.push(data);
     //    std::cout<<data<<"\n";
 }
+inline void compileLocalFunction(CompilationContext &ctx, string_view localName, string_view subexp, ParsedStatementList &params, AscalExecutor &runtime)
+{
+    Object newLocal = Object(runtime.memMan, string_view("", 0));
+
+    ctx.addOwnedLocal(localName, params.statements.size());
+    CompilationContext body_ctx(subexp, newLocal, runtime);
+    //ctx.addRefedLocal(newLocal.getId(), params.statements.size());
+    body_ctx.addRefedLocal(localName, params.statements.size());
+    //this->operation = makeSelfParameter;
+    //body_ctx.target.append(this->operation);
+    for(int32_t i = params.statements.size() - 1; i >= 0; i--)
+    {
+        const auto &param = params.statements[i];
+        if(param.data[0] != '&')
+        {
+            body_ctx.addDoubleLocal(param.data, 0);
+        }
+    }
+    newLocal.LexCodeAndCompile(runtime, body_ctx);
+    //nobj = &runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory())
+    auto operation = makeFunction;
+    ctx.target.append(operation);
+    ctx.target.append((uint64_t)(localName.size()));
+    for(int i = 0; i < localName.size(); i++)
+    {
+        ctx.target.append(localName[i]);
+    }
+    ctx.target.append((uint64_t)(body_ctx.target.getInstructions().size() + Keyword::opcodeSize()));
+    for(int i = 0; i < body_ctx.target.getInstructions().size(); i++)
+    {
+        ctx.target.append(body_ctx.target.getInstructions()[i]);
+    }
+    operation = returnAndPop;
+    ctx.target.append(operation);
+}
 class NewLocalVar: public StKeyword {
 public:
     NewLocalVar(AscalExecutor &runtime):
@@ -103,39 +138,7 @@ public:
         }
         if(!ParsingUtil::isDouble(subexp.data))
         {
-            Object newLocal = Object(runtime.memMan, string_view("", 0));
-
-            ctx.addOwnedLocal(localName.data, this->params.statements.size());
-            CompilationContext body_ctx(subexp.data, newLocal, runtime);
-            //ctx.addRefedLocal(newLocal.getId(), this->params.statements.size());
-            body_ctx.addRefedLocal(localName.data, this->params.statements.size());
-            //this->operation = makeSelfParameter;
-            //body_ctx.target.append(this->operation);
-            for(int32_t i = this->params.statements.size() - 1; i >= 0; i--)
-            {
-                const auto &param = this->params.statements[i];
-                if(param.data[0] != '&')
-                {
-                    body_ctx.addDoubleLocal(param.data, 0);
-                }
-            }
-            newLocal.LexCodeAndCompile(this->runtime, body_ctx);
-            //nobj = &runtime.loadUserDefinedFn(newLocal, *frame->getLocalMemory());
-
-            this->operation = makeFunction;
-            ctx.target.append(this->operation);
-            ctx.target.append((uint64_t)(localName.data.size()));
-            for(int i = 0; i < localName.data.size(); i++)
-            {
-                ctx.target.append(localName.data[i]);
-            }
-            ctx.target.append((uint64_t)(body_ctx.target.getInstructions().size() + Keyword::opcodeSize()));
-            for(int i = 0; i < body_ctx.target.getInstructions().size(); i++)
-            {
-                ctx.target.append(body_ctx.target.getInstructions()[i]);
-            }
-            this->operation = returnAndPop;
-            ctx.target.append(this->operation);
+            compileLocalFunction(ctx, localName.data, subexp.data, params, runtime);
         }
         else
         {

@@ -22,9 +22,10 @@ class CompilationContext {
     };
     struct LocalRecord {
         static inline const uint8_t DOUBLE = 0, OWNED_OBJECT = 1, REFERENCED_OBJECT = 2;
-        uint16_t stack_index = 0;
+        uint8_t stack_index = 0;
         uint8_t type = 0;
         uint8_t paramsCount = 0;
+        bool list = false;
         bool isDouble() const
         {
             return type == LocalRecord::DOUBLE;
@@ -40,6 +41,10 @@ class CompilationContext {
         bool isObject() const
         {
             return isOwnedObject() || isRefedObject();
+        }
+        bool isList() const noexcept
+        {
+            return this->list;
         }
         LocalRecord() {}
         LocalRecord(uint16_t stack_index, uint8_t paramsCount, uint8_t type): stack_index(stack_index), type(type), paramsCount(paramsCount) {}

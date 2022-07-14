@@ -20,7 +20,7 @@ private:
     ParsedStatementList params;
 public:
 	static inline const uint64_t LOCAL_FUNCTION = 0, GLOBAL_FUNCTION = 1;
-	static inline const uint64_t MAX_FUNCTIONS = 32, TABLE_WIDTH = 4096;
+	static inline const uint64_t MAX_FUNCTIONS = 16, TABLE_WIDTH = 4096;
 	PlotGUIAction(AscalExecutor &runtime):
 	StKeyword(runtime)
 	{
@@ -64,6 +64,13 @@ public:
 					ctx.target.append(GLOBAL_FUNCTION);
 					ctx.target.append(function);
 				}
+				else
+				{
+					//compile keyword call into local function
+					const uint64_t stack_index = ctx.addOwnedLocal(string_view("x", 0), 1);
+					ctx.target.append(LOCAL_FUNCTION);
+					ctx.target.append(stack_index);
+				}
 			}
 		}
 
@@ -78,8 +85,13 @@ struct GuiPlotParams {
 	double xMin = 0;
 	double xMax = 0;
 	std::array<Object*, PlotGUIAction::MAX_FUNCTIONS> functions;
-	Vect2D<double> results;
+	Vect2D<float> results;
+	GuiPlotParams(): results(0,0) {}
 	GuiPlotParams(KeywordExecutionContext ctx): results(0,0) //loads data from vm into struct, and increments instruction pointer
+	{
+		this->loadDataFromVM(ctx);
+	}
+	void loadDataFromVM(KeywordExecutionContext ctx)
 	{
 			ctx.frame().index += Keyword::opcodeSize();
 			//loading xMin, and xMax from stack because they were dynamically calculated from expressions
@@ -116,7 +128,7 @@ struct GuiPlotParams {
 	{
 		return (xMax - xMin * 1.0) / PlotGUIAction::TABLE_WIDTH;
 	}
-	Vect2D<double>& recalcResults(KeywordExecutionContext ctx) noexcept
+	Vect2D<float>& recalcResults(KeywordExecutionContext ctx) noexcept
 	{
 		const double dx = getdx();
 		for(int j = 0; j < results.getHeight();j++)
@@ -131,6 +143,9 @@ struct GuiPlotParams {
 				const double result = ctx.runtime().calculateExpression(&frame);
 				//std::cout<<" "<<result<<", ";
 				results.insertAt(i, j, result);
+				frame.initialOperands.pop();
+				frame.localMemory.pop();
+				ctx.runtime().frameStack.pop();
 			}
 			//std::cout<<"\n";
 		}
