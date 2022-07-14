@@ -134,9 +134,9 @@ struct GuiPlotParams {
 		for(int j = 0; j < results.getHeight();j++)
 		{
 		    const Object* function = functions[j];
+			double xi = xMin;
 		    for(int i = 0; i < results.getWidth();i++)
 		    {
-		        const double xi = xMin+dx*(i);
 				AscalFrame<double> frame(ctx.runtime());
 				frame.exp = function->getInstructions().substr(0, function->getInstructions().size() - sizeof(void*));
 				frame.localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, xi));
@@ -146,6 +146,7 @@ struct GuiPlotParams {
 				frame.initialOperands.pop();
 				frame.localMemory.pop();
 				ctx.runtime().frameStack.pop();
+				xi += dx;
 			}
 			//std::cout<<"\n";
 		}
