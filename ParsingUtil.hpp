@@ -39,7 +39,7 @@ public:
 	{
 		return c|32U;
 	}
-    static ParsedStatementList& ParseStatementList(const string_view param, uint32_t start, ParsedStatementList &list)
+    static ParsedStatementList& ParseStatementList(const string_view param, uint32_t start, ParsedStatementList &list, const char delim = ',')
     {
         list.statements.clear();
         uint32_t end = start,startBackup = start;
@@ -60,11 +60,11 @@ public:
             {
                 foundClosing = true;
             }
-            if((param[end] == ',' || foundClosing) && end > start && (pCount == 1 || (pCount == 0 && foundClosing)))
+            if((param[end] == delim || foundClosing) && end > start && (pCount == 1 || (pCount == 0 && foundClosing)))
             {
                 list.statements.push_back(SubStrSV(param.substr(start,end-start),start, end));
                     start = end;
-                    while(param[start] == ',' || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
+                    while(param[start] == delim || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
                     {
                         start++;
                         end++;

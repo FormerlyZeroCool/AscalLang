@@ -9,6 +9,7 @@
 #define KEYWORDS_WHILEACTION_H_
 
 #include "../Keyword.hpp"
+
 class WhileAction: public ComplexStKeyword {
 public:
 	WhileAction(AscalExecutor &runtime):
@@ -38,34 +39,8 @@ public:
 	    {
 	        throw std::string("Error no boolean expression provided in while.\n");
 	    }
-		const uint32_t topOfLoopIndex = ctx.target.getInstructions().size();
-		ctx.target.compileParams(booleanExpression.data, runtime, ctx);
-		uint32_t startOJumpLenIndex;
-		{
-			double val = 0;
-			
-			this->operation = (jumpIfFalseInlineAction);
-			ctx.target.append(this->operation);
-			startOJumpLenIndex = ctx.target.getInstructions().size();
-			ctx.target.append(val);
-		}
 	    SubStrSV codeBlock = ParsingUtil::getExprInStringSV(ctx.source, index);
-		ctx.target.compileParams(codeBlock.data, runtime, ctx);
-		
-		operationType cs = clearStack;
-		ctx.target.append(cs);
-		{
-			uint32_t codeBlockLen_bin = ctx.target.getInstructions().size() - topOfLoopIndex;
-			const double val = sizeof(void*) + codeBlockLen_bin;
-			
-			this->operation = jumpBackInlineAction;
-			ctx.target.append(this->operation);
-			ctx.target.append(val);
-		}
-		{
-			const double val = ctx.target.getInstructions().size() - startOJumpLenIndex;
-			memcpy(&ctx.target.getInstructions()[startOJumpLenIndex], &val, sizeof(val));
-		}
+		compileLoop(ctx, booleanExpression.data, codeBlock.data);
 	   	index = codeBlock.end + startOfCodeBlock-2;
 	    ctx.src_index = 0;
 	    while(ctx.source[index] == ';' || ctx.source[index] == ' ' || ctx.source[index] == '}')

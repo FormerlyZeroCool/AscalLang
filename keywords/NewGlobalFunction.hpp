@@ -79,6 +79,7 @@ public:
             /*Object obj(runtime.memMan, localName.data);
             obj.setDouble(atof(&subexp.data[0]));
             nobj = &runtime.loadUserDefinedFn(obj, *frame->getLocalMemory());*/
+            Object &newVar = ctx.runtime.loadUserDefinedFn(Object(runtime.memMan, localName.data), ctx.runtime.memory);
             const uint32_t nullIndex = ParsingUtil::isNumeric(subexp.data[subexp.data.size()-1])?subexp.data.size():subexp.data.size()-1;
             
             this->operation = Global::makeDouble;
@@ -90,7 +91,9 @@ public:
             }
             char tmp = subexp.data[nullIndex];
             subexp.data[nullIndex] = 0;
-            ctx.target.append((double) atof(&subexp.data[0]));
+            const double value = atof(&subexp.data[0]);
+            ctx.target.append(value);
+            newVar.setDouble(value);
             subexp.data[nullIndex] = tmp;
         }
         ctx.src_index = subexp.end;

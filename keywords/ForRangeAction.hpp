@@ -21,18 +21,15 @@ public:
 
     void compile(CompilationContext &ctx) override
     {
-        uint32_t index = ctx.src_index+this->opcodeSize();
+        auto &index = ctx.src_index += this->keyWord.size();
         while(ctx.source.size() > index && ParsingUtil::isalpha(ctx.source[index]))
             index++;
-        const int postRangeIndex = ctx.source.find("range", index)+5;
-        SubStrSV limitExpr = ParsingUtil::getExprInStringSV(ctx.source, postRangeIndex, '(', ')', '{');
+        SubStrSV limitExpr = ParsingUtil::getExprInStringSV(ctx.source, index, '(', ')', '{');
         //std::cout<<"ivar: "<<itVar.data<< " ivar len: "<< itVar.data.length()<<" limit: "<<limitExpr.data<<"\nexpr: "<<ctx.source<<"\n";
-        params.statements.clear();
-        ParsingUtil::ParseStatementList(limitExpr.data, 0, params);
-        if(params.statements.empty())
-            throw std::string("Error no limit in for loop condition");
+        ParsingUtil::ParseStatementList(limitExpr.data, 0, params, ';');
+        if(params.statements.size() < 3)
+            throw std::string("Error malformed for loop");
         
-        SubStr limitStr = params.statements.size()>1?params.statements[1]:params.statements[0];
         int startOfCodeBlock = limitExpr.start;
 
         while(ctx.source.size() > startOfCodeBlock && ctx.source[startOfCodeBlock] != '{')
@@ -40,8 +37,20 @@ public:
             startOfCodeBlock++;
         }
         index = startOfCodeBlock;
-        
-        
+        SubStrSV body = ParsingUtil::getExprInStringSV(ctx.source, startOfCodeBlock, '{', '}');
+        compileLoop(ctx, params.statements[1].data, body.data, params.statements[2].data, params.statements[0].data);
+        #ifdef debug
+        if(*runtime.boolsettings["o"])
+        {
+            for(int i = 0; i < params.statements.size(); i++)
+            {
+                const auto statement = params.statements[i].data;
+                std::cout<<statement<<"; ";
+            }
+            std::cout<<"\n{"<<body.data<<"\n}";
+        }
+        #endif
+        index = body.end;
     }
 };
 

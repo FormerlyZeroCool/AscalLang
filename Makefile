@@ -19,6 +19,7 @@ LDFLAGS = -lreadline
 .PHONY: default run
 default: 
 	make clean; make -j 7 ascal
+
 run:
 	./ascal
 ascal: AscalMain

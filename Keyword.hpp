@@ -194,7 +194,71 @@ inline void jumpBackInlineAction(KeywordExecutionContext ctx)
             std::cout<<"Pushing double: "<<val<<"\n";
         #endif
     }
-
+inline void compileLoop(CompilationContext &ctx, string_view booleanExpression, string_view codeBlock)
+	{
+		operationType operation = nullptr;
+		const uint32_t topOfLoopIndex = ctx.target.getInstructions().size();
+		ctx.target.compileParams(booleanExpression, ctx.runtime, ctx);
+		uint32_t startOJumpLenIndex;
+		{
+			double val = 0;
+			
+			operation = (jumpIfFalseInlineAction);
+			ctx.target.append(operation);
+			startOJumpLenIndex = ctx.target.getInstructions().size();
+			ctx.target.append(val);
+		}
+		ctx.target.compileParams(codeBlock, ctx.runtime, ctx);
+		
+		operation = clearStack;
+		ctx.target.append(operation);
+		{
+			uint32_t codeBlockLen_bin = ctx.target.getInstructions().size() - topOfLoopIndex;
+			const double val = sizeof(void*) + codeBlockLen_bin;
+			
+			operation = jumpBackInlineAction;
+			ctx.target.append(operation);
+			ctx.target.append(val);
+		}
+		{
+			const double val = ctx.target.getInstructions().size() - startOJumpLenIndex;
+			memcpy(&ctx.target.getInstructions()[startOJumpLenIndex], &val, sizeof(val));
+		}
+	}
+	inline void compileLoop(CompilationContext &ctx, string_view booleanExpression, string_view codeBlock, string_view codeBlock2, string_view initialization)
+	{
+		ctx.target.compileParams(initialization, ctx.runtime, ctx);
+		operationType operation = nullptr;
+		const uint32_t topOfLoopIndex = ctx.target.getInstructions().size();
+		ctx.target.compileParams(booleanExpression, ctx.runtime, ctx);
+		uint32_t startOJumpLenIndex;
+		{
+			double val = 0;
+			
+			operation = (jumpIfFalseInlineAction);
+			ctx.target.append(operation);
+			startOJumpLenIndex = ctx.target.getInstructions().size();
+			ctx.target.append(val);
+		}
+		ctx.target.compileParams(codeBlock, ctx.runtime, ctx);
+		ctx.target.compileParams(codeBlock2, ctx.runtime, ctx);
+		
+		operation = clearStack;
+		ctx.target.append(operation);
+		{
+			uint32_t codeBlockLen_bin = ctx.target.getInstructions().size() - topOfLoopIndex;
+			const double val = sizeof(void*) + codeBlockLen_bin;
+			
+			operation = jumpBackInlineAction;
+			ctx.target.append(operation);
+			ctx.target.append(val);
+		}
+		{
+			const double val = ctx.target.getInstructions().size() - startOJumpLenIndex;
+			memcpy(&ctx.target.getInstructions()[startOJumpLenIndex], &val, sizeof(val));
+		}
+	}
+	
 namespace Global {
 static inline void makeArray(KeywordExecutionContext ctx)
 {
