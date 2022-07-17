@@ -65,6 +65,7 @@ public:
 	}
 	inline void pop() noexcept;
     inline void pop_back() noexcept { pop(); }
+	t& back(){ return this->data->back(); }
 	inline void top(t&data) const noexcept;
 	inline void top(t*&data) const noexcept;
 	inline bool isEmpty() const noexcept;

@@ -123,12 +123,13 @@ template <typename t>
 class stack : public std::vector<t>{
 
 public:
-	stack(){ this->reserve(1280000); }
+	stack(){ this->reserve(128000); }
 	inline void push(const t &data) noexcept;
 	inline void push(const t &&data) noexcept;
   inline void pop() noexcept;
 	inline void top(t&data) const noexcept;
 	inline void top(t*&data) const noexcept;
+  t& back() const noexcept;
   inline t& get() noexcept
   {
       return (*this)[this->size() - 1];
@@ -172,6 +173,11 @@ void stack<t>::top(t&data) const noexcept
 	{
 		data = (*this)[this->size() - 1];
 	}
+}
+template <typename t>
+t& stack<t>::back() const noexcept
+{
+	return *const_cast<t*>(&(*this)[this->size() - 1]);
 }
 
 template <typename t>

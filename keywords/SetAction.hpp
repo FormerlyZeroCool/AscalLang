@@ -11,35 +11,35 @@
 #include "../Keyword.hpp"
 static inline void setGlobalDoubleOp(KeywordExecutionContext ctx)
 {
-	double value = -1;
+	AscalExecutor::Operand value(0.0);
 	ctx.frame().initialOperands.top(value);
 	ctx.frame().initialOperands.pop();
 	Object *obj = nullptr;
     ctx.frame().index += Keyword::opcodeSize();
 	memcpy(&obj, &ctx.frame().exp[ctx.frame().index], sizeof(obj));
-	obj->setDouble(value);
+	obj->setDouble(value.number());
 	ctx.frame().index += sizeof(obj);
 	#ifdef debug
 	if(*ctx.runtime().boolsettings["o"])
 	{
-		std::cout<<"setting global: "<<obj->getId()<<" to: "<<value<<"\n";
+		std::cout<<"setting global: "<<obj->getId()<<" to: "<<value.number()<<"\n";
 	}
 	#endif
 }
 static inline void setLocalDoubleOp(KeywordExecutionContext ctx)
 {
-	double value = -1;
+	AscalExecutor::Operand value(0.0);
 	ctx.frame().initialOperands.top(value);
 	ctx.frame().initialOperands.pop();
 	uint64_t localIndex = 0;
     ctx.frame().index += Keyword::opcodeSize();
 	memcpy(&localIndex, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
-	ctx.frame().getLocalMemory()[localIndex].data.number = value;
+	ctx.frame().getLocalMemory()[localIndex].data.number = value.number();
 	ctx.frame().index += sizeof(uint64_t);
 	#ifdef debug
 	if(*ctx.runtime().boolsettings["o"])
 	{
-		std::cout<<"setting local: "<<localIndex<<" to: "<<value<<"\n";
+		std::cout<<"setting local: "<<localIndex<<" to: "<<value.number()<<"\n";
 	}
 	#endif
 }

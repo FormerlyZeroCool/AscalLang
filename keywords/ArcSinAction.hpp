@@ -11,14 +11,12 @@
 #include "../Keyword.hpp"
 static inline void arcSinAction(KeywordExecutionContext ctx) 
 {
-	double input = 0;
-	ctx.frame().initialOperands.top(input);
-	ctx.frame().initialOperands.pop();
-    ctx.frame().initialOperands.push(asin(input));
+	AscalExecutor::Operand &input = ctx.frame().initialOperands.back();
+    input.number() = (asin(input.number()));
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"arcSin("<<input<<") = "<<asin(input)<<'\n';
+    	std::cout<<"arcSin("<<input.number()<<") = "<<asin(input.number())<<'\n';
     }
 	#endif
     ctx.frame().index += Keyword::opcodeSize();

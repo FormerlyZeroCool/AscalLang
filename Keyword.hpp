@@ -101,64 +101,64 @@ inline void localDoubleVarRead(KeywordExecutionContext ctx)
     ctx.frame().index += sizeof(uint64_t);
     //std::cout<<"Loading data for var id: "<<index<<"\n";
     ctx.frame().initialOperands.push(ctx.frame().localMemory[index].data.number);
-    //std::cout<<"value: "<<ctx.frame().localMemory[index].data.number<<"\n";
+    //std::cout<<"value: "<<ctx.frame().localMemory[index].data.number()<<"\n";
 }
 inline void jumpIfFalseAction(KeywordExecutionContext ctx) 
 {
-	double jmp = -1, boolVal = 0;
+	AscalExecutor::Operand jmp(-1.0), boolVal(0.0);
 	ctx.frame().initialOperands.top(jmp);
 	ctx.frame().initialOperands.pop();
 	ctx.frame().initialOperands.top(boolVal);
 	ctx.frame().initialOperands.pop();
-	if(!boolVal && asc::abs(jmp) > Keyword::opcodeSize())
+	if(!boolVal.number() && asc::abs(jmp.number()) > Keyword::opcodeSize())
 	{
-		ctx.frame().index += jmp;
+		ctx.frame().index += jmp.number();
 	}
 	else
     	ctx.frame().index += Keyword::opcodeSize();
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"jump if false("<<boolVal<<"): "<<jmp<<'\n';
+    	std::cout<<"jump if false("<<boolVal.number()<<"): "<<jmp.number()<<'\n';
     }
 	#endif
 }
 inline void jumpIfFalseInlineAction(KeywordExecutionContext ctx) 
 {
-	double jmp = -1, boolVal = 0;
+	AscalExecutor::Operand jmp(-1.0), boolVal(0.0);
 	ctx.frame().initialOperands.top(boolVal);
 	ctx.frame().initialOperands.pop();
 	ctx.frame().index += Keyword::opcodeSize();
 	ctx.getData(jmp, ctx.frame().index);
-	if(!boolVal && asc::abs(jmp) > Keyword::opcodeSize())
+	if(!boolVal.number() && asc::abs(jmp.number()) > Keyword::opcodeSize())
 	{
-		ctx.frame().index += jmp;
+		ctx.frame().index += jmp.number();
 	}
 	else
-    	ctx.frame().index += sizeof(jmp);
+    	ctx.frame().index += sizeof(jmp.number());
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"jump if false("<<boolVal<<"): "<<jmp<<'\n';
+    	std::cout<<"jump if false("<<boolVal.number()<<"): "<<jmp.number()<<'\n';
     }
 	#endif
 }
 inline void jumpBackAction(KeywordExecutionContext ctx) 
 {
-	double jmp = 0;
+	AscalExecutor::Operand jmp(0.0);
 	ctx.frame().initialOperands.top(jmp);
 	ctx.frame().initialOperands.pop();
-	ctx.frame().index -= jmp;
+	ctx.frame().index -= jmp.number();
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"jump back: "<<jmp<<'\n';
+    	std::cout<<"jump back: "<<jmp.number()<<'\n';
     }
 	#endif
 }
 inline void jumpForwardInlineAction(KeywordExecutionContext ctx) 
 {
-	double jmp = 0;
+	double jmp = (0.0);
 	ctx.frame().index += Keyword::opcodeSize();
 	ctx.getData(jmp, ctx.frame().index);
 	ctx.frame().index += jmp;
@@ -289,14 +289,14 @@ static inline void makeDouble(KeywordExecutionContext ctx)
 static inline void makeDoubleParameter(KeywordExecutionContext ctx)
 {
     ctx.frame().index += Keyword::opcodeSize();
-    double value = -1;
     auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->initialOperands;
-    localMem.top(value);
+    
+    AscalExecutor::Operand &var = ctx.frame().initialOperands.back();
+    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE, var.number()));
     localMem.pop();
 	#ifdef debug
-    std::cout<<"parameter created, double: "<<value<<"\n"<<"Var stack id: "<<ctx.frame().getLocalMemory().size();
+    std::cout<<"parameter created, double: "<<var.number()<<"\n"<<"Var stack id: "<<ctx.frame().getLocalMemory().size();
     #endif
-    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE,value));
 }
 static inline void makeObjectParameter(KeywordExecutionContext ctx)
 {
@@ -336,6 +336,12 @@ static inline void returnAndPop(KeywordExecutionContext ctx)
     ctx.frame().initialOperands.resetStart();
     ctx.runtime().framePool.destroy(&ctx.frame());
     runtime.frameStack.top(ctx.frame_ptr);
+	#ifdef debug
+	if(*ctx.runtime().boolsettings["o"])
+	{
+		std::cout<<"Returning value: "<<ctx.frame().initialOperands.back().number()<<"\n";
+	}
+	#endif
     //    std::cout<<data<<"\n";
 }
 };

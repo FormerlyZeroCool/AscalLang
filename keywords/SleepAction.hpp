@@ -11,16 +11,15 @@
 #include "../Keyword.hpp"
 static inline void sleepAction(KeywordExecutionContext ctx) 
 {
-	double input = 0;
-	ctx.frame().initialOperands.top(input);
-	ctx.frame().initialOperands.pop();
-    CrossPlatform::usleep(input * 100);
+	AscalExecutor::Operand &input = ctx.frame().initialOperands.back();
+    CrossPlatform::usleep(input.number() * 100);
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"sleep("<<input<<") \n";
+    	std::cout<<"sleep("<<input.number()<<") \n";
     }
 	#endif
+	ctx.frame().initialOperands.pop();
     ctx.frame().index += Keyword::opcodeSize();
 }
 class SleepAction: public OpKeyword {

@@ -11,14 +11,12 @@
 #include "../Keyword.hpp"
 static inline void cosAction(KeywordExecutionContext ctx) 
 {
-	double input = 0;
-	ctx.frame().initialOperands.top(input);
-	ctx.frame().initialOperands.pop();
-    ctx.frame().initialOperands.push(cos(input));
+	AscalExecutor::Operand &input = ctx.frame().initialOperands.back();
+    input.number() = (input.number());
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"cos("<<input<<") = "<<cos(input)<<'\n';
+    	std::cout<<"cos("<<input.number()<<") = "<<cos(input.number())<<'\n';
     }
 	#endif
     ctx.frame().index += Keyword::opcodeSize();

@@ -60,7 +60,7 @@ public:
     AscalExecutor &runtime;
     string_view exp;
     uint32_t index = 0;
-    StackSegment<double> initialOperands;
+    StackSegment<AscalExecutor::Operand> initialOperands;
     StackSegment<StackDataRecord> localMemory;
     inline Object* getContext()
     {

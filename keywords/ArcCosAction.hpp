@@ -11,14 +11,12 @@
 #include "../Keyword.hpp"
 static inline void arcCosAction(KeywordExecutionContext ctx) 
 {
-	double input = 0;
-	ctx.frame().initialOperands.top(input);
-	ctx.frame().initialOperands.pop();
-    ctx.frame().initialOperands.push(acos(input));
+	AscalExecutor::Operand &input = ctx.frame().initialOperands.back();
+    input.number() = (acos(input.number()));
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"arccos("<<input<<") = "<<acos(input)<<'\n';
+    	std::cout<<"arccos("<<input.number()<<") = "<<acos(input.number())<<'\n';
     }
 	#endif
     ctx.frame().index += Keyword::opcodeSize();

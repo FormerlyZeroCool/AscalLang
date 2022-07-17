@@ -93,16 +93,19 @@ struct GuiPlotParams {
 	}
 	void loadDataFromVM(KeywordExecutionContext ctx)
 	{
-			ctx.frame().index += Keyword::opcodeSize();
-			//loading xMin, and xMax from stack because they were dynamically calculated from expressions
-			ctx.frame().initialOperands.top(xMax);
-			ctx.frame().initialOperands.pop();
-			ctx.frame().initialOperands.top(xMin);
-			ctx.frame().initialOperands.pop();
-			ctx.getData(functionCount, ctx.frame().index);
-			ctx.frame().index += sizeof(uint64_t);
-			uint64_t i = 0;
-			for(; i < functionCount; i++)//load object pointers into memory
+		AscalExecutor::Operand xMin, xMax;
+		ctx.frame().index += Keyword::opcodeSize();
+		//loading xMin, and xMax from stack because they were dynamically calculated from expressions
+		ctx.frame().initialOperands.top(xMax);
+		ctx.frame().initialOperands.pop();
+		ctx.frame().initialOperands.top(xMin);
+		ctx.frame().initialOperands.pop();
+		this->xMax = xMax.number();
+		this->xMin = xMin.number();
+		ctx.getData(functionCount, ctx.frame().index);
+		ctx.frame().index += sizeof(uint64_t);
+		uint64_t i = 0;
+		for(; i < functionCount; i++)//load object pointers into memory
 			{
 				uint64_t type = 0;
 				ctx.getData(type, ctx.frame().index);
@@ -120,9 +123,9 @@ struct GuiPlotParams {
 					ctx.frame().index += sizeof(functions[i]);
 				}
 			}
-			results.reserve(PlotGUIAction::TABLE_WIDTH * functionCount);
-			results.set(PlotGUIAction::TABLE_WIDTH, functionCount);
-			recalcResults(ctx);
+		results.reserve(PlotGUIAction::TABLE_WIDTH * functionCount);
+		results.set(PlotGUIAction::TABLE_WIDTH, functionCount);
+		recalcResults(ctx);
 	}
 	double getdx() const noexcept
 	{

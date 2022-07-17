@@ -11,14 +11,12 @@
 #include "../Keyword.hpp"
 static inline void tanAction(KeywordExecutionContext ctx) 
 {
-	double input = 0;
-	ctx.frame().initialOperands.top(input);
-	ctx.frame().initialOperands.pop();
-    ctx.frame().initialOperands.push(tan(input));
+	AscalExecutor::Operand &input = ctx.frame().initialOperands.back();
+    input.number() = tan(input.number());
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"tan("<<input<<") = "<<tan(input)<<'\n';
+    	std::cout<<"tan("<<input.number()<<") = "<<tan(input.number())<<'\n';
     }
 	#endif
     ctx.frame().index += Keyword::opcodeSize();

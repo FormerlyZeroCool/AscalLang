@@ -410,13 +410,13 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             frame->getObjectAt(operation, frame->index);
             operation(KeywordExecutionContext(frame));
         }
-        double data = 0;
+        AscalExecutor::Operand data(0.0);
         if(!frame->initialOperands.isEmpty())
         {
             frame->initialOperands.top(data);
         }
 
-        return data;
+        return data.number();
     }
     catch(std::string &error)
     {

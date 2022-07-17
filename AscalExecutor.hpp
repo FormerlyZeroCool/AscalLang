@@ -80,11 +80,29 @@ Keyword* getKeywordFromPtrToOpcode(uint8_t *start)
 }
 static inline const uint8_t KEYWORD_IDENTIFIER = 128, DOUBLE = 129, OPERATOR = 130, VARIABLE = 131, DELIMITER = 132, ARRAY_OBJ = 133;
 
-    ObjectPool<AscalFrame<double> > framePool;
+ObjectPool<AscalFrame<double> > framePool;
 stack<AscalFrame<double>* > frameStack;
 /////////////////////////////
 //Program Global Memory Declaration
-stack<double> operands;
+struct Operand {
+	private:
+	double num;
+	public:
+	constexpr Operand(double num): num(num) {}
+	Operand(Object* object) { memcpy(&num, &object, sizeof(object)); }
+	constexpr Operand(): num(0.0) {}
+	constexpr double& number() noexcept
+	{
+		return num;
+	}
+	Object*& object() noexcept
+	{
+		Object** ptr = nullptr;
+		memcpy(&ptr, &num, sizeof(Object*));
+		return *ptr;
+	}
+};
+stack<Operand> operands;
 stack<StackDataRecord> dataStack;
 MemoryManager memMan;
 FlatMap<string_view, Object*> memory;

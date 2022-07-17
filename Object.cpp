@@ -72,7 +72,19 @@ const uint8_t Object::initialOffset = sizeof(double);
         //lexing
         while(ctx.src_index < ctx.source.length())
         {
-            if(ParsingUtil::isalpha(ctx.source[ctx.src_index]))
+            if(Calculator<double>::isOperator(ctx.source[ctx.src_index]))
+            {
+                if(ctx.source[ctx.src_index + 1] == '=' && (ctx.source[ctx.src_index] == '<' || ctx.source[ctx.src_index] == '>'))
+                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
+                else if(ctx.source[ctx.src_index + 1] == '=' && ctx.source[ctx.src_index] == '!')
+                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
+                else
+                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::OPERATOR));
+                //ctx.target.append(AscalExecutor::OPERATOR);
+                //ctx.target.append(ctx.source[ctx.src_index]);
+                ctx.src_index++;
+            }
+            else if(ParsingUtil::isalpha(ctx.source[ctx.src_index]))
             {
                 SubStrSV varName = ParsingUtil::getVarNameSV(ctx.source, ctx.src_index);
                 const auto keyword = runtime.inputMapper.find(varName.data);
@@ -107,18 +119,6 @@ const uint8_t Object::initialOffset = sizeof(double);
                 ctx.lastTokens.back().constantValue = number;
                 //ctx.target.append(AscalExecutor::DOUBLE);
                 //ctx.target.append(number);
-            }
-            else if(Calculator<double>::isOperator(ctx.source[ctx.src_index]))
-            {
-                if(ctx.source[ctx.src_index + 1] == '=' && (ctx.source[ctx.src_index] == '<' || ctx.source[ctx.src_index] == '>'))
-                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
-                else if(ctx.source[ctx.src_index + 1] == '=' && ctx.source[ctx.src_index] == '!')
-                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
-                else
-                    ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::OPERATOR));
-                //ctx.target.append(AscalExecutor::OPERATOR);
-                //ctx.target.append(ctx.source[ctx.src_index]);
-                ctx.src_index++;
             }
             else if(ctx.source[ctx.src_index] == ';' || ctx.source[ctx.src_index] == '\n')
             {
@@ -180,245 +180,234 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.getData(paramsCount, ctx.frame().index + sizeof(Object*) * 2);
         ctx.frame().index += sizeof(size_t) + sizeof(Object*) * 2;
         auto newFrame = ctx.runtime().framePool.construct(ctx.runtime());
-        double var;
+        
+        #ifdef debug
+        if(*ctx.runtime().boolsettings["o"])
+            std::cout<<"calling global function stored in obj id: "<<obj->getId()<<" frame instruction length: "<<newFrame->exp.length()<<"\n";
+        #endif
         for(int i = 0; i < paramsCount; i++)
         {
-            ctx.frame().initialOperands.top(var);
+            AscalExecutor::Operand &var = ctx.frame().initialOperands.back();
+            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, var.number()));
+            #ifdef debug
+            if(*ctx.runtime().boolsettings["o"])
+                std::cout<<"passing parameter: "<<var.number()<<"\n";
+            #endif
             ctx.frame().initialOperands.pop();
-            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, var));
         }
         newFrame->initialOperands.resetStart();
         newFrame->exp = obj->getInstructions();
         newFrame->index = 0;
         ctx.runtime().frameStack.push(newFrame);
         ctx.frame_ptr = newFrame;
-        #ifdef debug
-        std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";
-        #endif
     }
     
     
     inline void plusOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b+a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = b.number() + a.number();
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"+"<<a<<"\n";
+            std::cout<<b.number()<<"+"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void minusOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b-a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() - a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"-"<<a<<"\n";
+            std::cout<<b.number()<<"-"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void multiplyOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b*a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() * a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"*"<<a<<"\n";
+            std::cout<<b.number()<<"*"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void divisionOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b/a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() / a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"/"<<a<<"\n";
+            std::cout<<b.number()<<"/"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void modOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(doubleModulus(b,a));
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (doubleModulus(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"%"<<a<<"\n";
+            std::cout<<b.number()<<"%"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void exponentOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(std::pow(b,a));
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (std::pow(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"^"<<a<<"\n";
+            std::cout<<b.number()<<"^"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void permuteOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(permute(b,a));
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (permute(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"P"<<a<<"\n";
+            std::cout<<b.number()<<"P"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void combinationsOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(combinations(b,a));
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (combinations(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"C"<<a<<"\n";
+            std::cout<<b.number()<<"C"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void logOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(log(b,a));
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (log(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<"log"<<b<<"("<<a<<")"<<"\n";
+            std::cout<<"log"<<b.number()<<"("<<a.number()<<")"<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void rootOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(rootOp(b,a));
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (rootOp(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"$"<<a<<"\n";
+            std::cout<<b.number()<<"$"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void equalsOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b == a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() == a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"="<<a<<"\n";
+            std::cout<<b.number()<<"="<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void lessThanOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b < a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() < a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"<"<<a<<"\n";
+            std::cout<<b.number()<<"<"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void greaterThanOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b > a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() > a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<">"<<a<<"\n";
+            std::cout<<b.number()<<">"<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void lessThanOrEqualToOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b <= a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() <= a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<"<="<<a<<"\n";
+            std::cout<<b.number()<<"<="<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void greaterThanOrEqualToOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b >= a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() >= a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<">="<<a<<"\n";
+            std::cout<<b.number()<<">="<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void notEqualToOp(KeywordExecutionContext ctx)
     {
-        double a = -1, b = -1;
+        AscalExecutor::Operand a;
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.top(b);
-        ctx.frame().initialOperands.pop();
-        ctx.frame().initialOperands.push(b >= a);
+        AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
+        b.number() = (b.number() >= a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b<<">="<<a<<"\n";
+            std::cout<<b.number()<<">="<<a.number()<<"\n";
         #endif
         ctx.frame().index += Keyword::opcodeSize();
     }
@@ -513,10 +502,9 @@ const uint8_t Object::initialOffset = sizeof(double);
         newFrame->localMemory.push(StackDataRecord(StackDataRecord::REFERENCED, obj));
         for(int i = 0; i < paramsCount; i++)
         {
-            double data;
-            ctx.frame().initialOperands.top(data);
+            AscalExecutor::Operand &data = ctx.frame().initialOperands.back();
+            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, data.number()));
             ctx.frame().initialOperands.pop();
-            newFrame->localMemory.push(StackDataRecord(StackDataRecord::DOUBLE, data));
         }
 
         //std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";

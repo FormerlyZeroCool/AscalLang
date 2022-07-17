@@ -26,12 +26,12 @@ static inline void makeDouble(KeywordExecutionContext ctx)
 static inline void makeDoubleParameter(KeywordExecutionContext ctx)
 {
     ctx.frame().index += Keyword::opcodeSize();
-    double value = -1;
-    auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->initialOperands;
+    AscalExecutor::Operand value;
+    auto &localMem = ctx.runtime().frameStack.back()->initialOperands;
     localMem.top(value);
     localMem.pop();
     //std::cout<<"paramdouble: "<<value<<" StackIndex: "<<ctx.frame().getLocalMemory().size()<<"\n";
-    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE,value));
+    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE, value.number()));
 }
 static inline void makeObjectParameter(KeywordExecutionContext ctx)
 {

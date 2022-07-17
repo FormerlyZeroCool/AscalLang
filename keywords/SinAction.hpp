@@ -11,14 +11,12 @@
 #include "../Keyword.hpp"
 static inline void sinAction(KeywordExecutionContext ctx) 
 {
-	double input = 0;
-	ctx.frame().initialOperands.top(input);
-	ctx.frame().initialOperands.pop();
-    ctx.frame().initialOperands.push(sin(input));
+	AscalExecutor::Operand &input = ctx.frame().initialOperands.back();
+    input.number() = sin(input.number());
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {
-    	std::cout<<"sin("<<input<<") = "<<sin(input)<<'\n';
+    	std::cout<<"sin("<<input.number()<<") = "<<sin(input.number())<<'\n';
     }
 	#endif
     ctx.frame().index += Keyword::opcodeSize();
