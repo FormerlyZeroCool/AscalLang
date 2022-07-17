@@ -13,7 +13,7 @@ UTILINCLUDES = queue.hpp stack.hpp Vect2D.hpp unsortedlist.hpp
 CFLAGS   = -O3 -Wall
 CXXFLAGS = -O3 -std=c++17 -Wall -Dlibreadline 
 #for most distros
-LDFLAGS = -lreadline
+LDFLAGS = -lreadline -O3
 #for debian if previous fails
 #LDFLAGS = -lreadline -L/usr/lib/x86_64-linux-gnu 
 .PHONY: default run

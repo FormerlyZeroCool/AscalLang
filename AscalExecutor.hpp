@@ -86,20 +86,18 @@ stack<AscalFrame<double>* > frameStack;
 //Program Global Memory Declaration
 struct Operand {
 	private:
-	double num;
+	union rec{ double number; Object* obj; constexpr rec(double d):number(d){} constexpr rec(Object* obj): obj(obj) {}} data;
 	public:
-	constexpr Operand(double num): num(num) {}
-	Operand(Object* object) { memcpy(&num, &object, sizeof(object)); }
-	constexpr Operand(): num(0.0) {}
+	constexpr Operand(double num): data(num) {}
+	constexpr Operand(Object* object): data(object) { }
+	constexpr Operand(): data(0.0) {}
 	constexpr double& number() noexcept
 	{
-		return num;
+		return data.number;
 	}
-	Object*& object() noexcept
+	constexpr Object*& object() noexcept
 	{
-		Object** ptr = nullptr;
-		memcpy(&ptr, &num, sizeof(Object*));
-		return *ptr;
+		return data.obj;
 	}
 };
 stack<Operand> operands;
