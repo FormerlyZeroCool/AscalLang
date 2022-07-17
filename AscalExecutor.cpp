@@ -133,7 +133,7 @@ void AscalExecutor::loadInitialFunctions()
     loadFn(Object(memMan, "fib","(x){loc counter = 0;loc first = 0;loc second = 1;loc int = 0;while counter<x{set int = second;set second = second+first;set first = int;set counter = counter+1;};first}",""));
     loadFn(Object(memMan, "fibr","(x){loc fr = (x){when x > 1 then fr(x-1)+fr(x-2) else x end;};loc z = 0;memoize 1;set z = fr(x);memoize 0;z}",""));
     loadFn(Object(memMan, "rfibr","(x){when x > 1 then rfibr(x-1)+rfibr(x-2) else x end;}",""));
-    //loadFn(Object(memMan, "ack","when m=0 + n*0  then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
+    //loadFn(Object(memMan, "ack","when m=0 then n+1 when n=0 then ack(m-1,1) when  m+n > 0 then ack(m-1,ack(m,n-1)) else 0 end",""));
     //loadFn(Object(memMan, "fastAck","(m,n){loc z = 0;memoize 1;set z = ack(m,n);memoize 0;z;}",""));
     //loadFn(Object(memMan, "gcd","(a,b){when b=0 then a when a=0=0 then gcd(b,a%b) else b end}",""));
     /*loadFn(Object(memMan, "sumBetween","(numberzxa,numberzxb){"

@@ -80,7 +80,7 @@ static bool readLine(std::string &line, std::string prompt)
     else
         readLineBuffer = readline("");
 
-    auto bufCleaner = std::make_unique<char*>(readLineBuffer);
+    //auto bufCleaner = std::make_unique<char*>(readLineBuffer);
     if(readLineBuffer)
     {
         line = readLineBuffer;
@@ -88,6 +88,7 @@ static bool readLine(std::string &line, std::string prompt)
           add_history(readLineBuffer);
         }
     }
+    free(readLineBuffer);
     return readLineBuffer;
 }
 static void getLine(std::istream &ascal_cin, std::string &line)
