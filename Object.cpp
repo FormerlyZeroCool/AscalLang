@@ -209,11 +209,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = b.number() + a.number();
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"+"<<a.number()<<"\n";
         #endif
+        b.number() = b.number() + a.number();
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void minusOp(KeywordExecutionContext ctx)
@@ -222,11 +222,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() - a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"-"<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() - a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void multiplyOp(KeywordExecutionContext ctx)
@@ -235,11 +235,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() * a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"*"<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() * a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void divisionOp(KeywordExecutionContext ctx)
@@ -248,11 +248,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() / a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"/"<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() / a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void modOp(KeywordExecutionContext ctx)
@@ -261,11 +261,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (doubleModulus(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"%"<<a.number()<<"\n";
         #endif
+        b.number() = (doubleModulus(b.number(), a.number()));
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void exponentOp(KeywordExecutionContext ctx)
@@ -274,11 +274,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (std::pow(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"^"<<a.number()<<"\n";
         #endif
+        b.number() = (std::pow(b.number(), a.number()));
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void permuteOp(KeywordExecutionContext ctx)
@@ -287,11 +287,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (permute(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"P"<<a.number()<<"\n";
         #endif
+        b.number() = (permute(b.number(), a.number()));
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void combinationsOp(KeywordExecutionContext ctx)
@@ -300,11 +300,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (combinations(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"C"<<a.number()<<"\n";
         #endif
+        b.number() = (combinations(b.number(), a.number()));
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void logOp(KeywordExecutionContext ctx)
@@ -313,11 +313,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (log(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<"log"<<b.number()<<"("<<a.number()<<")"<<"\n";
         #endif
+        b.number() = (log(b.number(), a.number()));
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void rootOp(KeywordExecutionContext ctx)
@@ -326,11 +326,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (rootOp(b.number(), a.number()));
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"$"<<a.number()<<"\n";
         #endif
+        b.number() = (rootOp(b.number(), a.number()));
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void equalsOp(KeywordExecutionContext ctx)
@@ -339,11 +339,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() == a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"="<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() == a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void lessThanOp(KeywordExecutionContext ctx)
@@ -352,11 +352,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() < a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"<"<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() < a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void greaterThanOp(KeywordExecutionContext ctx)
@@ -365,11 +365,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() > a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<">"<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() > a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void lessThanOrEqualToOp(KeywordExecutionContext ctx)
@@ -378,11 +378,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() <= a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<"<="<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() <= a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void greaterThanOrEqualToOp(KeywordExecutionContext ctx)
@@ -391,11 +391,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() >= a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<">="<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() >= a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     inline void notEqualToOp(KeywordExecutionContext ctx)
@@ -404,11 +404,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.frame().initialOperands.top(a);
         ctx.frame().initialOperands.pop();
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
-        b.number() = (b.number() >= a.number());
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
             std::cout<<b.number()<<">="<<a.number()<<"\n";
         #endif
+        b.number() = (b.number() >= a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     void compileOperator(CompilationContext &ctx, StackSegment<CompilationContext::Token> &stack)
