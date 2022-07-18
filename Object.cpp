@@ -406,9 +406,9 @@ const uint8_t Object::initialOffset = sizeof(double);
         AscalExecutor::Operand &b = ctx.frame().initialOperands.back();
         #ifdef debug
         if(*ctx.runtime().boolsettings["o"])
-            std::cout<<b.number()<<">="<<a.number()<<"\n";
+            std::cout<<b.number()<<"!="<<a.number()<<"\n";
         #endif
-        b.number() = (b.number() >= a.number());
+        b.number() = (b.number() != a.number());
         ctx.frame().index += Keyword::opcodeSize();
     }
     void compileOperator(CompilationContext &ctx, StackSegment<CompilationContext::Token> &stack)
