@@ -71,16 +71,9 @@ void AscalExecutor::updateBoolSetting(std::string &&name)
             std::cout<<set.getName()<<" Status changed to: "<<(data?"On":"Off")<<"\n";
         }
     }
-AscalExecutor::~AscalExecutor() {
-    for(auto &chunk:inputMapper)
-    {
-        delete chunk.getValue();
-    }
-}
 Object& AscalExecutor::loadFn(Object function)
 {
     Object &inserted = loadUserDefinedFn(function, memory);
-    systemDefinedFunctions.push_back(function);
     return inserted;
 }
 
@@ -203,7 +196,19 @@ loadFn(Object(memMan, "clear","println(150)",""));
     loadFn(e).setDouble(2.718281828459045);
     loadFn(pi).setDouble(3.141592653589793238462643383279);
 }
-AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
+	AscalExecutor::~AscalExecutor()
+	{
+		for(auto &chunk : memory)
+		{
+			this->memMan.obj_free(chunk.getValue());
+		}
+        for(auto &chunk:inputMapper)
+        {
+            delete chunk.getValue();
+        }
+	}
+AscalExecutor::AscalExecutor(char** argv, int argc, int index, std::streambuf* streambuf): 
+    rememberedFromMemoTableCount(0), stream_buffer_cin(streambuf), ascal_cin(streambuf)
 {
 
     ascal_cin.rdbuf(streambuf);
@@ -415,7 +420,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
         {
             frame->initialOperands.top(data);
         }
-
+        frameStack.pop();
         return data.number();
     }
     catch(std::string &error)
@@ -451,8 +456,7 @@ void AscalExecutor::cleanOnError(bool timeInstruction, t start, t end)
 
                 frameCount = 1;
                 varCount = 0;
-                rememberedFromMemoTableCount = 0;
-                memoPad.clear();
+                
 }
 
 double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
@@ -495,17 +499,17 @@ double AscalExecutor::calcWithOptions(AscalFrame<double>* frame)
                                   << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
         }
-        if(std::to_string(result).length() != MAX.length() && *boolsettings["p"])
+        if(*boolsettings["p"])
         {
-            if(*boolsettings["sci"])
+            //if(*boolsettings["sci"])
                 std::cout<<result<<std::endl;
-            else
-                std::cout<<ParsingUtil::to_string(result)<<std::endl;
+            //else
+              //  std::cout<<ParsingUtil::to_string(result)<<std::endl;
         }
     }
     frameCount = 1;
     varCount = 0;
-    rememberedFromMemoTableCount = 0;
+    
     return result;
 
 }

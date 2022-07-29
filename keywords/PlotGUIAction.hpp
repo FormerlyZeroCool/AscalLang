@@ -148,7 +148,6 @@ struct GuiPlotParams {
 				results.insertAt(i, j, result);
 				frame.initialOperands.pop();
 				frame.localMemory.pop();
-				ctx.runtime().frameStack.pop();
 				xi += dx;
 			}
 			//std::cout<<"\n";

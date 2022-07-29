@@ -64,6 +64,8 @@ inline std::ostream& operator << (std::ostream& os, const std::vector<T>& v)
     return os;
 }
 class Object {
+    public:
+    static inline const uint64_t OBJECT = 1, LIST = 16, DOUBLE = 4, DOUBLE_LIST = 16 | 2 | 1, OBJECT_LIST = 16 | 8 | 1;
 private:
     void *inp = nullptr, *idp = nullptr;
     uint32_t instructionBufferSizeId = 0;
@@ -134,8 +136,7 @@ public:
             throw std::string("Error invalid index: "+std::to_string(index));
     }
     inline double getDouble() const;
-    inline bool isDouble();
-    double getDoubleAtIndex(uint32_t index)
+    double getDoubleAtIndex(uint32_t index) const
     {
         if(index < this->getListSize())
         {
@@ -144,7 +145,7 @@ public:
             return result;
         }
         else
-            throw std::string("Error invalid index: "+std::to_string(index));
+            throw std::string("Error invalid index: " + std::to_string(index));
     }
     inline Object& getObjectAtIndex(uint32_t index) const;
     int setParams(string_view param, uint32_t = 0);
@@ -170,9 +171,15 @@ public:
     Object& operator[](string_view id);
     Object& operator[](size_t index);
     Object& loadChild(Object &data, AscalExecutor &);
-    bool isList();
-    bool isDoubleList();
-    bool isObjList();
+    void makeList() noexcept
+    {
+        flagRegisters = Object::DOUBLE_LIST;
+    }
+    bool isDouble() const noexcept;
+    bool isDoubleList() const noexcept;
+    bool isList() const noexcept;
+    bool isObjList() const noexcept;
+    bool isObject() const noexcept;
     inline void clearList();
     void pushList(Object &data);
     void pushList(Object &&data);
@@ -207,10 +214,6 @@ public:
     virtual ~Object();
 };
 
-bool Object::isDouble()
-{
-    return (this->flagRegisters & 4);
-}
 void Object::setDouble(double d)
 {
     this->flagRegisters = 4;

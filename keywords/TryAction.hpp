@@ -20,11 +20,14 @@ public:
 	{
 	    SubStrSV exp = ParsingUtil::getFollowingExprSV(frame->exp, frame->index, keyWord);
 	    try{
+			/*
 	    	double input = runtime.callOnFrame(frame,exp.data);
 	    	frame->initialOperands.push(input);
+			*/
 	    }
 	    catch(std::string &s)
 	    {
+			/*
 	    	frame->initialOperands.clear();
 			frame->initialOperands.push_back(std::numeric_limits<double>::max());
 			Object log(runtime.memMan, string_view("errorMessageLog", 14), string_view("", 0));
@@ -33,6 +36,7 @@ public:
 			errorFlag.setDouble(1);
 			runtime.loadUserDefinedFn(log, *frame->getLocalMemory());
 			runtime.loadUserDefinedFn(errorFlag, *frame->getLocalMemory());
+			*/
 	    }
 	    if(*runtime.boolsettings["o"])
 	    {

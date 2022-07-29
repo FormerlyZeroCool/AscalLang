@@ -9,6 +9,22 @@
 #define KEYWORDS_ARRPUSHVALACTION_HPP_
 
 #include "../Keyword.hpp"
+static inline void pushDoubleArray(KeywordExecutionContext ctx)
+{
+	AscalExecutor::Operand a = ctx.frame().initialOperands.back();
+	ctx.frame().initialOperands.pop();
+	ctx.frame().index += Keyword::opcodeSize();
+	Object* obj = nullptr;
+	ctx.getData(obj);
+	ctx.frame().index += Keyword::opcodeSize();
+	obj->makeList();
+	obj->pushList(a.number());
+	
+	#ifdef debug
+	if(*ctx.runtime().boolsettings["o"])
+		std::cout<<"pushing: "<<obj->id<<"["<<obj->getListSize()<<"] = "<<a.constNumber()<<"\n";
+	#endif
+}
 class ArrPushValAction: public OpKeyword {
 private:
     ParsedStatementList params;
@@ -17,6 +33,26 @@ public:
 		OpKeyword(runtime)
 	{
 		this->keyWord = "arrPush";
+	}
+	void compile(CompilationContext &ctx) override
+	{
+		//parse, and compile push object in and then compile params for index
+		ctx.src_index += this->keyWord.size();
+		const SubStrSV paramsExp = ParsingUtil::getExprInStringSV(ctx.source, ctx.src_index, '(', ')');
+		ParsingUtil::ParseStatementList(paramsExp.data, 0, this->params);
+		if(this->params.statements.size() != 2)
+		{
+			throw std::string("Error invalid parameters for arrPush(arr, index)");
+		}
+		const auto it = ctx.runtime.memory.find(params.statements[0].data);
+		if(it != ctx.runtime.memory.end())
+		{
+			ctx.target.compileParams(params.statements[1].data, ctx.runtime, ctx);
+			this->operation = pushDoubleArray;
+			ctx.append(this->operation);
+			ctx.append((*it).getValue());
+		}
+		ctx.src_index = paramsExp.end+1;
 	}
 	/*void action(AscalFrame<double>* frame) override
 	{

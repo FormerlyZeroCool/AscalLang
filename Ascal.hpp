@@ -82,6 +82,7 @@ public:
 		keyword *key = new keyword(runtime);//constructor of keyword uses runtime.keywordsLookupTable.size() + 1 for opCode
 		runtime.addKeyWord(reinterpret_cast<Keyword*>(key));
 	}
+	~Ascal() {}
 	Ascal(char** argv, int argc, int index): runtime(argv, argc, index, std::cin.rdbuf())
 	{
 		initKeywords();
@@ -123,11 +124,11 @@ public:
 			addKeyWord<NewGlobalFunction>();
 			addKeyWord<WhenAction>();
 			addKeyWord<PlotGUIAction>();
-/*
-			addKeyWord<DerivefnAction>();
 			addKeyWord<ArrGetValAction>();
 			addKeyWord<ArrPushValAction>();
 			addKeyWord<ArrSetValAction>();
+/*
+			addKeyWord<DerivefnAction>();
 			addKeyWord<ApproxIntAction>();
 			addKeyWord<ElseAction>();
 			addKeyWord<ExistsAction>();

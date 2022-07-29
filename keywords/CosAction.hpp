@@ -12,7 +12,7 @@
 static inline void cosAction(KeywordExecutionContext ctx) 
 {
 	AscalExecutor::Operand &input = ctx.frame().initialOperands.back();
-    input.number() = (input.number());
+    input.number() = cos(input.number());
 	#ifdef debug
     if(*ctx.runtime().boolsettings["o"])
     {

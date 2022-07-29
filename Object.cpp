@@ -72,7 +72,23 @@ const uint8_t Object::initialOffset = sizeof(double);
         //lexing
         while(ctx.src_index < ctx.source.length())
         {
-            if(Calculator<double>::isOperator(ctx.source[ctx.src_index]))
+            if(ParsingUtil::isNumeric(ctx.source[ctx.src_index]) || ctx.source[ctx.src_index] == '.' ||
+                (!ctx.lastTokens.size() &&  ctx.source[ctx.src_index] == '-') ||
+                (ctx.lastTokens.size() && ctx.lastTokens.back().source[0] == ',' &&  ctx.source[ctx.src_index] == '-') ||
+                (ctx.lastTokens.size() && ctx.lastTokens.back().source[0] == ';' &&  ctx.source[ctx.src_index] == '-') ||
+                (ctx.lastTokens.size() && ctx.lastTokens.back().type == CompilationContext::Token::OPERATOR && ctx.lastTokens.back().source != string_view(")", 1)  &&  ctx.source[ctx.src_index] == '-')
+                )
+            {
+                int index = ctx.src_index;
+                const auto number = ParsingUtil::getNextDouble(ctx.source, index);
+                ctx.lastTokens.push_back(CompilationContext::Token(ctx.source.substr(ctx.src_index, index - ctx.src_index), ctx.src_index, CompilationContext::Token::NUMBER));
+                //std::cout<<"source Parsed num: "<<number<<" Len: "<<(index - ctx.src_index)<<"\n";
+                ctx.src_index = index;
+                ctx.lastTokens.back().constantValue = number;
+                //ctx.target.append(AscalExecutor::DOUBLE);
+                //ctx.target.append(number);
+            }
+            else if(Calculator<double>::isOperator(ctx.source[ctx.src_index]))
             {
                 if(ctx.source[ctx.src_index + 1] == '=' && (ctx.source[ctx.src_index] == '<' || ctx.source[ctx.src_index] == '>'))
                     ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index++], 2), ctx.src_index, CompilationContext::Token::OPERATOR));
@@ -105,21 +121,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                         //ctx.src_index++;
                     }*/
                 }
-            }
-            else if(ParsingUtil::isNumeric(ctx.source[ctx.src_index]) || ctx.source[ctx.src_index] == '.' ||
-                (!ctx.lastTokens.size() &&  ctx.source[ctx.src_index] == '-') ||
-                (ctx.lastTokens.size() && ctx.lastTokens.back().type == CompilationContext::Token::OPERATOR && ctx.lastTokens.back().source != string_view(")", 1) &&  ctx.source[ctx.src_index] == '-')
-                )
-            {
-                int index = ctx.src_index;
-                const auto number = ParsingUtil::getNextDouble(ctx.source, index);
-                ctx.lastTokens.push_back(CompilationContext::Token(ctx.source.substr(ctx.src_index, index - ctx.src_index), ctx.src_index, CompilationContext::Token::NUMBER));
-                //std::cout<<"source Parsed num: "<<number<<" Len: "<<(index - ctx.src_index)<<"\n";
-                ctx.src_index = index;
-                ctx.lastTokens.back().constantValue = number;
-                //ctx.target.append(AscalExecutor::DOUBLE);
-                //ctx.target.append(number);
-            }
+            } 
             else if(ctx.source[ctx.src_index] == ';' || ctx.source[ctx.src_index] == '\n')
             {
                 //ctx.lastTokens.clear();
@@ -132,7 +134,7 @@ const uint8_t Object::initialOffset = sizeof(double);
             {
                 while(ctx.src_index < ctx.source.length() && ctx.source[ctx.src_index++] != '\n') {}
             }
-            else if(ctx.source[ctx.src_index] == '&' ||ctx.source[ctx.src_index] == '[' || ctx.source[ctx.src_index] == ']' || ctx.source[ctx.src_index] == '"' || ctx.source[ctx.src_index] == '.')
+            else if(ctx.source[ctx.src_index] == '&' || ctx.source[ctx.src_index] == '[' || ctx.source[ctx.src_index] == ']' || ctx.source[ctx.src_index] == '"' || ctx.source[ctx.src_index] == '.')
             {
                 ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::VARIABLE_PART));
                 
@@ -176,9 +178,9 @@ const uint8_t Object::initialOffset = sizeof(double);
     {
         Object *obj = nullptr;
         uint64_t paramsCount = 0;
-        ctx.getData(obj, ctx.frame().index + sizeof(Object*));
-        ctx.getData(paramsCount, ctx.frame().index + sizeof(Object*) * 2);
-        ctx.frame().index += sizeof(size_t) + sizeof(Object*) * 2;
+        ctx.getData(obj, ctx.index() + sizeof(Object*));
+        ctx.getData(paramsCount, ctx.index() + sizeof(Object*) * 2);
+        ctx.index() += sizeof(size_t) + sizeof(Object*) * 2;
         auto newFrame = ctx.runtime().framePool.construct(ctx.runtime());
         
         #ifdef debug
@@ -508,9 +510,11 @@ const uint8_t Object::initialOffset = sizeof(double);
         }
 
         //std::cout<<" obj*: "<<obj<<" frame ptr: "<<newFrame->exp.length()<<"\n";
+        newFrame->initialOperands.resetStart();
         ctx.runtime().frameStack.push(newFrame);
         ctx.frame_ptr = newFrame;
     }
+    
     void Object::compileTokens(CompilationContext &ctx, uint32_t end)
     {
         end = end < ctx.lastTokens.size() ? end : ctx.lastTokens.size();
@@ -529,13 +533,36 @@ const uint8_t Object::initialOffset = sizeof(double);
                 ctx.target.append(op);
                 ctx.target.append(token.constantValue);
             }
+            else if(token.type == CompilationContext::Token::VARIABLE_PART && token.source[0] == '[')
+            {
+                ctx.src_index = token.start;
+                //parse expression
+                const SubStrSV expression = ParsingUtil::getExprInStringSV(ctx.source, ctx.src_index, '[', ']');
+                std::cout<<"compiling array access: "<<expression.data.substr(1, expression.data.size() - 2)<<"\n";
+                //handle runtime
+                if(ctx.target.getInstructions().size() < (sizeof(void*)))
+                    throw std::string("Error building no object supplied");
+
+                operationType op = readAndPushFromGlobalList;
+                ctx.append(op);
+                
+                const auto start = ctx.target.getInstructions().size();
+                const uint64_t zero = 0;
+                ctx.append(zero);
+                ctx.src_index = expression.data.size() + ctx.src_index;
+                ctx.target.compileParams(expression.data.substr(1, expression.data.size() - 2), ctx.runtime, ctx);
+                const uint64_t length = ctx.target.getInstructions().size() - start - sizeof(uint64_t);
+                memcpy(&ctx.target.getInstructions()[start], &length, sizeof(zero));
+                ctx.src_index = expression.end;
+                ctx.syncTokenIndexToSrcIndex();
+                ctx.src_index = tokens[--i].start;
+            }
             else if(token.type == CompilationContext::Token::VARIABLE)
             {
                 auto endIt = tokens.begin() + i;
-                while(endIt != tokens.end() && (endIt->type == CompilationContext::Token::VARIABLE || endIt->type == CompilationContext::Token::VARIABLE_PART 
-                    || endIt->type == CompilationContext::Token::NUMBER))
+                while(endIt != tokens.end() && (endIt->type == CompilationContext::Token::VARIABLE))
                     endIt++;
-                Object *parent = nullptr;
+                //Object *parent = nullptr;
                 const auto it = ctx.runtime.memory.find(token.source);
                 const auto localIt = ctx.localMemory.find(token.source);
                 //std::cout<<"parsing varname: "<<token.source<<"\n";
@@ -565,56 +592,25 @@ const uint8_t Object::initialOffset = sizeof(double);
                             {
                                 ctx.target.compileParams(ctx.runtime.paramsBuffer.statements[j].data, ctx.runtime, ctx);
                             }
-                        }
-                        
-                        operationType FunctionCallSetup = functionCallSetup;
-                        ctx.target.append(FunctionCallSetup);
-                        ctx.target.append(current);
-                        ctx.target.append((size_t) ctx.runtime.paramsBuffer.statements.size());
-                    }
-                    else
-                    for(auto it = tokens.begin() + i + 1; it < endIt; it++)
-                    {
-                        const auto &varToken = *it;
-                        if(varToken.type == CompilationContext::Token::VARIABLE)
-                        {
-                            /*for(int_fast32_t j = 0; j < varToken.source.length(); j++)
-                            {
-                                ctx.target.append(varToken.source[j]);
-                            }*/
-                            const auto node = current->objectMap.search(varToken.source);
-                            if(node)
-                            {
-                                parent = current;
-                                current = node->data.second;
-                            }
-                        }
-                        else if(token.type == CompilationContext::Token::NUMBER)
-                        {
-                            
-                            operationType op = readAndPushDouble;
-                            ctx.target.append(op);
-                            ctx.target.append(varToken.constantValue);
-                            if(current->isDoubleList())
-                            {
-                                
-                                operationType GlobalVariableDoubleArrayAccess = globalVariableDoubleArrayAccess;
-                                ctx.target.append(GlobalVariableDoubleArrayAccess);
-                                ctx.target.append(current);
-                                ctx.target.append(token.constantValue);
-                                break;
-                            }
-                            else if(current-isObjList())
-                            {
-
-                            }
+                            operationType FunctionCallSetup = functionCallSetup;
+                            ctx.target.append(FunctionCallSetup);
+                            ctx.target.append(current);
+                            ctx.target.append((size_t) ctx.runtime.paramsBuffer.statements.size());
                         }
                         else
                         {
-                            //ctx.target.append(varToken.source[0]);
+                            operationType op = readAndPushObject;
+                            ctx.append(op);
+                            ctx.append(current);
                         }
-                }
-                
+                        
+                    }
+                    else
+                    {
+                        operationType op = readAndPushObject;
+                        ctx.append(op);
+                        ctx.append(current);
+                    }
                 }
                 else if(localIt != ctx.localMemory.end())
                 {
@@ -646,11 +642,17 @@ const uint8_t Object::initialOffset = sizeof(double);
                                 ctx.target.compileParams(ctx.runtime.paramsBuffer.statements[j].data, ctx.runtime, ctx);
                             }
                             ctx.currentToken = ctBackup;
+                            operationType opLocalFunctionCall = localFunctionCall;
+                            ctx.target.append(opLocalFunctionCall);
+                            ctx.target.append((uint64_t) current.stack_index);
+                            ctx.target.append((uint64_t) ctx.runtime.paramsBuffer.statements.size());
                         }
-                        operationType opLocalFunctionCall = localFunctionCall;
-                        ctx.target.append(opLocalFunctionCall);
-                        ctx.target.append((uint64_t) current.stack_index);
-                        ctx.target.append((uint64_t) ctx.runtime.paramsBuffer.statements.size());
+                        else
+                        {
+                            operationType op = readAndPushLocalObject;
+                            ctx.append(op);
+                            ctx.append((uint64_t) current.stack_index);
+                        }
                         //std::cout<<"loading local function call\n";
                     }
                     else if(current.isDouble())
@@ -661,6 +663,12 @@ const uint8_t Object::initialOffset = sizeof(double);
                         ctx.target.append((uint64_t) current.stack_index);
                         
                         i += endIt - (tokens.begin() + i) - 1;
+                    }
+                    else
+                    {
+                        operationType op = readAndPushLocalObject;
+                        ctx.append(op);
+                        ctx.append(current);
                     }
                 }
             }
@@ -898,16 +906,28 @@ bool Object::operator==(Object &o) const
     return equal;
 }
 
-bool Object::isList()
+bool Object::isDouble() const noexcept
 {
-    return this->listSize;
+    return (this->flagRegisters & Object::DOUBLE) == Object::DOUBLE;
+}
+bool Object::isDoubleList() const noexcept
+{
+    return (this->flagRegisters & Object::DOUBLE_LIST) == Object::DOUBLE_LIST;
+}
+bool Object::isList() const noexcept
+{
+    return (this->flagRegisters & Object::LIST) == Object::LIST;
 }
 
-bool Object::isObjList()
+bool Object::isObjList() const noexcept
 {
-    return (this->flagRegisters & 2) == 2;
+    return (this->flagRegisters & Object::OBJECT_LIST) == Object::OBJECT_LIST;
 }
-size_t Object::getListSize() const
+bool Object::isObject() const noexcept
+{
+    return (this->flagRegisters & Object::OBJECT) == Object::OBJECT;
+}
+size_t Object::getListSize() const 
 {
     return this->listSize;
 }
@@ -1189,17 +1209,13 @@ void Object::deallocateMemory(void* ptr, const size_t bufSize, void *idptr, cons
     deallocateInstructions(ptr, bufSize);
 }
 
-bool Object::isDoubleList()
-{
-    return this->instructions[0] == 6;
-}
 
 void Object::pushList(double data)
 {
     static const uint16_t objSize = sizeof(double);
     if(initialOffset+this->listSize*(objSize) < this->instructionBufferSizeId)
     {
-        this->flagRegisters = 1;
+        this->flagRegisters = Object::DOUBLE_LIST;
         memcpy(&this->instructions[initialOffset+this->listSize*(objSize)], &data, objSize);
         listSize++;
     }
@@ -1220,7 +1236,7 @@ void Object::pushList(Object &data)
     static const uint16_t objSize = sizeof(Object*);
     if(initialOffset+this->listSize*(objSize) < this->instructionBufferSizeId)
     {
-        this->flagRegisters = 2;
+        this->flagRegisters = Object::OBJECT_LIST;
         data.id = std::to_string(listSize)+this->id.str();
         data.parent = this;
         Object *obj = this->objectMap.getMemMan().constructObj(data);
@@ -1410,7 +1426,7 @@ void Object::loadInstructions(string_view exp)
         this->inp = malloc(exp.size());
         this->instructions = string_view(static_cast<const char*>(this->inp), exp.size());
     }
-    memcpy((char*) this->instructions.c_str(), (char*) exp.c_str(), exp.size());
+    memcpy(&this->instructions[0], exp.c_str(), exp.size());
     this->instructions[instructions.size()] = '\0';
 }
 void Object::loadId(string_view id)

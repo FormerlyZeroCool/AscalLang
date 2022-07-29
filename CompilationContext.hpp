@@ -24,7 +24,6 @@ class CompilationContext {
         static inline const uint8_t DOUBLE = 0, OWNED_OBJECT = 1, REFERENCED_OBJECT = 2;
         uint8_t stack_index = 0;
         uint8_t type = 0;
-        uint8_t paramsCount = 0;
         bool list = false;
         bool isDouble() const
         {
@@ -47,7 +46,7 @@ class CompilationContext {
             return this->list;
         }
         LocalRecord() {}
-        LocalRecord(uint16_t stack_index, uint8_t paramsCount, uint8_t type): stack_index(stack_index), type(type), paramsCount(paramsCount) {}
+        LocalRecord(uint16_t stack_index, uint8_t paramsCount, uint8_t type): stack_index(stack_index), type(type) {}
     };
     std::vector<Token> lastTokens;
     uint32_t currentToken = 0;

@@ -10,6 +10,34 @@
 
 
 #include "../Keyword.hpp"
+static inline void convertParamToObject(KeywordExecutionContext ctx)
+{
+    ctx.index() += Keyword::opcodeSize();
+    uint64_t stackIndex = 0;
+    ctx.getData(stackIndex);
+    ctx.index() += sizeof(stackIndex);
+    //const auto lastFrame = ctx.runtime().frameStack[ctx.runtime().frameStack.size() - 2];
+    ctx.frame().localMemory[stackIndex].type = StackDataRecord::REFERENCED;
+    //ctx.frame().localMemory[stackIndex].data.obj = lastFrame.localMemory[ctx.frame().localMemory[stackIndex].data.integer];
+    #ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+        std::cout<<"stack index: "<<stackIndex<<" referenced object: "<<ctx.frame().localMemory[stackIndex].data.obj->id<<"\n";
+    #endif
+}
+static inline void convertParamToObjectAndCopy(KeywordExecutionContext ctx)
+{
+    ctx.index() += Keyword::opcodeSize();
+    uint64_t stackIndex = 0;
+    ctx.getData(stackIndex);
+    ctx.index() += sizeof(stackIndex);
+    StackDataRecord record = ctx.frame().localMemory[stackIndex];
+    record.type = StackDataRecord::OWNED;
+    record.data.obj = ctx.runtime().memMan.constructObj(*record.data.obj);
+    #ifdef debug
+    if(*ctx.runtime().boolsettings["o"])
+        std::cout<<"stack index: "<<stackIndex<<" copied object: "<<ctx.frame().localMemory[stackIndex].data.obj->id<<"\n";
+    #endif
+}
 class NewGlobalFunction: public StKeyword {
 public:
     NewGlobalFunction(AscalExecutor &runtime):
@@ -48,12 +76,29 @@ public:
             newVar.setObject();
 
             CompilationContext body_ctx(subexp.data, newVar, runtime);
-            for(int32_t i = this->params.statements.size() - 1; i >= 0; i--)
+            for(int32_t i = this->params.statements.size() - 1, j = 0; i >= 0; i--, j++)
             {
                 const auto &param = this->params.statements[i];
                 if(param.data[0] != '&')
                 {
                     body_ctx.addDoubleLocal(param.data, 0);
+                }
+                else 
+                {
+                    operationType op = nullptr;
+                    if(param.data.size() > 1 && param.data[1] != '&')
+                    {
+                        body_ctx.addRefedLocal(param.data.substr(1), 0);
+                        op = convertParamToObject;
+                    }
+                    else
+                    {
+                        body_ctx.addOwnedLocal(param.data.substr(2), 0);
+                        op = convertParamToObjectAndCopy;
+                    }
+                        body_ctx.append(op);
+                        const uint64_t stackIndex = j;
+                        body_ctx.append(stackIndex);
                 }
             }
 

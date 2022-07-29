@@ -16,7 +16,7 @@ static inline void setGlobalDoubleOp(KeywordExecutionContext ctx)
 	ctx.frame().initialOperands.pop();
 	Object *obj = nullptr;
     ctx.frame().index += Keyword::opcodeSize();
-	memcpy(&obj, &ctx.frame().exp[ctx.frame().index], sizeof(obj));
+	ctx.getData(obj, ctx.frame().index);
 	obj->setDouble(value.number());
 	ctx.frame().index += sizeof(obj);
 	#ifdef debug
@@ -33,7 +33,7 @@ static inline void setLocalDoubleOp(KeywordExecutionContext ctx)
 	ctx.frame().initialOperands.pop();
 	uint64_t localIndex = 0;
     ctx.frame().index += Keyword::opcodeSize();
-	memcpy(&localIndex, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
+	ctx.getData(localIndex, ctx.frame().index);
 	ctx.frame().getLocalMemory()[localIndex].data.number = value.number();
 	ctx.frame().index += sizeof(uint64_t);
 	#ifdef debug
@@ -42,6 +42,47 @@ static inline void setLocalDoubleOp(KeywordExecutionContext ctx)
 		std::cout<<"setting local: "<<localIndex<<" to: "<<value.number()<<"\n";
 	}
 	#endif
+}
+static inline void setList(KeywordExecutionContext ctx, Object* obj, AscalExecutor::Operand value, const AscalExecutor::Operand index_as_double)
+{
+	if(obj->isDoubleList())
+	{
+		obj->setDoubleAtIndex(index_as_double.constNumber(), value.constNumber());
+	}
+	else if(obj->isObjList())
+	{
+		obj->setList(*value.object(), index_as_double.constNumber());
+	}
+	#ifdef debug
+	if(*ctx.runtime().boolsettings["o"])
+		std::cout<<"setting: "<<obj->id<<"["<<index_as_double.constNumber()<<"] = "<<value.constNumber()<<"\n";
+	#endif
+}
+static inline void setGlobalArrayOp(KeywordExecutionContext ctx)
+{
+	const AscalExecutor::Operand value = ctx.frame().initialOperands.back();
+	ctx.frame().initialOperands.pop();
+	const AscalExecutor::Operand index_as_double = ctx.frame().initialOperands.back();
+	ctx.frame().initialOperands.pop();
+	Object *obj = nullptr;
+	ctx.index() += Keyword::opcodeSize();
+	ctx.getData(obj);
+	ctx.index() += Keyword::opcodeSize();
+	setList(ctx, obj, value, index_as_double);
+}
+static inline void setLocalArrayOp(KeywordExecutionContext ctx)
+{
+	const AscalExecutor::Operand value = ctx.frame().initialOperands.back();
+	ctx.frame().initialOperands.pop();
+	const AscalExecutor::Operand index_as_double = ctx.frame().initialOperands.back();
+	ctx.frame().initialOperands.pop();
+	uint64_t stack_index = 0;
+	ctx.index() += Keyword::opcodeSize();
+	ctx.getData(stack_index);
+	ctx.index() += sizeof(stack_index);
+
+	Object *obj = ctx.localMemory(stack_index).obj;
+	setList(ctx, obj, value, index_as_double);
 }
 class SetAction: public StKeyword {
 public:
@@ -55,31 +96,63 @@ public:
 		static const std::string keyWord = "set";
 		uint32_t index = ctx.src_index+keyWord.size();
 	    SubStrSV varName = ParsingUtil::getVarNameSV(ctx.source, index);
+		SubStrSV maybeArraySubScript = ParsingUtil::getExprInStringSV(ctx.source, varName.end + 1, '[', ']');
 	    uint32_t startIndex = ctx.source.find("=",varName.end)+1;
 	    while(ctx.source.size() > startIndex && ctx.source[startIndex] == ' ')
 	        startIndex++;
-	    SubStrSV subexp = ParsingUtil::getExprInStringSV(ctx.source,startIndex, '{', '}', ';');
+	    SubStrSV subexp = ParsingUtil::getExprInStringSV(ctx.source, startIndex, '{', '}', ';');
 		auto localIt = ctx.localMemory.find(varName.data);
 		ctx.src_index  = subexp.end;
-		if(localIt != ctx.localMemory.end())
+		if(ParsingUtil::firstChar(maybeArraySubScript.data, '['))
 		{
-        	ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
-			const CompilationContext::LocalRecord localRec = (*localIt).getValue();
-			this->operation = setLocalDoubleOp;
-			ctx.target.append(this->operation);
-			ctx.target.append((uint64_t) (localRec.stack_index));
+			const string_view arraySubScript = maybeArraySubScript.data.substr(1, maybeArraySubScript.data.size() - 2);
+			if(localIt != ctx.localMemory.end())
+			{
+				ctx.target.compileParams(arraySubScript, ctx.runtime, ctx);
+        		ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
+
+				const CompilationContext::LocalRecord localRec = (*localIt).getValue();
+				this->operation = setLocalArrayOp;
+				ctx.target.append(this->operation);
+				ctx.target.append((uint64_t) (localRec.stack_index));
+			}
+			else
+			{
+        		auto it = ctx.runtime.memory.find(varName.data);
+        		if(it != ctx.runtime.memory.end())
+        		{
+					ctx.target.compileParams(arraySubScript, ctx.runtime, ctx);
+        		    ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
+        		    this->operation = setGlobalArrayOp;
+        		    ctx.target.append(this->operation);
+        		    ctx.target.append((*it).getValue());
+        		}
+
+			}
+		
 		}
 		else
 		{
-        	auto it = ctx.runtime.memory.find(varName.data);
-        	if(it != ctx.runtime.memory.end())
-        	{
-        	    ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
-        	    this->operation = setGlobalDoubleOp;
-        	    ctx.target.append(this->operation);
-        	    ctx.target.append((*it).getValue());
-        	}
-			
+			if(localIt != ctx.localMemory.end())
+			{
+        		ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
+				const CompilationContext::LocalRecord localRec = (*localIt).getValue();
+				this->operation = setLocalDoubleOp;
+				ctx.target.append(this->operation);
+				ctx.target.append((uint64_t) (localRec.stack_index));
+			}
+			else
+			{
+        		auto it = ctx.runtime.memory.find(varName.data);
+        		if(it != ctx.runtime.memory.end())
+        		{
+        		    ctx.target.compileParams(subexp.data, ctx.runtime, ctx);
+        		    this->operation = setGlobalDoubleOp;
+        		    ctx.target.append(this->operation);
+        		    ctx.target.append((*it).getValue());
+        		}
+
+			}
 		}
 
 	}

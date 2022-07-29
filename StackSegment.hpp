@@ -28,7 +28,7 @@ public:
 		data = &dat;
 		start = dat.size();
 	}
-	void clear() noexcept
+	void clear() 
 	{
         /*if(start+len == data->size() || !len){
             for(size_t i = 0; i < len; i++)

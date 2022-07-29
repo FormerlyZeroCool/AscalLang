@@ -65,7 +65,6 @@ uint32_t varCount = 0;
 /////////////////////////////
 size_t rememberedFromMemoTableCount;
 //end stack frame shred memory
-std::unordered_map<uint64_t,double> memoPad;
 AscalFrame<double>* cachedRtnObject = nullptr;
 public:
 ParsedStatementList paramsBuffer;
@@ -81,13 +80,13 @@ Keyword* getKeywordFromPtrToOpcode(uint8_t *start)
 static inline const uint8_t KEYWORD_IDENTIFIER = 128, DOUBLE = 129, OPERATOR = 130, VARIABLE = 131, DELIMITER = 132, ARRAY_OBJ = 133;
 
 ObjectPool<AscalFrame<double> > framePool;
-stack<AscalFrame<double>* > frameStack;
 /////////////////////////////
 //Program Global Memory Declaration
 struct Operand {
 	private:
-	union rec{ double number; Object* obj; constexpr rec(double d):number(d){} constexpr rec(Object* obj): obj(obj) {}} data;
+	union rec{ double number; Object* obj; uint64_t integer; constexpr rec(double d):number(d){} constexpr rec(Object* obj): obj(obj) {}} data;
 	public:
+	static const inline uint64_t GLOBAL = 0, LOCAL = 1;
 	constexpr Operand(double num): data(num) {}
 	constexpr Operand(Object* object): data(object) { }
 	constexpr Operand(): data(0.0) {}
@@ -95,11 +94,24 @@ struct Operand {
 	{
 		return data.number;
 	}
+	constexpr const double& constNumber() const noexcept
+	{
+		return data.number;
+	}
+	constexpr uint64_t& integer() noexcept
+	{
+		return data.integer;
+	}
 	constexpr Object*& object() noexcept
 	{
 		return data.obj;
 	}
+	constexpr Object* const & constObject() const noexcept
+	{
+		return data.obj;
+	}
 };
+stack<AscalFrame<double>* > frameStack;
 stack<Operand> operands;
 stack<StackDataRecord> dataStack;
 MemoryManager memMan;
@@ -113,8 +125,6 @@ FlatMap<std::string,setting<bool> > boolsettings;
 stack<std::string> lastExp;
 //list of previous undone expressions for r command in interpretParam fn
 stack<std::string> undoneExp;
-std::vector<Object> userDefinedFunctions;
-std::vector<Object> systemDefinedFunctions;
 void deleteFrame(AscalFrame<double> *frame);
 AscalFrame<double>* getCachedRtnObject()
 {
