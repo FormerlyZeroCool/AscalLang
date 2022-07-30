@@ -7,6 +7,10 @@
 
 #ifndef ASCAL_HPP_
 #define ASCAL_HPP_
+#ifndef debug
+#define NDEBUG
+#endif
+#include <cassert>
 #include "AscalExecutor.hpp"
 #include "keywords/PrintBoolSetting.hpp"
 #include "keywords/TimeBoolSetting.hpp"

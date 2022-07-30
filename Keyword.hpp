@@ -203,7 +203,7 @@ inline void readAndPushDouble(KeywordExecutionContext ctx)
 {
     double val;
     ctx.index() += Keyword::opcodeSize();
-	ctx.getData(val, ctx.index());
+	ctx.getData(val);
     ctx.frame().initialOperands.push(val);
     ctx.index() += sizeof(double);
     #ifdef debug

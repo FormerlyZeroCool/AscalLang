@@ -63,13 +63,12 @@ public:
             if((param[end] == delim || foundClosing) && end > start && (pCount == 1 || (pCount == 0 && foundClosing)))
             {
                 list.statements.push_back(SubStrSV(param.substr(start,end-start),start, end));
-                    start = end;
-                    while(param[start] == delim || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
-                    {
-                        start++;
-                        end++;
-                    }
-
+                start = end;
+                while(param[start] == delim || param[start] == ' ' || (!isalpha(param[start]) && param[start] != '-' && !(param[start] < 58 && param[start > 47])))
+                {
+                    start++;
+                    end++;
+                }
             }
 
             end++;
