@@ -11,19 +11,19 @@
 #include "../Keyword.hpp"
 static inline void incAction(KeywordExecutionContext ctx) 
 {
-    ctx.frame().index += Keyword::opcodeSize();
+    ctx.index() += Keyword::opcodeSize();
     Object *obj = nullptr;
-    memcpy(&obj, &ctx.frame().exp[ctx.frame().index], sizeof(Object*));
-    ctx.frame().index += sizeof(Object*);
+    ctx.getData(obj);
+    ctx.index() += sizeof(Object*);
     obj->setDouble(obj->getDouble() + 1);
     //std::cout<<"Loading data for var id: "<<index<<"\n";
 }
 static inline void incLocalAction(KeywordExecutionContext ctx) 
 {
-    ctx.frame().index += Keyword::opcodeSize();
+    ctx.index() += Keyword::opcodeSize();
     uint64_t index = -1;
-    memcpy(&index, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
-    ctx.frame().index += sizeof(uint64_t);
+    ctx.getData(index);
+    ctx.index() += sizeof(uint64_t);
     //std::cout<<"Loading data for var id: "<<index<<"\n";
     ctx.frame().localMemory[index].data.number++;
 }

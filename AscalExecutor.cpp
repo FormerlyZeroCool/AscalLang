@@ -415,7 +415,7 @@ double AscalExecutor::calculateExpression(AscalFrame<double>* frame)
             frame->getObjectAt(operation, frame->index);
             operation(KeywordExecutionContext(frame));
         }
-        AscalExecutor::Operand data(0.0);
+        AscalExecutor::Operand data;
         if(!frame->initialOperands.isEmpty())
         {
             frame->initialOperands.top(data);

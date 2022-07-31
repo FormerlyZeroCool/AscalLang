@@ -12,58 +12,59 @@
 
 static inline void makeArray(KeywordExecutionContext ctx)
 {
-    ctx.frame().index += Keyword::opcodeSize();
+    ctx.index() += Keyword::opcodeSize();
 }
 static inline void makeDouble(KeywordExecutionContext ctx)
 {
-    ctx.frame().index += Keyword::opcodeSize();
+    ctx.index() += Keyword::opcodeSize();
     double value = -1;
-    memcpy(&value, &ctx.frame().exp[ctx.frame().index], sizeof(double));
-    ctx.frame().index += sizeof(double);
+    ctx.getData(value);
+    ctx.index() += sizeof(double);
     //std::cout<<"localdouble: "<<value<<"\n";
-    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE, value));
+    ctx.localMemory().push(StackDataRecord(StackDataRecord::DOUBLE, value));
 }
 static inline void makeDoubleParameter(KeywordExecutionContext ctx)
 {
-    ctx.frame().index += Keyword::opcodeSize();
+    ctx.index() += Keyword::opcodeSize();
     AscalExecutor::Operand value;
     auto &localMem = ctx.runtime().frameStack.back()->initialOperands;
     localMem.top(value);
     localMem.pop();
-    //std::cout<<"paramdouble: "<<value<<" StackIndex: "<<ctx.frame().getLocalMemory().size()<<"\n";
-    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::DOUBLE, value.number()));
+    //std::cout<<"paramdouble: "<<value<<" StackIndex: "<<ctx.localMemory().size()<<"\n";
+    ctx.localMemory().push(StackDataRecord(StackDataRecord::DOUBLE, value.number()));
 }
 static inline void makeObjectParameter(KeywordExecutionContext ctx)
 {
-    ctx.frame().index += Keyword::opcodeSize();
+    ctx.index() += Keyword::opcodeSize();
     StackDataRecord value;
     auto &localMem = (ctx.runtime().frameStack)[ctx.runtime().frameStack.size() - ((ctx.runtime().frameStack.size() > 1) << 1)]->localMemory;
     localMem.top(value);
     localMem.pop();
     //std::cout<<"paramdouble: "<<value<<"\n";
-    ctx.frame().getLocalMemory().push(value);
+    ctx.localMemory().push(value);
 }
 static inline void makeFunction(KeywordExecutionContext ctx)
 {
-    ctx.frame().index += Keyword::opcodeSize();
+    ctx.index() += Keyword::opcodeSize();
     uint64_t size = -1;
-    memcpy(&size, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
-    ctx.frame().index += sizeof(uint64_t);
-    const auto nameIndex = ctx.frame().index;
-    ctx.frame().index += size;
+    ctx.getData(size);
+    ctx.index() += sizeof(uint64_t);
+    const auto nameIndex = ctx.index();
+    ctx.index() += size;
     uint64_t bodySize = -1;
-    memcpy(&bodySize, &ctx.frame().exp[ctx.frame().index], sizeof(uint64_t));
-    ctx.frame().index += sizeof(uint64_t);
+    ctx.getData(bodySize);
+    ctx.index() += sizeof(uint64_t);
     Object *obj = ctx.runtime().memMan.constructObj(string_view(&ctx.frame().exp[nameIndex], size), 
-                        string_view(&ctx.frame().exp[ctx.frame().index], bodySize));
-    ctx.frame().index += bodySize;
-    //std::cout<<"localobj: "<<obj->getId()<<" id: "<<ctx.frame().getLocalMemory().size()<<"\n";
-    ctx.frame().getLocalMemory().push(StackDataRecord(StackDataRecord::OWNED, obj));
+                        string_view(&ctx.frame().exp[ctx.index()], bodySize));
+    ctx.index() += bodySize;
+    std::cout<<"localobj: "<<obj->getId()<<" id: "<<ctx.localMemory().size()<<"\n";
+    ctx.localMemory().push(StackDataRecord(StackDataRecord::OWNED, obj));
 }
 static inline void returnAndPop(KeywordExecutionContext ctx)
 {
     //double data;
     //ctx.frame().initialOperands.top(data);
+    ctx.frame().initialOperands.resetStart();
     ctx.runtime().frameStack.pop();
     ctx.runtime().framePool.destroy(&ctx.frame());
     ctx.runtime().frameStack.top(ctx.frame_ptr);

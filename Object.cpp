@@ -617,17 +617,17 @@ const uint8_t Object::initialOffset = sizeof(double);
                     const auto current = (*localIt).getValue();
 
                         //std::cout<<"local variable compiliation\n";
-                    if(current.isObject())
+                    if(current.isObject() && !current.isList())
                     {
                         //make sure to have params executed and pushed to results stack beforehand
                         //create frame push paramsCount params to data stack from parent function
                         endIt = tokens.begin() + i + 1;
-                        //std::cout<<"next token after local: "<<endIt->source<<"\n";
+                        std::cout<<"next token after local: "<<endIt->source<<"\n";
                         if(endIt != tokens.end() && endIt->source[0] == '(')
                         {
                             ctx.src_index = endIt->start;
                             SubStrSV exp = ParsingUtil::getFollowingExprSV(ctx.source, ctx.src_index, string_view("", 0));
-                                //std::cout<<"param op: "<<exp.data<<"\n";
+                                std::cout<<"param op: "<<exp.data<<"\n";
                             ParsingUtil::ParseStatementList(exp.data,0,ctx.runtime.paramsBuffer);
                             int32_t j = ctx.runtime.paramsBuffer.statements.size() - 1;
                             auto ctBackup = i;

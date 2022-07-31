@@ -38,7 +38,7 @@ static inline void pushLocalDoubleArray(KeywordExecutionContext ctx)
 
 	Object* obj = ctx.localMemory()[stack_index].data.obj;
 	#ifdef debug
-	if(ctx.localMemory()[stack_index].type == StackDataRecord::OWNED || ctx.localMemory()[stack_index].type == StackDataRecord::REFERENCED)
+	if(ctx.localMemory()[stack_index].type != StackDataRecord::OWNED && ctx.localMemory()[stack_index].type != StackDataRecord::REFERENCED)
 	{
 		throw std::string("Assert failed invalid variable type, double cannot be made into list\n");
 	}
@@ -75,6 +75,7 @@ public:
 			ctx.target.compileParams(params.statements[1].data, ctx.runtime, ctx);
 			this->operation = pushDoubleArray;
 			ctx.append(this->operation);
+			(*it).getValue()->makeList();
 			ctx.append((*it).getValue());
 		}
 		else
@@ -82,10 +83,18 @@ public:
 			const auto localIt = ctx.localMemory.find(params.statements[0].data);
 			if(localIt != ctx.localMemory.end())
 			{
-				ctx.target.compileParams(params.statements[1].data, ctx.runtime, ctx);
 				this->operation = pushLocalDoubleArray;
-				ctx.append(this->operation);
-				ctx.append((uint64_t) (*localIt).getValue().stack_index);
+				if((*localIt).getValue().isObject())
+				{
+					ctx.target.compileParams(params.statements[1].data, ctx.runtime, ctx);
+					ctx.append(this->operation);
+					(*localIt).getValue().list = true;
+					ctx.append((uint64_t) (*localIt).getValue().stack_index);
+				}
+				else
+				{
+					throw std::string("error cannot convert stack allocated double as array");
+				}
 			}
 		}
 		ctx.src_index = paramsExp.end+1;

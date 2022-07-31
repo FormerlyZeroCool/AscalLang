@@ -37,7 +37,7 @@ public:
 	}
 	inline static char toLower(char c)
 	{
-		return c|32U;
+		return c | 32U;
 	}
     static ParsedStatementList& ParseStatementList(const string_view param, uint32_t start, ParsedStatementList &list, const char delim = ',')
     {
