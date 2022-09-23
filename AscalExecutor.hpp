@@ -67,6 +67,7 @@ size_t rememberedFromMemoTableCount;
 //end stack frame shred memory
 AscalFrame<double>* cachedRtnObject = nullptr;
 public:
+unsigned int s {0};
 ParsedStatementList paramsBuffer;
 //Interpreter hash map for system keywords
 FlatMap<string_view, Keyword*> inputMapper;

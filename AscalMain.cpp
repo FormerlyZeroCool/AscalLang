@@ -21,7 +21,6 @@
 
 #define DEBUG 1
 #define THROWERRORS 1
-
 int main(int argc,char* argv[])
 {
   /*
@@ -73,14 +72,8 @@ int main(int argc,char* argv[])
     //if you then remove macro definition in compilation for readline this will compile without dependencies, or just use AscalMainNoDep.cpp
       
       std::string line;
-      if(!CrossPlatform::readLine(line, ">>"))
-        break;
-      //get expression from line parsed from std in,
-      //If a codeblock is unclosed it will continue reading from std in until it sees a closing brace to the codeblock }
-      	if(ParsingUtil::firstChar(line, '{'))
-        {
-          line = ParsingUtil::getExpr(line, 0, std::cin).data;
-        }
+      line = ParsingUtil::getExpr(line, 0, std::cin, '{', '}', ';', string_view(">>", 2)).data;
+        
         try{
         	ascalRuntime.execExpression(line);
         }

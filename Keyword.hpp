@@ -240,16 +240,7 @@ inline Object& popObject(KeywordExecutionContext ctx)
 {
     AscalExecutor::Operand val = ctx.frame().initialOperands.back();
 	ctx.frame().initialOperands.pop();
-	Object* obj = nullptr;
-	if(val.integer() > 256)
-	{
-		obj = val.object();
-	}
-	else
-	{
-		obj = ctx.frame().getLocalMemory()[val.integer()].data.obj;
-	}
-	return *obj;
+	return *val.object();
 }
 inline AscalExecutor::Operand callSub(KeywordExecutionContext ctx)
 {
@@ -292,6 +283,35 @@ inline void readAndPushFromGlobalList(KeywordExecutionContext ctx)
     	#endif
 	}
 }
+//leaves current token on last token parsed
+   inline SubStrSV getExpr(CompilationContext &ctx, const uint32_t end, const char opening = '{', const char closing = '}', const char line_break = ';')
+    {
+        const uint32_t start = ctx.currentToken;
+        uint32_t level = 0;
+        while(ctx.currentToken < end && ctx.currentToken < ctx.lastTokens.size() && ctx.current().source[0] != line_break && !(ctx.current().source[0] == opening))
+        {
+            ++ctx;
+        }
+
+        level = (ctx.current().source[0] == opening);
+
+        while(ctx.currentToken < end && ctx.currentToken < ctx.lastTokens.size() && level)
+        {
+            ++ctx;
+            level += (ctx.current().source[0] == opening) - (ctx.current().source[0] == closing);
+        }
+
+        if(level)
+        {
+            throw std::string("Error no closing ") + closing + " for: " + std::to_string(start);
+        }
+
+        if(ctx.currentToken < ctx.lastTokens.size())
+            return ctx.mergeTokens(ctx.lastTokens[start], ctx.current());
+        else
+            return ctx.mergeTokens(ctx.lastTokens[start], ctx.lastTokens[ctx.lastTokens.size() - 1]);
+    }
+    
 inline void compileLoop(CompilationContext &ctx, string_view booleanExpression, string_view codeBlock)
 	{
 		operationType operation = nullptr;
@@ -437,7 +457,10 @@ static inline void returnAndPop(KeywordExecutionContext ctx)
 	#ifdef debug
 	if(*ctx.runtime().boolsettings["o"])
 	{
-		std::cout<<"Returning value: "<<ctx.frame().initialOperands.back().number()<<"\n";
+		if(ctx.frame().initialOperands.size())
+			std::cout<<"Returning value: "<<ctx.frame().initialOperands.back().number()<<"\n";
+		else
+			std::cout<<"Returning from void function\n";
 	}
 	#endif
     //    std::cout<<data<<"\n";

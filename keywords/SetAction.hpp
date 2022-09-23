@@ -96,16 +96,19 @@ public:
 		static const std::string keyWord = "set";
 		uint32_t index = ctx.src_index+keyWord.size();
 	    SubStrSV varName = ParsingUtil::getVarNameSV(ctx.source, index);
-		SubStrSV maybeArraySubScript = ParsingUtil::getExprInStringSV(ctx.source, varName.end + 1, '[', ']');
+		++ctx;
+		++ctx;
+		std::cout<<"current: "<<ctx.current().source<<"\n";
+		SubStrSV maybeArraySubScript = getExpr(ctx, ctx.findTokenIndexAtLevel(string_view("=", 1), 0, '[', ']'), '[', ']');
 	    uint32_t startIndex = ctx.source.find("=",varName.end)+1;
-	    while(ctx.source.size() > startIndex && ctx.source[startIndex] == ' ')
-	        startIndex++;
 	    SubStrSV subexp = ParsingUtil::getExprInStringSV(ctx.source, startIndex, '{', '}', ';');
 		auto localIt = ctx.localMemory.find(varName.data);
 		ctx.src_index  = subexp.end;
+			std::cout<<"full array subscript substr: "<<maybeArraySubScript.data<<"\n";
 		if(ParsingUtil::firstChar(maybeArraySubScript.data, '['))
 		{
 			const string_view arraySubScript = maybeArraySubScript.data.substr(1, maybeArraySubScript.data.size() - 2);
+			std::cout<<"trimmed subscript: "<<arraySubScript<<"\n";
 			if(localIt != ctx.localMemory.end())
 			{
 				ctx.target.compileParams(arraySubScript, ctx.runtime, ctx);

@@ -30,6 +30,7 @@ public:
     string_view(const std::string &s, const uint32_t start, const uint32_t end) noexcept;
     string_view(const string_view s, const uint32_t start, const uint32_t end) noexcept;
     string_view(const char *s, const uint32_t len) noexcept;
+    //string_view(const char *s): ptr(s), len(strlen(s)) noexcept{}
     const char* c_str() const noexcept { return ptr; }
     void resize(uint32_t newLen) noexcept
     {

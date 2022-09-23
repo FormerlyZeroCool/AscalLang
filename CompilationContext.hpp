@@ -12,32 +12,33 @@
 class CompilationContext {
     public:
     struct Token {
-        static inline uint_fast16_t null = 0, KEYWORD = 1, NUMBER = 2, OPERATOR = 3, VARIABLE = 4, DELIMITER = 5, KEYWORD_END = 6, CTXDELIMITER = 7, VARIABLE_PART = 8;
+        static inline uint_fast16_t null = 0, KEYWORD = 1, NUMBER = 2, OPERATOR = 3, VARIABLE = 4, DELIMITER = 5, KEYWORD_END = 6, CODE_BODY_DELIMITER = 7, VARIABLE_PART = 8;
         string_view source;
         uint_fast32_t start = 0;
         uint_fast16_t type = 0;
         double constantValue = std::numeric_limits<double>::max();
         Token(string_view s, uint_fast32_t start, uint_fast16_t type): source(s), start(start), type(type) {}
-        Token() {}
+        Token(): type(null) {}
     };
     struct LocalRecord {
         static inline const uint8_t DOUBLE = 0, OWNED_OBJECT = 1, REFERENCED_OBJECT = 2;
+        static inline const uint8_t DOUBLE_LIST = 1, OBJECT_LIST = 2;
         uint8_t stack_index = 0;
         uint8_t type = 0;
-        bool list = false;
-        bool isDouble() const
+        uint8_t list = 0;
+        bool isDouble() const noexcept
         {
             return type == LocalRecord::DOUBLE;
         }
-        bool isOwnedObject() const
+        bool isOwnedObject() const noexcept
         {
             return type == LocalRecord::OWNED_OBJECT;
         }
-        bool isRefedObject() const
+        bool isRefedObject() const noexcept
         {
             return type == LocalRecord::REFERENCED_OBJECT;
         }
-        bool isObject() const
+        bool isObject() const noexcept
         {
             return isOwnedObject() || isRefedObject();
         }
@@ -64,6 +65,60 @@ class CompilationContext {
         //target.resizeInstructions(src.length() + Object::SMALL_EXP);
         this->target.clearList();
         this->target.shrinkInstructions(0);
+    }
+    CompilationContext::Token findTokenAtLevel(string_view source_text, const uint32_t accepted_level, const char opening = '{', const char closing = '}') const noexcept
+    {
+        uint32_t index = findTokenIndexAtLevel(source_text, accepted_level, opening, closing);
+        if(index != std::numeric_limits<uint32_t>::max())
+            return this->lastTokens[index];
+
+        return CompilationContext::Token(this->source.substr(source.size(), 0), -1, CompilationContext::Token::null);
+    }
+    uint32_t findTokenIndexAtLevel(string_view source_text, const uint32_t accepted_level, const char opening = '{', const char closing = '}') const noexcept
+    {
+        uint32_t index = this->currentToken;
+        uint32_t level = 0;
+        bool found = false;
+        while(!found) 
+        {
+            while(!level && this->lastTokens.size() > index && this->lastTokens[index].source != source_text)
+            {
+                const auto token = this->lastTokens[index];
+                level += (token.source[0] == opening) - (token.source[0] == closing);
+                index++;
+            }
+
+            found = this->lastTokens[index].source == source_text;
+
+            while(level && this->lastTokens.size() > index)
+            {
+                const auto token = this->lastTokens[index];
+                level += (token.source[0] == opening) - (token.source[0] == closing);
+                index++;
+            }
+        }
+        if(found)
+            return index;
+        return std::numeric_limits<uint32_t>::max();
+    }
+    SubStrSV mergeTokens(CompilationContext::Token start, CompilationContext::Token end)
+    {
+        uint32_t startIndex = reinterpret_cast<uintptr_t>(&start.source[0]) - reinterpret_cast<uintptr_t>(&this->source[0]);
+        uint32_t endIndex = reinterpret_cast<uintptr_t>(&end.source.back() + 1) - reinterpret_cast<uintptr_t>(&this->source[0]);
+        return SubStrSV(this->source.substr(startIndex, endIndex - startIndex), startIndex, endIndex);
+    }
+    CompilationContext::Token current()
+    {
+        if(currentToken >= lastTokens.size())
+        {
+            throw std::string("Error in compilation accessing token past end of stream, note this is a system error please submit bug report");
+        }
+        return lastTokens[currentToken];
+    }
+    CompilationContext& operator++()
+    {
+        currentToken++;
+        return *this;
     }
     template <typename PLAIN_OLD_OBJECT>
     void writeToTargetAtByte(PLAIN_OLD_OBJECT &obj, uint32_t index)

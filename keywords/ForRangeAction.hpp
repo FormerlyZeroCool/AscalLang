@@ -50,7 +50,7 @@ public:
             std::cout<<"\n{"<<body.data<<"\n}";
         }
         #endif
-        index = body.end;
+        index = body.end - 2;
     }
 };
 

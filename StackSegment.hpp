@@ -46,7 +46,7 @@ public:
 	}
 	StackSegment(stack<t> &dat);
 	StackSegment() noexcept {start = 0; data = nullptr;}
-	inline t& operator[](size_t index) const noexcept
+	constexpr inline t& operator[](size_t index) const noexcept
 	{
         //if(index < len)
             return (*data)[index+start];

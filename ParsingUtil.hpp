@@ -108,7 +108,7 @@ public:
 	    data[data.length()-offsetFromEnd-1] *= brek == true;
 	}
 	template <typename string>
-	static SubStr getExpr(const string &data,int startingIndex, std::istream &ascal_cin, char opening = '{',char closing = '}',char lineBreak = ';');
+	static SubStr getExpr(const string &data,int startingIndex, std::istream &ascal_cin, char opening = '{',char closing = '}',char lineBreak = ';', string_view prompt = string_view("", 0));
 	template <typename string>
 	static SubStr getFollowingExpr(string &exp, uint32_t startIndex,const std::string &id, char start = '(', char end = ')');
 	template <typename string>
@@ -226,74 +226,46 @@ public:
 void ParsingUtil::getLine(std::istream &ascal_cin, std::string &line)
 {
     //if you get compiler errors you can not use readLine
-    CrossPlatform::getLine(ascal_cin, line);
+    CrossPlatform::getLine(ascal_cin, line, string_view("", 0));
 }
 template <typename string>
-SubStr ParsingUtil::getExpr(const string &data,int index, std::istream &ascal_cin,char opening,char closing,char lineBreak)
+SubStr ParsingUtil::getExpr(const string &data, int index, std::istream &ascal_cin,char opening,char closing,char lineBreak, string_view prompt)
 {
-    int count = 0;
-    int openingCount = 0;
-    int maxOpeningCount = 0;
-    SubStr block("",0,0);
-    std::string result;
-    if(data.length()<1024)
-        result.reserve(1024);
-    else
-        result.reserve(data.length());
+    uint64_t start = 0;
+    uint64_t length = 0;
+    uint64_t level = 0;
     string_view sline(data);
-    std::string line = sline.str();
+    std::string expr = sline.str();
+    SubStr block("",0,0);
+    if(data.length() < 1024)
+        expr.reserve(1024);
+    else
+        expr.reserve(data.length());
+    //ignore whitespace
+    while(expr[start] && (expr[start] == ' ')){ start++; }
+    //check for unclosed brace
 
-    do{
-        while(line[index] && !ParsingUtil::isNumeric(line[index]) && !isalpha(line[index]) && !Calculator<double>::isOperator(line[index]) &&
-                line[index] != closing && line[index] != opening)
+    if(expr.size() == 0)
+    {
+        CrossPlatform::getLineNoHistory(ascal_cin, block.data, prompt);
+        expr += block.data;
+    }
+    do {
+        while(expr[start + length])
         {
-            openingCount += (line[index] == opening) - (line[index] == closing);
-            maxOpeningCount += (line[index] == opening);
-            index++;
+            level += (expr[start + length] == '{') - (expr[start + length] == '}');
+            length++;
         }
-        while(line[index + count] && (line[index + count] != lineBreak && line[index + count] != '\n')
-                && !(line[index+count] == closing && openingCount == 1))
+        if(level)
         {
-            openingCount += (line[index+count] == opening) - (line[index+count] == closing);
-            maxOpeningCount += (line[index+count] == opening);
-            count++;
+            CrossPlatform::getLineNoHistory(ascal_cin, block.data, prompt);
+            expr += block.data;
         }
-        openingCount -= (line[index+count] == closing);
-
-        if(count > 0)
-        {
-
-            for(int i = index<line.size()?index:line.size();line[i] && i <= index+count;i++)
-            {
-                result += (line[i]);
-            }
-            if(line[line.size()-1]!=opening && result[result.size()-1] != lineBreak)
-                result += (lineBreak);
-        }
-        if(openingCount > 0 && line.length() <= index+count)
-        {
-            block.loadedNew = true;
-        	uint32_t i;
-        	do{
-        		getLine(ascal_cin, line);
-        		i = 0;
-        		while(line[i] == ' ')
-        			i++;
-        	} while(line[i] == '#');
-            index = 0;
-        }
-        else
-        {
-            index += count+1;
-        }
-        count = 0;
-    }while(openingCount > 0 && std::cin);
-
-    if(maxOpeningCount > 0)
-        result += (closing);
-    block.data = std::move(result);
-    block.start = index;
-	block.end = result.size();
+    } while(level);
+    CrossPlatform::saveToHistory(expr);
+    block.start = start;
+	block.end = start + expr.size();
+    block.data = (expr);
     return block;
 }
 
@@ -441,13 +413,11 @@ SubStrSV ParsingUtil::getExprInStringSV(const string &line,uint32_t index,char o
     return SubStrSV(string_view(line, index, i), index, i);
 }
 
-static char periodCount;
-static bool isADouble;
 template <typename string>
 bool ParsingUtil::isDouble(string &exp)
 {
-    isADouble = true;
-    periodCount = 0;
+    bool isADouble = true;
+    char periodCount = 0;
     for(uint16_t i = (exp[0] == '-'); isADouble && i < exp.size(); i++)
     {
         //to avoid branching I'm doing boolean arithmetic to determine if a string is a double

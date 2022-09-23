@@ -70,6 +70,19 @@ static void getLine(std::istream &ascal_cin, std::string &line)
 {
     getline(ascal_cin, line);
 }
+static void getLine(std::istream &ascal_cin, std::string &line, string_view prompt)
+{
+    std::cout<<prompt;
+    getline(ascal_cin, line);
+}
+static void getLineNoHistory(std::istream &ascal_cin, std::string &line, string_view prompt)
+{
+    getLine(ascal_cin, line, prompt);
+}
+static void saveToHistory(std::string &source)
+{
+
+}
 #else
 
 static bool readLine(std::string &line, std::string prompt)
@@ -87,8 +100,29 @@ static bool readLine(std::string &line, std::string prompt)
         if (line.size() > 0) {
           add_history(readLineBuffer);
         }
+        free(readLineBuffer);
     }
-    free(readLineBuffer);
+    return readLineBuffer;
+}
+static void saveToHistory(std::string& source)
+{
+    if(source.length() > 0)
+        add_history(source.c_str());
+}
+static bool readLineNoHistory(std::string &line, std::string prompt)
+{
+    char *readLineBuffer = nullptr;
+    if(prompt.size())
+        readLineBuffer = readline(prompt.c_str());
+    else
+        readLineBuffer = readline("");
+
+    //auto bufCleaner = std::make_unique<char*>(readLineBuffer);
+    if(readLineBuffer)
+    {
+        line = readLineBuffer;
+        free(readLineBuffer);
+    }
     return readLineBuffer;
 }
 static void getLine(std::istream &ascal_cin, std::string &line)
@@ -98,6 +132,24 @@ static void getLine(std::istream &ascal_cin, std::string &line)
         getline(ascal_cin, line);
     else
         readLine(line, "");
+}
+static void getLine(std::istream &ascal_cin, std::string &line, string_view prompt)
+{
+    //if you get compiler errors you can not use readLine
+    if(ascal_cin.rdbuf() != std::cin.rdbuf()){
+        getline(ascal_cin, line);
+    }
+    else
+        readLine(line, prompt.c_str());
+}
+static void getLineNoHistory(std::istream &ascal_cin, std::string &line, string_view prompt)
+{
+    //if you get compiler errors you can not use readLine
+    if(ascal_cin.rdbuf() != std::cin.rdbuf()){
+        getline(ascal_cin, line);
+    }
+    else
+        readLineNoHistory(line, prompt.c_str());
 }
 #endif
 

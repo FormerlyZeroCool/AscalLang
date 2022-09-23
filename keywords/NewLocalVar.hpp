@@ -161,8 +161,9 @@ public:
             subexp.data[nullIndex] = tmp;
             ctx.addDoubleLocal(localName.data, 0);
         }
-    ctx.src_index = subexp.end;
-
+        
+        ctx.src_index = subexp.end - 1;
+        std::cout<<ctx.source.substr(ctx.src_index)<<"\n";
     }
 };
 

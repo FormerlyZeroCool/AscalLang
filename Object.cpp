@@ -50,7 +50,6 @@ const uint8_t Object::initialOffset = sizeof(double);
 
     void Object::compileParams(string_view s, AscalExecutor &runtime, CompilationContext &ctx)
     {
-        //std::cout<<"instruction length before param compilation: "<<ctx.target.getInstructions().size()<<"\n";
         uint32_t start = 0, end = 0;
         std::uintptr_t endptr = reinterpret_cast<std::uintptr_t>(&s.back());
         std::uintptr_t startptr = reinterpret_cast<std::uintptr_t>(&s[0]);
@@ -60,9 +59,7 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.currentToken = start;
         while(ctx.lastTokens.size() > end && reinterpret_cast<std::uintptr_t>(&ctx.lastTokens[end].source.back()) <= endptr)
             end++;
-        //std::cout<<"sub start: "<<ctx.currentToken<<" end: "<<(end)<<"\n";
         this->compileTokens(ctx, end);
-        //std::cout<<"instruction length after param compilation: "<<ctx.target.getInstructions().size()<<"\n";
     }
 
     void Object::LexCodeAndCompile(AscalExecutor &runtime, CompilationContext &ctx)
@@ -134,7 +131,7 @@ const uint8_t Object::initialOffset = sizeof(double);
             {
                 while(ctx.src_index < ctx.source.length() && ctx.source[ctx.src_index++] != '\n') {}
             }
-            else if(ctx.source[ctx.src_index] == '&' || ctx.source[ctx.src_index] == '[' || ctx.source[ctx.src_index] == ']' || ctx.source[ctx.src_index] == '"' || ctx.source[ctx.src_index] == '.')
+            else if(ctx.source[ctx.src_index] == '&' || ctx.source[ctx.src_index] == '"' || ctx.source[ctx.src_index] == '.')
             {
                 ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::VARIABLE_PART));
                 
@@ -142,9 +139,17 @@ const uint8_t Object::initialOffset = sizeof(double);
                 //ctx.target.append(ctx.source[ctx.src_index++]);
                 ctx.src_index++;
             }
+            else if(ctx.source[ctx.src_index] == '{' || ctx.source[ctx.src_index] == '}' || ctx.source[ctx.src_index] == '(' || ctx.source[ctx.src_index] == ')' || ctx.source[ctx.src_index] == '[' || ctx.source[ctx.src_index] == ']')
+            {
+                ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::CODE_BODY_DELIMITER));
+                
+                //std::cout<<"source Parsed char: "<<ctx.source[ctx.src_index]<<" ind: "<<(ctx.src_index)<<"\n"<<"isnum: "<<ParsingUtil::isNumeric(ctx.source[ctx.src_index])<<"\n";
+                //ctx.target.append(ctx.source[ctx.src_index++]);
+                ctx.src_index++;
+            }
             else
             {
-                ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::null));
+                //ctx.lastTokens.push_back(CompilationContext::Token(string_view(&ctx.source[ctx.src_index], 1), ctx.src_index, CompilationContext::Token::null));
                 
                 //std::cout<<"source Parsed char: "<<ctx.source[ctx.src_index]<<" ind: "<<(ctx.src_index)<<"\n"<<"isnum: "<<ParsingUtil::isNumeric(ctx.source[ctx.src_index])<<"\n";
                 //ctx.target.append(ctx.source[ctx.src_index++]);
@@ -153,7 +158,7 @@ const uint8_t Object::initialOffset = sizeof(double);
         }
         ctx.currentToken = tokenStart + 1;
         //code generation
-        this->compileTokens(ctx, std::numeric_limits<uint32_t>::max());
+        this->compileTokens(ctx, ctx.lastTokens.size());
     }
     void globalVariableDoubleArrayAccess(KeywordExecutionContext ctx)
     {
@@ -514,7 +519,27 @@ const uint8_t Object::initialOffset = sizeof(double);
         ctx.runtime().frameStack.push(newFrame);
         ctx.frame_ptr = newFrame;
     }
-    
+    void localDoubleArrayImmediateAccess(KeywordExecutionContext ctx)
+    {
+        const AscalExecutor::Operand array_index = ctx.frame().initialOperands.back();
+        ctx.frame().initialOperands.pop();
+        uint64_t stack_index = 0;
+        ctx.index() += Keyword::opcodeSize();
+        ctx.getData(stack_index);
+        ctx.index() += sizeof(stack_index);
+        Object *obj = ctx.frame().localMemory[stack_index].data.obj;
+        ctx.frame().initialOperands.push(obj->getDoubleAtIndex(array_index.constNumber()));
+    }
+    void globalDoubleArrayImmediateAccess(KeywordExecutionContext ctx)
+    {
+        const AscalExecutor::Operand array_index = ctx.frame().initialOperands.back();
+        ctx.frame().initialOperands.pop();
+        Object *obj = nullptr;
+        ctx.index() += Keyword::opcodeSize();
+        ctx.getData(obj);
+        ctx.index() += sizeof(obj);
+        ctx.frame().initialOperands.push(obj->getDoubleAtIndex(array_index.constNumber()));
+    }
     void Object::compileTokens(CompilationContext &ctx, uint32_t end)
     {
         end = end < ctx.lastTokens.size() ? end : ctx.lastTokens.size();
@@ -533,42 +558,20 @@ const uint8_t Object::initialOffset = sizeof(double);
                 ctx.target.append(op);
                 ctx.target.append(token.constantValue);
             }
-            else if(token.type == CompilationContext::Token::VARIABLE_PART && token.source[0] == '[')
-            {
-                ctx.src_index = token.start;
-                //parse expression
-                const SubStrSV expression = ParsingUtil::getExprInStringSV(ctx.source, ctx.src_index, '[', ']');
-                std::cout<<"compiling array access: "<<expression.data.substr(1, expression.data.size() - 2)<<"\n";
-                //handle runtime
-                if(ctx.target.getInstructions().size() < (sizeof(void*)))
-                    throw std::string("Error building no object supplied");
-
-                operationType op = readAndPushFromGlobalList;
-                ctx.append(op);
-                
-                const auto start = ctx.target.getInstructions().size();
-                const uint64_t zero = 0;
-                ctx.append(zero);
-                ctx.src_index = expression.data.size() + ctx.src_index;
-                ctx.target.compileParams(expression.data.substr(1, expression.data.size() - 2), ctx.runtime, ctx);
-                const uint64_t length = ctx.target.getInstructions().size() - start - sizeof(uint64_t);
-                memcpy(&ctx.target.getInstructions()[start], &length, sizeof(zero));
-                ctx.src_index = expression.end;
-                ctx.syncTokenIndexToSrcIndex();
-                ctx.src_index = tokens[--i].start;
-            }
             else if(token.type == CompilationContext::Token::VARIABLE)
             {
+                //std::cout<<"compiling variable: "<<token.source<<"\n";
                 auto endIt = tokens.begin() + i;
                 while(endIt != tokens.end() && (endIt->type == CompilationContext::Token::VARIABLE))
                     endIt++;
                 //Object *parent = nullptr;
                 const auto it = ctx.runtime.memory.find(token.source);
                 const auto localIt = ctx.localMemory.find(token.source);
-                //std::cout<<"parsing varname: "<<token.source<<"\n";
+                std::cout<<"parsing varname: "<<token.source<<"\n";
                 if(it != ctx.runtime.memory.end() && localIt == ctx.localMemory.end())
                 {
                     Object *current = (*it).getValue();
+                    endIt = tokens.begin() + i + 1;
                     if(current->isDouble())
                     {
                         
@@ -577,9 +580,26 @@ const uint8_t Object::initialOffset = sizeof(double);
                         ctx.target.append(current);
                         endIt = tokens.begin() + i + 1;
                     }
+                    else if(current->isList() && endIt->source[0] == '[')
+                    {
+                        ctx.src_index = endIt->start;
+                        ++ctx;
+                        //parse expression
+                        const SubStrSV fullExpression = getExpr(ctx, end, '[', ']');
+                        const auto newEnd = ctx.currentToken - 1;
+                        if(fullExpression.data.size() <= 2)
+                            throw std::string("Error building local array access no index supplied");
+                        const string_view expression = fullExpression.data.substr(1, fullExpression.data.size() - 2);
+                        std::cout<<"compiling array access index for global: "<<expression<<"\n";
+                        //handle runtime
+                        ctx.target.compileParams(expression, ctx.runtime, ctx); // compile index calculation beforehand
+                        const operationType op = globalDoubleArrayImmediateAccess;
+                        ctx.append(op);
+                        ctx.append(current);
+                        ctx.currentToken = newEnd;
+                    }
                     else if(!current->isList() && current->getInstructions().length() > 1)//is function
                     {
-                        endIt = tokens.begin() + i + 1;
                         if(endIt != tokens.end() && endIt->source[0] == '(')
                         {
                             uint32_t paramsStartSource = ctx.getSrcIndex(*endIt);
@@ -616,19 +636,37 @@ const uint8_t Object::initialOffset = sizeof(double);
                 {
                     const auto current = (*localIt).getValue();
 
-                        //std::cout<<"local variable compiliation\n";
-                    if(current.isObject() && !current.isList())
+                        std::cout<<"local variable compiliation\n";
+                    endIt = tokens.begin() + i + 1;
+                    if(current.isObject() && endIt != tokens.end() && endIt->source[0] == '[')
+                    {
+                        ctx.src_index = endIt->start;
+                        //parse expression
+                        ++ctx;
+                        const SubStrSV fullExpression = getExpr(ctx, end, '[', ']');
+                        const auto newEnd = ctx.currentToken - 1;
+                        if(fullExpression.data.size() <= 2)
+                            throw std::string("Error building local array access no index supplied");
+                        const string_view expression = fullExpression.data.substr(1, fullExpression.data.size() - 2);
+                        std::cout<<"compiling array access from local: "<<expression<<"\n";
+                        //handle runtime
+                        ctx.target.compileParams(expression, ctx.runtime, ctx); // compile index calculation beforehand
+                        const operationType op = localDoubleArrayImmediateAccess;
+                        ctx.append(op);
+                        ctx.append((uint64_t) current.stack_index);
+                        ctx.currentToken = newEnd;
+                    }
+                    else if(!current.isList() && current.isObject())
                     {
                         //make sure to have params executed and pushed to results stack beforehand
                         //create frame push paramsCount params to data stack from parent function
-                        endIt = tokens.begin() + i + 1;
                         std::cout<<"next token after local: "<<endIt->source<<"\n";
                         if(endIt != tokens.end() && endIt->source[0] == '(')
                         {
                             ctx.src_index = endIt->start;
                             SubStrSV exp = ParsingUtil::getFollowingExprSV(ctx.source, ctx.src_index, string_view("", 0));
                                 std::cout<<"param op: "<<exp.data<<"\n";
-                            ParsingUtil::ParseStatementList(exp.data,0,ctx.runtime.paramsBuffer);
+                            ParsingUtil::ParseStatementList(exp.data, 0, ctx.runtime.paramsBuffer);
                             int32_t j = ctx.runtime.paramsBuffer.statements.size() - 1;
                             auto ctBackup = i;
                             if(j >= 0)
@@ -657,7 +695,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                     }
                     else if(current.isDouble())
                     {
-                        //std::cout<<"loading local variable load double\nstack index: "<<current.stack_index<<"\n";
+                        std::cout<<"compiling local variable load double stack index: "<<current.stack_index<<"\n";
                         operationType opLocalDoubleVarRead = localDoubleVarRead;
                         ctx.target.append(opLocalDoubleVarRead);
                         ctx.target.append((uint64_t) current.stack_index);
@@ -668,9 +706,32 @@ const uint8_t Object::initialOffset = sizeof(double);
                     {
                         operationType op = readAndPushLocalObject;
                         ctx.append(op);
-                        ctx.append(current);
+                        ctx.append((uint64_t) current.stack_index);
                     }
                 }
+            }
+            else if(token.type == CompilationContext::Token::VARIABLE_PART && token.source[0] == '[')
+            {
+                ctx.src_index = token.start;
+                //parse expression
+                const SubStrSV expression = getExpr(ctx, end, '[', ']');
+                const auto newEnd = ctx.currentToken - 1;
+                std::cout<<"compiling array access: "<<expression.data.substr(1, expression.data.size() - 2)<<"\n";
+                //handle runtime
+                if(ctx.target.getInstructions().size() < (sizeof(void*)))
+                    throw std::string("Error building no object supplied");
+
+                operationType op = readAndPushFromGlobalList;
+                ctx.append(op);
+                
+                const auto start = ctx.target.getInstructions().size();
+                const uint64_t zero = 0;
+                ctx.append(zero);
+                ctx.src_index = expression.data.size() + ctx.src_index;
+                ctx.target.compileParams(expression.data.substr(1, expression.data.size() - 2), ctx.runtime, ctx);
+                const uint64_t length = ctx.target.getInstructions().size() - start - sizeof(uint64_t);
+                memcpy(&ctx.target.getInstructions()[start], &length, sizeof(zero));
+                ctx.currentToken = newEnd;
             }
             else if(token.type == CompilationContext::Token::OPERATOR && token.source[0] == ')')
             {
@@ -680,13 +741,13 @@ const uint8_t Object::initialOffset = sizeof(double);
                 while(!stack.isEmpty() && nextOp.source[0] != '(')
                 {
                     //std::cout<<"should not be (: "<<nextOp.source<<"\n";
-                    //to do
+                    //to do //done?
                     compileOperator(ctx, stack);
                     stack.pop();
                     stack.top(nextOp);
                 }
                 if(!stack.isEmpty()) {
-                    stack.top(nextOp);
+                    //stack.top(nextOp);
                     //std::cout<<"should be (: "<<nextOp.source<<"\n";
                     stack.pop();
                 }
@@ -724,7 +785,6 @@ const uint8_t Object::initialOffset = sizeof(double);
             {
 		        CompilationContext::Token nextOp;
                 stack.top(nextOp);
-                if(token.source[0] != '(')
                 while(!stack.isEmpty() && Calculator<double>::getPriority(nextOp.source[0]) >= Calculator<double>::getPriority(token.source[0]) && nextOp.source[0] != '(')
                 {   
                     //to do
@@ -732,7 +792,7 @@ const uint8_t Object::initialOffset = sizeof(double);
                     stack.pop();
                     stack.top(nextOp);
                 }
-		        operationType cs = clearStackExcept1;
+		        operationType cs = clearStack;
 		        ctx.target.append(cs);
             }
             else

@@ -23,7 +23,7 @@ static inline void pushDoubleArray(KeywordExecutionContext ctx)
 	
 	#ifdef debug
 	if(*ctx.runtime().boolsettings["o"])
-		std::cout<<"pushing: "<<obj->id<<"["<<obj->getListSize()<<"] = "<<a.constNumber()<<"\n";
+		std::cout<<"pushing: "<<obj->id<<"["<<(obj->getListSize()-1)<<"] = "<<a.constNumber()<<"\n";
 	#endif
 }
 
@@ -43,7 +43,7 @@ static inline void pushLocalDoubleArray(KeywordExecutionContext ctx)
 		throw std::string("Assert failed invalid variable type, double cannot be made into list\n");
 	}
 	if(*ctx.runtime().boolsettings["o"])
-		std::cout<<"pushing: "<<obj->id<<"["<<obj->getListSize()<<"] = "<<a.constNumber()<<"\n";
+		std::cout<<"pushing: "<<obj->id<<"["<<(obj->getListSize() - 1)<<"] = "<<a.constNumber()<<"\n";
 	#endif
 	
 	obj->makeList();
@@ -67,7 +67,7 @@ public:
 		ParsingUtil::ParseStatementList(paramsExp.data, 0, this->params);
 		if(this->params.statements.size() != 2)
 		{
-			throw std::string("Error invalid parameters for arrPush(arr, index)");
+			throw std::string("Error invalid parameters for arrPush(arr, value)");
 		}
 		const auto it = ctx.runtime.memory.find(params.statements[0].data);
 		if(it != ctx.runtime.memory.end())
@@ -97,7 +97,7 @@ public:
 				}
 			}
 		}
-		ctx.src_index = paramsExp.end+1;
+		ctx.src_index = paramsExp.end;
 	}
 	/*void action(AscalFrame<double>* frame) override
 	{
