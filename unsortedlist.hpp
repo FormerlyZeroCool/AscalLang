@@ -171,6 +171,8 @@ void UnsortedList<t>::removeHead()
 		len--;
 		node<t> *p = head;
 		head = head->next;
+    if(head)
+      head->previous = nullptr;
 		alloc.destroy(p);
 	}
 }
@@ -182,6 +184,8 @@ void UnsortedList<t>::removeTail()
 		len--;
 		node<t> *p = tail;
 		tail = tail->previous;
+    if(tail)
+      tail->next = nullptr;
 		alloc.destroy(p);
 	}
 }
@@ -203,8 +207,6 @@ bool UnsortedList<t>::operator==(const UnsortedList<t>& other)
 		p = p->next;
 		o = o->next;
 	}
-	if(isEqual && p!=o)
-		isEqual = false;
 	return isEqual;
 }
 template <class t>
